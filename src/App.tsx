@@ -15,7 +15,6 @@ const StyledApp = styled.div`
 const App = () => {
   React.useEffect(() => {
     document.body.style.overflow = "hidden";
-    asdfsadf;
     return () => {
       document.body.style.overflow = "scroll";
     };
@@ -34,6 +33,6 @@ const App = () => {
       </Canvas>
     </StyledApp>
   );
-};
+
 
 export default App;
