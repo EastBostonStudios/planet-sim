@@ -15,6 +15,7 @@ const StyledApp = styled.div`
 const App = () => {
   React.useEffect(() => {
     document.body.style.overflow = "hidden";
+    asdfsadf;
     return () => {
       document.body.style.overflow = "scroll";
     };
