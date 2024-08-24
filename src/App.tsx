@@ -1,9 +1,7 @@
-import * as React from 'react'
-
-import styled from 'styled-components'
-
-import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { OrbitControls } from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import * as React from "react";
+import styled from "styled-components";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -12,30 +10,29 @@ const StyledApp = styled.div`
   left: 0;
   right: 0;
   background-color: darkslategray;
-`
+`;
 
 const App = () => {
   React.useEffect(() => {
-    document.body.style.overflow = 'hidden'
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = 'scroll'
-    }
-  }, [])
+      document.body.style.overflow = "scroll";
+    };
+  }, []);
 
   return (
-    <StyledApp className='App'>
-      <input type='range' min='1' max='100' value='50' />
+    <StyledApp className="App">
       <Canvas>
-        <OrbitControls/>
-        <directionalLight rotation={[45, 45, 45]}/>
-        <ambientLight/>
+        <OrbitControls />
+        <directionalLight rotation={[45, 45, 45]} />
+        <ambientLight />
         <mesh>
-          <boxGeometry args={[1, 1, 1]}/>
-          <meshStandardMaterial color="#6be092"/>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color="#6be092" />
         </mesh>
       </Canvas>
     </StyledApp>
-  )
-}
+  );
+};
 
-export default App
+export default App;
