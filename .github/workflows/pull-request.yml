@@ -16,3 +16,5 @@ jobs:
           version: latest
       - name: Run Biome
         run: biome ci .
+      - name: Build
+        run: npm run build
