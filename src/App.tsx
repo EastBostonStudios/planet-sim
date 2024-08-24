@@ -33,6 +33,6 @@ const App = () => {
       </Canvas>
     </StyledApp>
   );
-
+};
 
 export default App;
