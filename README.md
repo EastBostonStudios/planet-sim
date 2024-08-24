@@ -1,1 +1,1 @@
-# planet-sim
+# Planet Sim
