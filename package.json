@@ -12,6 +12,7 @@
     "preview": "vite preview --port 8080"
   },
   "dependencies": {
+    "@radix-ui/react-popover": "^1.1.1",
     "@react-three/drei": "^9.111.3",
     "@react-three/fiber": "^8.17.5",
     "@types/three": "^0.167.0",
