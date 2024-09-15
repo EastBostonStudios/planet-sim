@@ -1,6 +1,6 @@
 import { Html, Line } from "@react-three/drei";
 import type { GroupProps } from "@react-three/fiber";
-import {
+import React, {
   type FC,
   Fragment,
   type ReactNode,
@@ -18,12 +18,11 @@ import {
   distBetweenPoints,
   icosahedron,
 } from "./Icosahedron";
-import { type Tile, getTiles } from "./Tile";
+import type { Tile } from "./Tile";
 
 import styled from "styled-components";
 import { getChunks } from "./Chunk";
 import { interpolateOnFace } from "./utils";
-import React = require("react");
 
 const Asdf = styled(Html)<{ $color: string }>`
   color: ${({ $color }) => $color};
