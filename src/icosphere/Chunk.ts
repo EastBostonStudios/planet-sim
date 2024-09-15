@@ -72,4 +72,3 @@ for (let x = 0; x < rp1; x++) {
     });
   }
 }
-console.log(result.map((a) => a.faceCoords));
