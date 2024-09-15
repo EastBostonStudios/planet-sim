@@ -1,52 +1,56 @@
-import * as Popover from "@radix-ui/react-popover";
-import { OrbitControls } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
 import * as React from "react";
+
 import styled from "styled-components";
 
+import {
+  Grid,
+  MapControls,
+  OrbitControls,
+  PerspectiveCamera,
+  Stats,
+} from "@react-three/drei";
+import { Canvas } from "@react-three/fiber";
+import { createContext } from "react";
+import { DoubleSide } from "three";
+import { distBetweenPoints } from "./icosphere/Icosahedron";
+import { Scene } from "./icosphere/Scene";
+
 const StyledApp = styled.div`
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: black;
-    background-image: url("test.gif");
-    background-size:cover;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: darkslategray;
 `;
 
 const StyledTopBar = styled.div`
-    background: linear-gradient(black 0%, var(--color-2-transparent) 100%);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: outset var(--color-5);
-    border-width: 0 0 3px 0;
-    padding:4px;
-`;
-/*
-    height: var(--spacing-large);
-    background: linear-gradient(var(--color-2) 0%, var(--color-1) 100%);
-    border-style: solid;
-    border-width: 4px;
-    border-color: black;
- */
-
-const StyledButton = styled.button``;
-
-const Button2 = styled.button`
-    width:32px;
-    height:32px;
-    border-radius: 16px;
+  position: absolute;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  z-index: 999;
 `;
 
-const StyledDiv = styled.div`
-    padding: var(--spacing-small);
-    background-color: var(--color-1);
-    border-style: outset;
-    border-width: 4px;
-    border-color: var(--color-3);
+const StyledToolbar = styled.div`
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  color: white;
 `;
+
+const StyledButtonHolder = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+`;
+
+const minResolution = 0;
+const maxResolution = 8;
+const defaultResolution = 0;
+
+export const AppContext = createContext<{ is3D: boolean }>({ is3D: false });
 
 const App = () => {
   React.useEffect(() => {
@@ -56,76 +60,73 @@ const App = () => {
     };
   }, []);
 
-  return (
-    <StyledApp className="App">
-      <Canvas
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          width: "100%",
-          height: "100%",
-        }}
-      >
-        <OrbitControls />
-        <directionalLight rotation={[45, 45, 45]} />
-        <ambientLight />
-        <mesh>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color="#6be092" />
-        </mesh>
-      </Canvas>
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          width: "100%",
-          height: "100%",
-        }}
-      >
-        <StyledTopBar
-          style={{ display: "flex", gap: "8px", justifyContent: "end" }}
-        >
-          <Button2>?</Button2>
-          <Button2>!</Button2>
-        </StyledTopBar>
+  const [resolution, setResolution] = React.useState(
+    Math.min(maxResolution, Math.max(minResolution, defaultResolution)),
+  );
+  const [is3D, setIs3D] = React.useState(false);
 
-        <Popover.Root>
-          <Popover.Trigger asChild>
-            <StyledButton>Test</StyledButton>
-          </Popover.Trigger>
-          <Popover.Anchor />
-          <Popover.Portal>
-            <Popover.Content sideOffset={5}>
-              <Popover.Close />
-              <Popover.Arrow />
-              <div>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-                eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut
-                enim ad minim veniam, quis nostrud exercitation ullamco laboris
-                nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor
-                in reprehenderit in voluptate velit esse cillum dolore eu fugiat
-                nulla pariatur. Excepteur sint occaecat cupidatat non proident,
-                sunt in culpa qui officia deserunt mollit anim id est laborum.
-              </div>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-        <StyledButton>Test 2</StyledButton>
-        <div style={{ display: "flex", flexDirection: "row" }}>
-          <StyledTopBar style={{ width: 400 }}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat. Duis aute irure dolor in
-            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
-            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
-            culpa qui officia deserunt mollit anim id est laborum.
-          </StyledTopBar>
-        </div>
-      </div>
-    </StyledApp>
+  return (
+    <AppContext.Provider value={{ is3D }}>
+      <StyledApp className="App">
+        <StyledTopBar>
+          <StyledToolbar>
+            <h4>Resolution: {resolution}</h4>
+            <input
+              type="range"
+              min={minResolution}
+              max={maxResolution}
+              value={resolution}
+              onChange={(e) => setResolution(Number(e.target.value))}
+            />
+            <StyledButtonHolder>
+              <button type="button" onClick={() => setIs3D((prev) => !prev)}>
+                {is3D ? "3D" : "2D"}
+              </button>
+            </StyledButtonHolder>
+          </StyledToolbar>
+        </StyledTopBar>
+        <Canvas>
+          <Stats />
+          <directionalLight rotation={[45, 45, 45]} />
+          {is3D ? (
+            <group key="3D">
+              <axesHelper args={[5]} />
+              <OrbitControls />
+              <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
+              <Scene resolution={resolution} />
+            </group>
+          ) : (
+            <group key="2D">
+              <MapControls />
+              <PerspectiveCamera
+                makeDefault
+                position={[0, 6, 0]}
+                rotation={[Math.PI / 2.0, 0, 0]}
+              />
+              <group
+                position={[
+                  -distBetweenPoints * 1.75,
+                  0,
+                  distBetweenPoints * 1.25,
+                ]}
+                rotation={[-Math.PI / 2.0, 0, 0]}
+              >
+                <Scene resolution={resolution} />
+              </group>
+              <Grid
+                position={[0, 0.01, 0]}
+                side={DoubleSide}
+                cellSize={0.1}
+                cellColor="grey"
+                sectionColor="grey"
+                infiniteGrid={true}
+                followCamera={true}
+              />
+            </group>
+          )}
+        </Canvas>
+      </StyledApp>
+    </AppContext.Provider>
   );
 };
 
