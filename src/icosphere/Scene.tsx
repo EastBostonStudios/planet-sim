@@ -11,7 +11,7 @@ import React, {
 import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
 import { AppContext } from "../App";
-import { HtmlOverlay3D } from "../HtmlOverlay";
+import { HtmlOverlay3D } from "../utils/HtmlOverlay";
 import { getChunks } from "./Chunk";
 import {
   type IcosphereEdge,

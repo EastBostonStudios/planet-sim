@@ -53,11 +53,12 @@ export const HtmlOverlaysProvider: React.FC<{
     <HtmlOverlaysContext.Provider
       value={{ htmlOverlaysRef, frameCounterRef, setHtmlOverlays }}
     >
-      <HtmlOverlaysContainer />
-      {htmlOverlays.map(({ id, node }) => (
-        <div key={id}>{node}</div>
-      ))}
       {children}
+      <HtmlOverlaysContainer>
+        {htmlOverlays.map(({ id, node }) => (
+          <div key={id}>{node}</div>
+        ))}
+      </HtmlOverlaysContainer>
     </HtmlOverlaysContext.Provider>
   );
 };

@@ -11,9 +11,9 @@ import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { DoubleSide } from "three";
-import { HtmlOverlaysProvider } from "./HtmlOverlaysProvider";
 import { distBetweenPoints } from "./icosphere/Icosahedron";
 import { Scene } from "./icosphere/Scene";
+import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 
 const StyledApp = styled.div`
   position: absolute;
