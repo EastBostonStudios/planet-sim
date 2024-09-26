@@ -80,11 +80,7 @@ const App = () => {
               min={minResolution}
               max={maxResolution}
               value={resolution}
-              onChange={(e) =>
-                setSearchParams({
-                  resolution: e.target.value,
-                })
-              }
+              onChange={(e) => setSearchParams({ resolution: e.target.value })}
             />
             <StyledButtonHolder>
               <button type="button" onClick={() => setIs3D((prev) => !prev)}>
