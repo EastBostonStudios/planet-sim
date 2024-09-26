@@ -1,5 +1,10 @@
 import { Vector2 } from "three";
-import { type IcosphereFace, icosahedron } from "./Icosahedron";
+import {
+  IcosphereEdge,
+  type IcosphereFace,
+  IcospherePoint,
+  icosahedron,
+} from "./Icosahedron";
 
 export type Tile = {
   index: number;
@@ -7,70 +12,28 @@ export type Tile = {
   faceCoords: Vector2;
 };
 
+const createTile = (
+  index: number,
+  face: IcosphereFace,
+  faceCoords: Vector2,
+): Tile => ({ index, face, faceCoords });
+
 export const getTiles = (resolution: number): ReadonlyArray<Tile> => {
   const result = new Array<Tile>();
 
   result.push(
-    {
-      index: 0,
-      face: icosahedron.faces[0],
-      faceCoords: new Vector2(0.0, 0.0),
-    },
-    {
-      index: 1,
-      face: icosahedron.faces[0],
-      faceCoords: new Vector2(1.0, 0.0),
-    },
-    {
-      index: 2,
-      face: icosahedron.faces[1],
-      faceCoords: new Vector2(1.0, 0.0),
-    },
-    {
-      index: 3,
-      face: icosahedron.faces[2],
-      faceCoords: new Vector2(1.0, 0.0),
-    },
-    {
-      index: 4,
-      face: icosahedron.faces[3],
-      faceCoords: new Vector2(1.0, 0.0),
-    },
-    {
-      index: 5,
-      face: icosahedron.faces[4],
-      faceCoords: new Vector2(1.0, 0.0),
-    },
-    {
-      index: 6,
-      face: icosahedron.faces[6],
-      faceCoords: new Vector2(0.0, 0.0),
-    },
-    {
-      index: 7,
-      face: icosahedron.faces[8],
-      faceCoords: new Vector2(0.0, 0.0),
-    },
-    {
-      index: 8,
-      face: icosahedron.faces[10],
-      faceCoords: new Vector2(0.0, 0.0),
-    },
-    {
-      index: 9,
-      face: icosahedron.faces[12],
-      faceCoords: new Vector2(0.0, 0.0),
-    },
-    {
-      index: 10,
-      face: icosahedron.faces[14],
-      faceCoords: new Vector2(0.0, 0.0),
-    },
-    {
-      index: 11,
-      face: icosahedron.faces[19],
-      faceCoords: new Vector2(0.0, 0.0),
-    },
+    createTile(0, icosahedron.faces[0], new Vector2(0.0, 0.0)),
+    createTile(1, icosahedron.faces[0], new Vector2(1.0, 0.0)),
+    createTile(2, icosahedron.faces[1], new Vector2(1.0, 0.0)),
+    createTile(3, icosahedron.faces[2], new Vector2(1.0, 0.0)),
+    createTile(4, icosahedron.faces[3], new Vector2(1.0, 0.0)),
+    createTile(5, icosahedron.faces[4], new Vector2(1.0, 0.0)),
+    createTile(6, icosahedron.faces[6], new Vector2(0.0, 0.0)),
+    createTile(7, icosahedron.faces[8], new Vector2(0.0, 0.0)),
+    createTile(8, icosahedron.faces[10], new Vector2(0.0, 0.0)),
+    createTile(9, icosahedron.faces[12], new Vector2(0.0, 0.0)),
+    createTile(10, icosahedron.faces[14], new Vector2(0.0, 0.0)),
+    createTile(11, icosahedron.faces[19], new Vector2(0.0, 0.0)),
   );
   return result;
 };
