@@ -13,21 +13,56 @@ const createTile = (
   faceCoords: Vector2,
 ): Tile => ({ index, face, faceCoords });
 
-const createRow = (
+const createEdgeTiles = (
   result: Array<Tile>,
   resolution: number,
   face: IcosphereFace,
   useB: boolean,
 ) => {
   for (let i = 1; i < (resolution + 1) * 5; i++) {
-    const t = i / ((resolution + 1) * 5);
+    const s = i / ((resolution + 1) * 5);
     result.push(
       createTile(
         result.length,
         face,
-        useB ? new Vector2(1.0 - t, 1.0 - t) : new Vector2(t, 0.0),
+        useB ? new Vector2(1.0 - s, 1.0 - s) : new Vector2(s, 0.0),
       ),
     );
+  }
+};
+
+const createTrussTiles = (
+  result: Array<Tile>,
+  resolution: number,
+  face: IcosphereFace,
+) => {
+  // a -> b (horizontal) rows
+  for (let chunkJ = 1; chunkJ <= resolution; chunkJ++) {
+    const t = chunkJ / (resolution + 1.0);
+    for (let i = chunkJ * 5.0 + 1; i < (resolution + 1) * 5.0; i++) {
+      const s = i / ((resolution + 1) * 5.0);
+      result.push(createTile(result.length, face, new Vector2(s, t)));
+    }
+  }
+
+  // b -> c (diagonal) rows
+  for (let chunkI = 1; chunkI <= resolution; chunkI++) {
+    const s = chunkI / (resolution + 1.0);
+    for (let j = 1; j < chunkI * 5.0; j++) {
+      if (j % 5 === 0) continue; // Ignore intersection with horizontal rows
+      const t = j / ((resolution + 1.0) * 5.0);
+      result.push(createTile(result.length, face, new Vector2(s, t)));
+    }
+  }
+
+  // c -> a (diagonal) rows
+  for (let chunkI = 1; chunkI <= resolution; chunkI++) {
+    for (let ij = 1; ij < (resolution + 1.0 - chunkI) * 5.0; ij++) {
+      if (ij % 5 === 0) continue; // Ignore intersection with horizontal rows
+      const s = (chunkI * 5.0 + ij) / ((resolution + 1.0) * 5.0);
+      const t = ij / ((resolution + 1.0) * 5.0);
+      result.push(createTile(result.length, face, new Vector2(s, t)));
+    }
   }
 };
 
@@ -50,44 +85,46 @@ export const getTiles = (resolution: number): ReadonlyArray<Tile> => {
   );
 
   // Diagonal
-  createRow(result, resolution, icosahedron.faces[0], false);
-  createRow(result, resolution, icosahedron.faces[1], false);
-  createRow(result, resolution, icosahedron.faces[2], false);
-  createRow(result, resolution, icosahedron.faces[3], false);
-  createRow(result, resolution, icosahedron.faces[4], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[0], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[1], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[2], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[3], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[4], false);
 
   // Horizontal
-  createRow(result, resolution, icosahedron.faces[5], true);
-  createRow(result, resolution, icosahedron.faces[7], true);
-  createRow(result, resolution, icosahedron.faces[9], true);
-  createRow(result, resolution, icosahedron.faces[11], true);
-  createRow(result, resolution, icosahedron.faces[13], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[5], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[7], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[9], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[11], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[13], true);
 
   // Diagonal
-  createRow(result, resolution, icosahedron.faces[5], false);
-  createRow(result, resolution, icosahedron.faces[6], true);
-  createRow(result, resolution, icosahedron.faces[7], false);
-  createRow(result, resolution, icosahedron.faces[8], true);
-  createRow(result, resolution, icosahedron.faces[9], false);
-  createRow(result, resolution, icosahedron.faces[10], true);
-  createRow(result, resolution, icosahedron.faces[11], false);
-  createRow(result, resolution, icosahedron.faces[12], true);
-  createRow(result, resolution, icosahedron.faces[13], false);
-  createRow(result, resolution, icosahedron.faces[14], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[5], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[6], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[7], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[8], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[9], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[10], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[11], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[12], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[13], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[14], true);
 
   // Horizontal
-  createRow(result, resolution, icosahedron.faces[6], false);
-  createRow(result, resolution, icosahedron.faces[8], false);
-  createRow(result, resolution, icosahedron.faces[10], false);
-  createRow(result, resolution, icosahedron.faces[12], false);
-  createRow(result, resolution, icosahedron.faces[14], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[6], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[8], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[10], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[12], false);
+  createEdgeTiles(result, resolution, icosahedron.faces[14], false);
 
   // Diagonal
-  createRow(result, resolution, icosahedron.faces[15], true);
-  createRow(result, resolution, icosahedron.faces[16], true);
-  createRow(result, resolution, icosahedron.faces[17], true);
-  createRow(result, resolution, icosahedron.faces[18], true);
-  createRow(result, resolution, icosahedron.faces[19], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[15], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[16], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[17], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[18], true);
+  createEdgeTiles(result, resolution, icosahedron.faces[19], true);
+
+  createTrussTiles(result, resolution, icosahedron.faces[8]);
 
   console.assert(
     result.every((tile, i) => tile.index === i),

@@ -8,7 +8,7 @@ export const interpolateOnFace = (props: {
 }): Vector3 => {
   const { a, b, c, p } = props;
   if (p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1 || p.y > p.x)
-    throw new Error(`(${p.x}, ${p.y}) of bounds!`);
+    throw new Error(`(${p.x}, ${p.y}) out of bounds!`);
   if (p.x === 0) return a;
   const ab = new Vector3().lerpVectors(a, b, p.x);
   const ca = new Vector3().lerpVectors(a, c, p.x);

@@ -11,6 +11,7 @@ import {
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { createContext } from "react";
+import { useSearchParams } from "react-router-dom";
 import { DoubleSide } from "three";
 import { distBetweenPoints } from "./icosphere/Icosahedron";
 import { Scene } from "./icosphere/Scene";
@@ -60,9 +61,12 @@ const App = () => {
     };
   }, []);
 
-  const [resolution, setResolution] = React.useState(
-    Math.min(maxResolution, Math.max(minResolution, defaultResolution)),
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const resolution = React.useMemo(() => {
+    const param = searchParams.get("resolution");
+    if (Number.isNaN(param)) return defaultResolution;
+    return Math.min(maxResolution, Math.max(minResolution, Number(param)));
+  }, [searchParams]);
   const [is3D, setIs3D] = React.useState(false);
 
   return (
@@ -76,7 +80,11 @@ const App = () => {
               min={minResolution}
               max={maxResolution}
               value={resolution}
-              onChange={(e) => setResolution(Number(e.target.value))}
+              onChange={(e) =>
+                setSearchParams({
+                  resolution: e.target.value,
+                })
+              }
             />
             <StyledButtonHolder>
               <button type="button" onClick={() => setIs3D((prev) => !prev)}>
