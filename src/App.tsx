@@ -48,7 +48,7 @@ const StyledButtonHolder = styled.div`
 
 const minResolution = 0;
 const maxResolution = 8;
-const defaultResolution = 0;
+const defaultResolution = 1;
 
 export const AppContext = createContext<{ is3D: boolean }>({ is3D: false });
 

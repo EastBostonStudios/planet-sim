@@ -181,6 +181,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                 <TripleAttribute attribute="color" array={colors} />
               </bufferGeometry>
               <meshBasicMaterial
+                opacity={0.25}
                 vertexColors={true}
                 transparent={true}
                 polygonOffset={true}

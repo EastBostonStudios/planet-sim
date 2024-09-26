@@ -54,21 +54,3 @@ export const getChunks = (resolution: number): ReadonlyArray<Chunk> => {
   }
   return result;
 };
-
-const rp1 = 2;
-const result = new Array<Chunk>();
-let index = 0;
-const face = icosahedron.faces[0];
-for (let x = 0; x < rp1; x++) {
-  for (let y = 0; y < rp1; y++) {
-    result.push({
-      index: index++,
-      face,
-      faceCoords: {
-        a: new Vector2(x / rp1, y / rp1),
-        b: new Vector2((x + 1) / rp1, y / rp1),
-        c: new Vector2((x + 1) / rp1, (y + 1) / rp1),
-      },
-    });
-  }
-}
