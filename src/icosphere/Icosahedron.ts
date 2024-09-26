@@ -40,8 +40,13 @@ const createEdge = (
   index: number,
   start: IcospherePoint,
   end: IcospherePoint,
-  wrapsX?: true,
-): IcosphereEdge => ({ index, start, end, wrapsMeridian: wrapsX ?? false });
+  wrapsMeridian?: true,
+): IcosphereEdge => ({
+  index,
+  start,
+  end,
+  wrapsMeridian: wrapsMeridian ?? false,
+});
 
 const createFace = (
   index: number,

@@ -6,7 +6,6 @@ import React, {
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
 } from "react";
 import { type Vector2, Vector3 } from "three";
@@ -18,7 +17,7 @@ import {
   distBetweenPoints,
   icosahedron,
 } from "./Icosahedron";
-import type { Tile } from "./Tile";
+import { type Tile, getTiles } from "./Tile";
 
 import styled from "styled-components";
 import { getChunks } from "./Chunk";
@@ -95,16 +94,10 @@ const project2D = (xy: Vector2) =>
 export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   //----------------------------------------------------------------------------
 
-  const tiles = useMemo(() => new Array<Tile>() /*getTiles(resolution)*/, []);
-  const chunks = useMemo(() => getChunks(resolution), [resolution]);
   const { is3D } = useContext(AppContext);
 
-  useEffect(() => {
-    tiles.forEach((tile, index) => {
-      if (tile.index !== index)
-        throw new Error(`Tile ${index} has an index of ${tile.index}`);
-    });
-  }, [tiles]);
+  const tiles = useMemo(() => getTiles(resolution), [resolution]);
+  const chunks = useMemo(() => getChunks(resolution), [resolution]);
 
   const getFaceXYZs = useCallback(
     (face: IcosphereFace): [Vector3, Vector3, Vector3] => {
@@ -151,11 +144,11 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   );
 
   const getTileXYZ = useCallback(
-    (point: Tile): Vector3 => {
-      if (is3D) return project3D(point.coords3D);
-      return project2D(point.coords2D);
+    (tile: Tile): Vector3 => {
+      const [a, b, c] = getFaceXYZs(tile.face);
+      return interpolateOnFace({ a, b, c, p: tile.faceCoords });
     },
-    [is3D],
+    [getFaceXYZs],
   );
 
   //----------------------------------------------------------------------------
@@ -163,11 +156,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   return (
     <Fragment key={resolution}>
       {tiles.map((tile) => (
-        <StyledLabel
-          key={tile.index}
-          color={"white"}
-          position={getTileXYZ(tile)}
-        >
+        <StyledLabel key={tile.index} position={getTileXYZ(tile)}>
           t{tile.index}
         </StyledLabel>
       ))}
@@ -176,7 +165,6 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
         const point0 = interpolateOnFace({ a, b, c, p: faceCoords.a });
         const point1 = interpolateOnFace({ a, b, c, p: faceCoords.b });
         const point2 = interpolateOnFace({ a, b, c, p: faceCoords.c });
-        //if (face.index === 5) console.log(index, faceCoords)
         const positions = new Float32Array(
           [point0, point1, point2].flatMap((point) => [
             point.x,
@@ -209,27 +197,31 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           </Fragment>
         );
       })}
-      {icosahedron.points.map((point) => (
-        <StyledLabel key={point.index} position={getPointXYZ(point)}>
-          p{point.index}
-        </StyledLabel>
-      ))}
-      {icosahedron.edges.map((edge) => {
-        const [start, end] = getEdgeXYZs(edge);
-        return (
-          <Fragment key={edge.index}>
-            <StyledLabel position={new Vector3().lerpVectors(start, end, 0.5)}>
-              e{edge.index}
-            </StyledLabel>
-            <Line
-              points={[start, end]}
-              vertexColors={greyAndBlack}
-              lineWidth={4}
-              segments
-            />
-          </Fragment>
-        );
-      })}
+      {false &&
+        icosahedron.points.map((point) => (
+          <StyledLabel key={point.index} position={getPointXYZ(point)}>
+            p{point.index}
+          </StyledLabel>
+        ))}
+      {false &&
+        icosahedron.edges.map((edge) => {
+          const [start, end] = getEdgeXYZs(edge);
+          return (
+            <Fragment key={edge.index}>
+              <StyledLabel
+                position={new Vector3().lerpVectors(start, end, 0.5)}
+              >
+                e{edge.index}
+              </StyledLabel>
+              <Line
+                points={[start, end]}
+                vertexColors={greyAndBlack}
+                lineWidth={4}
+                segments
+              />
+            </Fragment>
+          );
+        })}
       {icosahedron.faces.map((face) => {
         const facePoints = getFaceXYZs(face);
         const faceCenter = new Vector3()
