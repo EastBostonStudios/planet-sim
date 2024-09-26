@@ -124,7 +124,9 @@ export const getTiles = (resolution: number): ReadonlyArray<Tile> => {
   createEdgeTiles(result, resolution, icosahedron.faces[18], true);
   createEdgeTiles(result, resolution, icosahedron.faces[19], true);
 
-  createTrussTiles(result, resolution, icosahedron.faces[8]);
+  for (let f = 0; f < icosahedron.faces.length; f++) {
+    createTrussTiles(result, resolution, icosahedron.faces[f]);
+  }
 
   console.assert(
     result.every((tile, i) => tile.index === i),

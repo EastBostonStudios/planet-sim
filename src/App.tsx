@@ -1,7 +1,3 @@
-import * as React from "react";
-
-import styled from "styled-components";
-
 import {
   Grid,
   MapControls,
@@ -10,9 +6,12 @@ import {
   Stats,
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import * as React from "react";
 import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
+import styled from "styled-components";
 import { DoubleSide } from "three";
+import { HtmlOverlaysProvider } from "./HtmlOverlaysProvider";
 import { distBetweenPoints } from "./icosphere/Icosahedron";
 import { Scene } from "./icosphere/Scene";
 
@@ -89,46 +88,48 @@ const App = () => {
             </StyledButtonHolder>
           </StyledToolbar>
         </StyledTopBar>
-        <Canvas>
-          <Stats />
-          <directionalLight rotation={[45, 45, 45]} />
-          {is3D ? (
-            <group key="3D">
-              <axesHelper args={[5]} />
-              <OrbitControls />
-              <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
-              <Scene resolution={resolution} />
-            </group>
-          ) : (
-            <group key="2D">
-              <MapControls />
-              <PerspectiveCamera
-                makeDefault
-                position={[0, 6, 0]}
-                rotation={[Math.PI / 2.0, 0, 0]}
-              />
-              <group
-                position={[
-                  -distBetweenPoints * 1.75,
-                  0,
-                  distBetweenPoints * 1.25,
-                ]}
-                rotation={[-Math.PI / 2.0, 0, 0]}
-              >
+        <HtmlOverlaysProvider>
+          <Canvas>
+            <Stats />
+            <directionalLight rotation={[45, 45, 45]} />
+            {is3D ? (
+              <group key="3D">
+                <axesHelper args={[5]} />
+                <OrbitControls />
+                <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
                 <Scene resolution={resolution} />
               </group>
-              <Grid
-                position={[0, 0.01, 0]}
-                side={DoubleSide}
-                cellSize={0.1}
-                cellColor="grey"
-                sectionColor="grey"
-                infiniteGrid={true}
-                followCamera={true}
-              />
-            </group>
-          )}
-        </Canvas>
+            ) : (
+              <group key="2D">
+                <MapControls />
+                <PerspectiveCamera
+                  makeDefault
+                  position={[0, 6, 0]}
+                  rotation={[Math.PI / 2.0, 0, 0]}
+                />
+                <group
+                  position={[
+                    -distBetweenPoints * 1.75,
+                    0,
+                    distBetweenPoints * 1.25,
+                  ]}
+                  rotation={[-Math.PI / 2.0, 0, 0]}
+                >
+                  <Scene resolution={resolution} />
+                </group>
+                <Grid
+                  position={[0, 0.01, 0]}
+                  side={DoubleSide}
+                  cellSize={0.1}
+                  cellColor="grey"
+                  sectionColor="grey"
+                  infiniteGrid={true}
+                  followCamera={true}
+                />
+              </group>
+            )}
+          </Canvas>
+        </HtmlOverlaysProvider>
       </StyledApp>
     </AppContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { Html, Line } from "@react-three/drei";
+import { Line } from "@react-three/drei";
 import type { GroupProps } from "@react-three/fiber";
 import React, {
   type FC,
@@ -8,8 +8,11 @@ import React, {
   useContext,
   useMemo,
 } from "react";
+import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
 import { AppContext } from "../App";
+import { HtmlOverlay3D } from "../HtmlOverlay";
+import { getChunks } from "./Chunk";
 import {
   type IcosphereEdge,
   type IcosphereFace,
@@ -18,12 +21,9 @@ import {
   icosahedron,
 } from "./Icosahedron";
 import { type Tile, getTiles } from "./Tile";
-
-import styled from "styled-components";
-import { getChunks } from "./Chunk";
 import { interpolateOnFace } from "./utils";
 
-const StyledHtml = styled(Html)<{ $color: string }>`
+const StyledHtml = styled.strong<{ $color: string }>`
   color: ${({ $color }) => $color};
   pointer-events: none;
   font-size: 12px;
@@ -31,20 +31,22 @@ const StyledHtml = styled(Html)<{ $color: string }>`
 `;
 
 const StyledLabel: FC<
-  { color?: string; children: ReactNode } & Partial<GroupProps>
-> = ({ color, children, ...otherProps }) => {
+  {
+    color?: string;
+    position: Vector3;
+    children: ReactNode;
+  } & Partial<GroupProps>
+> = ({ color, position, children }) => {
   const { is3D } = useContext(AppContext);
   return (
-    <group {...otherProps}>
-      <StyledHtml
-        center
-        $color={color ?? "lightgrey"}
-        occlude={"raycast"}
-        position={is3D ? undefined : [0, 0, 0.1]}
-      >
-        <strong>{children}</strong>
-      </StyledHtml>
-    </group>
+    <HtmlOverlay3D
+      key={is3D ? "3D" : "2D"}
+      x={position.x}
+      y={position.y}
+      z={position.z}
+    >
+      <StyledHtml $color={color ?? "white"}>{children}</StyledHtml>
+    </HtmlOverlay3D>
   );
 };
 
