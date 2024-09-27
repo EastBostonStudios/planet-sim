@@ -1,5 +1,5 @@
-import { Vector2 } from "three";
-import { type IcosphereFace, icosahedron } from "./Icosahedron";
+import type { Vector2 } from "three";
+import type { IcosphereFace } from "./Icosahedron";
 
 export type Chunk = {
   index: number;
@@ -11,6 +11,7 @@ export type Chunk = {
   };
 };
 
+/*
 export const getChunks = (resolution: number): ReadonlyArray<Chunk> => {
   const rp1 = resolution + 1;
   const result = new Array<Chunk>();
@@ -18,6 +19,7 @@ export const getChunks = (resolution: number): ReadonlyArray<Chunk> => {
   for (let f = 0; f < icosahedron.faces.length; f++) {
     const face = icosahedron.faces[f];
     for (let y = 0; y < rp1; y++) {
+      // noinspection PointlessArithmeticExpressionJS
       for (let x = y + 0; x < rp1; x++) {
         const p00 = new Vector2(x / rp1, y / rp1);
         const p10 = new Vector2((x + 1) / rp1, y / rp1);
@@ -54,3 +56,4 @@ export const getChunks = (resolution: number): ReadonlyArray<Chunk> => {
   }
   return result;
 };
+*/

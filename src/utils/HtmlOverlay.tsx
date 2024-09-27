@@ -21,6 +21,7 @@ export const HtmlOverlay3D: React.FC<{
   anchor?: HtmlOverlayAnchor;
   tilt?: boolean;
   maxPixelOverlap?: number;
+  noOcclusion?: boolean;
 }> = ({
   children,
   x,
@@ -31,6 +32,7 @@ export const HtmlOverlay3D: React.FC<{
   anchor = "center",
   maxPixelOverlap = 0,
   tilt = false,
+  noOcclusion = false,
 }) => {
   //----------------------------------------------------------------------------
 
@@ -143,7 +145,9 @@ export const HtmlOverlay3D: React.FC<{
     //--------------------------------------------------------------------------
     // Occlusion culling: hide HTML Overlays behind objects in the scene
 
-    if (
+    if (noOcclusion) {
+      entry.isOcclusionCulled = false;
+    } else if (
       // Only recalculate for visible overlays
       isVisible &&
       // Only recalculate for on-screen overlays

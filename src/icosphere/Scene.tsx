@@ -12,7 +12,6 @@ import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
 import { AppContext } from "../App";
 import { HtmlOverlay3D } from "../utils/HtmlOverlay";
-import { getChunks } from "./Chunk";
 import {
   type IcosphereEdge,
   type IcosphereFace,
@@ -44,6 +43,7 @@ const StyledLabel: FC<
       x={position.x}
       y={position.y}
       z={position.z}
+      noOcclusion
     >
       <StyledHtml $color={color ?? "white"}>{children}</StyledHtml>
     </HtmlOverlay3D>
@@ -98,8 +98,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   const { is3D } = useContext(AppContext);
 
-  const tiles = useMemo(() => getTiles(resolution), [resolution]);
-  const chunks = useMemo(() => getChunks(resolution), [resolution]);
+  const { tiles, chunks } = useMemo(() => getTiles(resolution), [resolution]);
 
   const getFaceXYZs = useCallback(
     (face: IcosphereFace): [Vector3, Vector3, Vector3] => {
@@ -157,11 +156,22 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   return (
     <Fragment key={resolution}>
-      {tiles.map((tile) => (
-        <StyledLabel key={tile.index} position={getTileXYZ(tile)}>
-          t{tile.index}
-        </StyledLabel>
-      ))}
+      {tiles.map((tile) => {
+        const tilePosition = getTileXYZ(tile);
+        const points = new Array<Vector3>(tilePosition);
+        for (const neighbor of tile.neighbors) {
+          points.push(
+            new Vector3().lerpVectors(tilePosition, getTileXYZ(neighbor), 0.45),
+          );
+        }
+        points.push(tilePosition);
+        return (
+          <group key={tile.index}>
+            <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
+            {points.length > 2 && <Line points={points} lineWidth={4} />}
+          </group>
+        );
+      })}
       {chunks.map(({ index, face, faceCoords }) => {
         const [a, b, c] = getFaceXYZs(face);
         const point0 = interpolateOnFace({ a, b, c, p: faceCoords.a });

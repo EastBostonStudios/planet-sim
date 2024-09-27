@@ -1,5 +1,7 @@
 import { type Vector2, Vector3 } from "three";
 
+export const getTriangleNumber = (n: number) => (n * (n + 1)) / 2;
+
 export const interpolateOnFace = (props: {
   a: Vector3;
   b: Vector3;
