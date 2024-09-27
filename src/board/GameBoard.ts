@@ -24,6 +24,12 @@ export type GameBoardTri = {
   readonly c: GameBoardTile;
 };
 
+export type GameBoardChunk = {
+  readonly index: number;
+  readonly face: IcosphereFace;
+  readonly tris: GameBoardTri[];
+};
+
 export type GameBoardConnection = {
   readonly index: number;
   readonly start: GameBoardTile;
@@ -37,7 +43,7 @@ export class GameBoard {
 
   public readonly resolution: number;
   public readonly tiles: GameBoardTile[];
-  public readonly tris: GameBoardTri[];
+  public readonly chunks: GameBoardChunk[];
   public readonly connections: GameBoardConnection[];
 
   //----------------------------------------------------------------------------
@@ -48,15 +54,14 @@ export class GameBoard {
     this.tiles = new Array<GameBoardTile>(
       this.getFaceTileIndex(icosahedron.faces.length, 0, 0),
     );
-    this.tris = new Array<GameBoardChunk>(
-      icosahedron.faces.length *
-        ((resolution + 1) * (resolution + 1) * chunkSize * chunkSize),
+    this.chunks = new Array<GameBoardChunk>(
+      icosahedron.faces.length * ((resolution + 1) * (resolution + 1)),
     );
     // TODO: Preallocate these arrays
     this.connections = new Array<GameBoardConnection>();
 
     this.createTiles();
-    this.createTris();
+    this.createChunks();
     this.validate();
   }
 
@@ -203,6 +208,8 @@ export class GameBoard {
     ca: IcosphereEdge,
     face: IcosphereFace,
   ) => {
+    const faceChunkStartIndex =
+      face.index * getTriangleNumber(this.resolution + 1);
     const maxIJ = (this.resolution + 1) * chunkSize - 1;
     const flipAB = face.index > 14;
     const flipCA = face.index > 4;
@@ -221,33 +228,65 @@ export class GameBoard {
       return this.getFaceTile(f, i, j);
     };
 
-    let index =
-      face.index *
-      ((this.resolution + 1) * (this.resolution + 1) * chunkSize * chunkSize);
+    for (let chunkI = 0; chunkI < this.resolution + 1; chunkI++) {
+      for (let chunkJ = 0; chunkJ <= chunkI; chunkJ++) {
+        const chunkIndex =
+          faceChunkStartIndex + getTriangleNumber(chunkI) + chunkJ;
 
-    // -1 represents off of the face tiles (connecting to the edge tiles)
-    for (let i = -1; i < maxIJ; i++) {
-      for (let j = -1; j <= i; j++) {
-        if (j > -1) {
-          const pa = getTile(face, i + 1, j);
-          const pb = getTile(face, i, j);
-          const pc = getTile(face, i, j - 1);
-          this.tris[index] = { index, face, a: pa, b: pb, c: pc };
-          index++;
+        let index = 0;
+
+        // -1 represents off of the face tiles (connecting to the edge tiles)
+        for (let localI = -1; localI < chunkSize - 1; localI++) {
+          for (let localJ = -1; localJ <= localI; localJ++) {
+            const i = chunkI * chunkSize + localI;
+            const j = chunkJ * chunkSize + localJ;
+            if (j > -1) {
+              const pa = getTile(face, i + 1, j);
+              const pb = getTile(face, i, j);
+              const pc = getTile(face, i, j - 1);
+              this.chunks[chunkIndex].tris[index] = {
+                index,
+                face,
+                a: pa,
+                b: pb,
+                c: pc,
+              };
+              index++;
+            }
+            const pa = getTile(face, i, j);
+            const pb = getTile(face, i + 1, j);
+            const pc = getTile(face, i + 1, j + 1);
+            this.chunks[chunkIndex].tris[index] = {
+              index,
+              face,
+              a: pa,
+              b: pb,
+              c: pc,
+            };
+            index++;
+          }
         }
-        const pa = getTile(face, i, j);
-        const pb = getTile(face, i + 1, j);
-        const pc = getTile(face, i + 1, j + 1);
-        this.tris[index] = { index, face, a: pa, b: pb, c: pc };
-        index++;
       }
     }
   };
 
-  private readonly createTris = () => {
+  private readonly createChunks = () => {
     const f = icosahedron.faces;
     const e = icosahedron.edges;
     const p = icosahedron.points;
+
+    for (let faceIndex = 0; faceIndex < f.length; faceIndex++) {
+      const faceChunkStartIndex =
+        faceIndex * getTriangleNumber(this.resolution + 1);
+      for (let i = 0; i < this.resolution + 1; i++) {
+        for (let j = 0; j <= i; j++) {
+          const index = faceChunkStartIndex + getTriangleNumber(i) + j;
+          const face = f[faceIndex];
+          const tris = new Array(chunkSize * chunkSize);
+          this.chunks[index] = { index, face, tris };
+        }
+      }
+    }
 
     // Top row
     this.createFaceTris(p[0], p[1], p[2], e[0], e[5], e[1], f[0]);
@@ -284,7 +323,13 @@ export class GameBoard {
       "Tile indices incorrect!",
     );
     console.assert(
-      this.tris.every((chunk, i) => chunk.index === i),
+      this.chunks.every((chunk, i) => chunk.index === i),
+      "Chunk indices incorrect!",
+    );
+    console.assert(
+      this.chunks.every((chunk) =>
+        chunk.tris.every((tri, i) => tri.index === i),
+      ),
       "Tri indices incorrect!",
     );
   };

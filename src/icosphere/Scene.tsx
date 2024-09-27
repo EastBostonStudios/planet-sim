@@ -58,7 +58,7 @@ const TripleAttribute: FC<{ attribute: string; array: Float32Array }> = ({
     <bufferAttribute
       attach={`attributes-${attribute}`}
       array={array}
-      count={3}
+      count={array.length / 3}
       itemSize={3}
     />
   );
@@ -98,7 +98,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   const { is3D } = useContext(AppContext);
 
-  const { tiles, tris, connections } = useMemo(
+  const { tiles, chunks, connections } = useMemo(
     () => new GameBoard(resolution),
     [resolution],
   );
@@ -191,29 +191,28 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             />
           );
         })}
-      {tris.map(({ index, a, b, c, face }) => {
-        const p0 = getTileXYZ(a);
-        const p1 = getTileXYZ(b);
-        const p2 = getTileXYZ(c);
-        const center = new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0);
-        if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
-          return null; // TODO PAC: figure out how to wrap
+      {chunks.flatMap((chunk) => {
+        const points = new Array<Vector3>();
+        const centers = new Array<Vector3>();
+        for (const tri of chunk.tris) {
+          const p0 = getTileXYZ(tri.a);
+          const p1 = getTileXYZ(tri.b);
+          const p2 = getTileXYZ(tri.c);
+          if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
+            continue;
+          points.push(p0, p1, p2);
+          centers.push(new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0));
+        }
 
         const positions = new Float32Array(
-          [p0, p1, p2].flatMap((point) => [point.x, point.y, point.z]),
+          points.flatMap(({ x, y, z }) => [x, y, z]),
         );
-        const colors = new Float32Array(rgb.flat());
+        const colors = new Float32Array(points.flatMap(() => rgb.flat()));
         return (
-          <Fragment key={index}>
-            <Line
-              points={[center, p0, center, p1, center, p2]}
-              vertexColors={greyAndBlack}
-              lineWidth={4}
-              segments
-            />
-            {face.index === 0 && (
+          <Fragment key={chunk.index}>
+            {/*face.index === 0 && (
               <StyledLabel position={center}>t{index}</StyledLabel>
-            )}
+            )*/}
             <mesh>
               <bufferGeometry>
                 <TripleAttribute attribute="position" array={positions} />
