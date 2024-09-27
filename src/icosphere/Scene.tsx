@@ -43,7 +43,7 @@ const StyledLabel: FC<
       x={position.x}
       y={position.y}
       z={position.z}
-      noOcclusion={!is3D}
+      noOcclusion
     >
       <StyledHtml $color={color ?? "white"}>{children}</StyledHtml>
     </HtmlOverlay3D>
@@ -191,7 +191,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             />
           );
         })}
-      {tris.map(({ index, a, b, c }) => {
+      {tris.map(({ index, a, b, c, face }) => {
         const p0 = getTileXYZ(a);
         const p1 = getTileXYZ(b);
         const p2 = getTileXYZ(c);
@@ -211,13 +211,15 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
               lineWidth={4}
               segments
             />
+            {face.index === 0 && (
+              <StyledLabel position={center}>t{index}</StyledLabel>
+            )}
             <mesh>
               <bufferGeometry>
                 <TripleAttribute attribute="position" array={positions} />
                 <TripleAttribute attribute="color" array={colors} />
               </bufferGeometry>
               <meshBasicMaterial
-                opacity={0.25}
                 vertexColors={true}
                 transparent={true}
                 polygonOffset={true}
@@ -239,55 +241,59 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           p{point.index}
         </StyledLabel>
       ))}
-      {icosahedron.edges.map((edge) => {
-        const [start, end] = getEdgeXYZs(edge);
-        return (
-          <Fragment key={edge.index}>
-            <StyledLabel position={new Vector3().lerpVectors(start, end, 0.5)}>
-              e{edge.index}
-            </StyledLabel>
-            <Line
-              points={[start, end]}
-              vertexColors={greyAndBlack}
-              lineWidth={4}
-              segments
-            />
-          </Fragment>
-        );
-      })}
-      {icosahedron.faces.map((face) => {
-        const facePoints = getFaceXYZs(face);
-        const faceCenter = new Vector3()
-          .add(facePoints[0])
-          .add(facePoints[1])
-          .add(facePoints[2])
-          .divideScalar(3.0);
-        return (
-          <group key={face.index}>
-            <StyledLabel position={faceCenter}>f{face.index}</StyledLabel>
-            {facePoints.map((point, i) => (
+      {false &&
+        icosahedron.edges.map((edge) => {
+          const [start, end] = getEdgeXYZs(edge);
+          return (
+            <Fragment key={edge.index}>
               <StyledLabel
-                key={`${point.x},${point.y}${point.z}`}
-                position={point.clone().lerp(faceCenter, 0.2)}
+                position={new Vector3().lerpVectors(start, end, 0.5)}
               >
-                {i === 0 ? "a" : i === 1 ? "b" : "c"}
+                e{edge.index}
               </StyledLabel>
-            ))}
-            {false && (
               <Line
-                points={[...facePoints, facePoints[0]].map((point) =>
-                  point.clone().lerp(faceCenter, 0.2),
-                )}
-                vertexColors={[...rgb, rgb[0]]}
+                points={[start, end]}
+                vertexColors={greyAndBlack}
                 lineWidth={4}
-                dashed={face.wrapsMeridian}
-                dashSize={0.01}
-                gapSize={0.01}
+                segments
               />
-            )}
-          </group>
-        );
-      })}
+            </Fragment>
+          );
+        })}
+      {false &&
+        icosahedron.faces.map((face) => {
+          const facePoints = getFaceXYZs(face);
+          const faceCenter = new Vector3()
+            .add(facePoints[0])
+            .add(facePoints[1])
+            .add(facePoints[2])
+            .divideScalar(3.0);
+          return (
+            <group key={face.index}>
+              <StyledLabel position={faceCenter}>f{face.index}</StyledLabel>
+              {facePoints.map((point, i) => (
+                <StyledLabel
+                  key={`${point.x},${point.y}${point.z}`}
+                  position={point.clone().lerp(faceCenter, 0.2)}
+                >
+                  {i === 0 ? "a" : i === 1 ? "b" : "c"}
+                </StyledLabel>
+              ))}
+              {false && (
+                <Line
+                  points={[...facePoints, facePoints[0]].map((point) =>
+                    point.clone().lerp(faceCenter, 0.2),
+                  )}
+                  vertexColors={[...rgb, rgb[0]]}
+                  lineWidth={4}
+                  dashed={face.wrapsMeridian}
+                  dashSize={0.01}
+                  gapSize={0.01}
+                />
+              )}
+            </group>
+          );
+        })}
     </Fragment>
   );
 };

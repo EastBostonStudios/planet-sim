@@ -67,3 +67,51 @@ export type GameBoardChunk = {
         }
       }
     }
+
+  //----------------------------------------------------------------------------
+
+  /*
+  private readonly createConnections = () => {
+    for (let edgeIndex = 0; edgeIndex < 30; edgeIndex++) {
+      for (let i = 1; i < (this.resolution + 1) * 5; i++) {
+        const index =
+            12 + edgeIndex * ((this.resolution + 1) * 5 - 1) + (i - 1);
+        const start = i === 1 ? null : this.tiles[index];
+        const end =
+            i === (this.resolution + 1) * 5 - 1 ? null : this.tiles[index + 1];
+        if (!!start && !!end) this.connections.push({ index, start, end });
+      }
+    }
+  };
+
+  private readonly addNeighbor = (
+    tile: GameBoardTile,
+    i: number,
+    j: number,
+  ) => {
+    const neighbor = this.getFaceTile(tile.face.index, i, j);
+    return tile.neighbors.push(neighbor);
+  };
+
+  private readonly stitchFaceTiles = (face: IcosphereFace) => {
+    for (let i = 0; i < (this.resolution + 1) * 5 - 1; i++) {
+      const isAtMinI = i === 0;
+      const isAtMaxI = i === (this.resolution + 1) * 5 - 2;
+      for (let j = 0; j < i - 1; j++) {
+        const isAtMinJ = j === 0;
+        const isAtMaxJ = j === i - 1;
+        const tile = this.getFaceTile(face.index, i, j);
+        if (!isAtMinI) {
+          this.addNeighbor(tile, i - 1, j);
+          if (!isAtMinJ) this.addNeighbor(tile, i - 1, j - 1);
+        }
+        if (!isAtMinJ) this.addNeighbor(tile, i, j - 1);
+        if (!isAtMaxI) {
+          this.addNeighbor(tile, i + 1, j);
+          if (!isAtMaxJ) this.addNeighbor(tile, i + 1, j + 1);
+        }
+        if (!isAtMaxI) this.addNeighbor(tile, i, j + 1);
+      }
+    }
+  };
+  */

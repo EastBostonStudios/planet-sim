@@ -7,6 +7,8 @@ import {
 } from "../icosphere/Icosahedron";
 import { getTriangleNumber } from "../icosphere/utils";
 
+const chunkSize = 5;
+
 export type GameBoardTile = {
   readonly index: number;
   readonly face: IcosphereFace;
@@ -46,8 +48,9 @@ export class GameBoard {
     this.tiles = new Array<GameBoardTile>(
       this.getFaceTileIndex(icosahedron.faces.length, 0, 0),
     );
-    this.tris = new Array<GameBoardTri>(
-      icosahedron.faces.length * ((resolution + 1) * (resolution + 1) * 25),
+    this.tris = new Array<GameBoardChunk>(
+      icosahedron.faces.length *
+        ((resolution + 1) * (resolution + 1) * chunkSize * chunkSize),
     );
     // TODO: Preallocate these arrays
     this.connections = new Array<GameBoardConnection>();
@@ -55,24 +58,14 @@ export class GameBoard {
     this.createTiles();
     this.createTris();
     this.validate();
-    // this.createConnections();
-
-    // for (let f = 0; f < icosahedron.faces.length; f++) {
-    //  this.stitchFaceTiles(icosahedron.faces[f]);
-    //}
-
-    // stitchEdgeTiles(0, tiles[0], tiles[1], resolutionPlus1, tiles);
-    // stitchEdgeTiles(1, tiles[0], tiles[2], 0, 1, resolutionPlus1, tiles);
-    // stitchEdgeTiles(2, tiles[0], tiles[3], resolutionPlus1, tiles);
-    // stitchEdgeTiles(3, tiles[0], tiles[4], resolutionPlus1, tiles);
   }
 
   //----------------------------------------------------------------------------
 
   private readonly getEdgeTileIndex = (edgeIndex: number, i: number) => {
-    if (i < 0 || i > (this.resolution + 1) * 5)
+    if (i < 0 || i > (this.resolution + 1) * chunkSize)
       throw new Error(`${i} out of bounds!`);
-    return 12 + edgeIndex * ((this.resolution + 1) * 5 - 1) + (i - 1);
+    return 12 + edgeIndex * ((this.resolution + 1) * chunkSize - 1) + (i - 1);
   };
 
   private readonly getFaceTileIndex = (
@@ -80,14 +73,14 @@ export class GameBoard {
     i: number,
     j: number,
   ) => {
-    if (i < 0 || i > (this.resolution + 1) * 5 - 2)
+    if (i < 0 || i > (this.resolution + 1) * chunkSize - 2)
       throw new Error(`(${i}, ${j}) out of bounds!`);
-    if (j < 0 || j > i || j > (this.resolution + 1) * 5 - 2)
+    if (j < 0 || j > i || j > (this.resolution + 1) * chunkSize - 2)
       throw new Error(`(${i}, ${j}) out of bounds!`);
     return (
       12 +
-      30 * ((this.resolution + 1) * 5 - 1) +
-      faceIndex * getTriangleNumber((this.resolution + 1) * 5 - 2) +
+      30 * ((this.resolution + 1) * chunkSize - 1) +
+      faceIndex * getTriangleNumber((this.resolution + 1) * chunkSize - 2) +
       getTriangleNumber(i - 1) +
       j
     );
@@ -114,9 +107,9 @@ export class GameBoard {
     face: IcosphereFace,
     useBCEdge: boolean,
   ) => {
-    for (let i = 1; i < (this.resolution + 1) * 5; i++) {
+    for (let i = 1; i < (this.resolution + 1) * chunkSize; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
-      const s = i / ((this.resolution + 1) * 5.0);
+      const s = i / ((this.resolution + 1) * chunkSize);
       const faceCoords = useBCEdge
         ? new Vector2(1.0 - s, 1.0 - s)
         : new Vector2(s, 0.0);
@@ -125,11 +118,11 @@ export class GameBoard {
   };
 
   private readonly createFaceTiles = (face: IcosphereFace) => {
-    for (let i = 0; i < (this.resolution + 1) * 5 - 1; i++) {
+    for (let i = 0; i < (this.resolution + 1) * chunkSize - 1; i++) {
       for (let j = 0; j < i; j++) {
         const index = this.getFaceTileIndex(face.index, i, j);
-        const s = (i + 1.0) / ((this.resolution + 1) * 5.0);
-        const t = (j + 1.0) / ((this.resolution + 1) * 5.0);
+        const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
+        const t = (j + 1.0) / ((this.resolution + 1) * chunkSize);
         this.createTile(index, face, new Vector2(s, t));
       }
     }
@@ -210,7 +203,7 @@ export class GameBoard {
     ca: IcosphereEdge,
     face: IcosphereFace,
   ) => {
-    const maxIJ = (this.resolution + 1) * 5 - 1;
+    const maxIJ = (this.resolution + 1) * chunkSize - 1;
     const flipAB = face.index > 14;
     const flipCA = face.index > 4;
 
@@ -229,7 +222,8 @@ export class GameBoard {
     };
 
     let index =
-      face.index * ((this.resolution + 1) * (this.resolution + 1) * 25);
+      face.index *
+      ((this.resolution + 1) * (this.resolution + 1) * chunkSize * chunkSize);
 
     // -1 represents off of the face tiles (connecting to the edge tiles)
     for (let i = -1; i < maxIJ; i++) {
@@ -281,54 +275,6 @@ export class GameBoard {
     this.createFaceTris(p[11], p[10], p[9], e[29], e[23], e[28], f[18]);
     this.createFaceTris(p[11], p[6], p[10], e[25], e[24], e[29], f[19]);
   };
-
-  //----------------------------------------------------------------------------
-
-  /*
-  private readonly createConnections = () => {
-    for (let edgeIndex = 0; edgeIndex < 30; edgeIndex++) {
-      for (let i = 1; i < (this.resolution + 1) * 5; i++) {
-        const index =
-            12 + edgeIndex * ((this.resolution + 1) * 5 - 1) + (i - 1);
-        const start = i === 1 ? null : this.tiles[index];
-        const end =
-            i === (this.resolution + 1) * 5 - 1 ? null : this.tiles[index + 1];
-        if (!!start && !!end) this.connections.push({ index, start, end });
-      }
-    }
-  };
-
-  private readonly addNeighbor = (
-    tile: GameBoardTile,
-    i: number,
-    j: number,
-  ) => {
-    const neighbor = this.getFaceTile(tile.face.index, i, j);
-    return tile.neighbors.push(neighbor);
-  };
-
-  private readonly stitchFaceTiles = (face: IcosphereFace) => {
-    for (let i = 0; i < (this.resolution + 1) * 5 - 1; i++) {
-      const isAtMinI = i === 0;
-      const isAtMaxI = i === (this.resolution + 1) * 5 - 2;
-      for (let j = 0; j < i - 1; j++) {
-        const isAtMinJ = j === 0;
-        const isAtMaxJ = j === i - 1;
-        const tile = this.getFaceTile(face.index, i, j);
-        if (!isAtMinI) {
-          this.addNeighbor(tile, i - 1, j);
-          if (!isAtMinJ) this.addNeighbor(tile, i - 1, j - 1);
-        }
-        if (!isAtMinJ) this.addNeighbor(tile, i, j - 1);
-        if (!isAtMaxI) {
-          this.addNeighbor(tile, i + 1, j);
-          if (!isAtMaxJ) this.addNeighbor(tile, i + 1, j + 1);
-        }
-        if (!isAtMaxI) this.addNeighbor(tile, i, j + 1);
-      }
-    }
-  };
-  */
 
   //----------------------------------------------------------------------------
 
