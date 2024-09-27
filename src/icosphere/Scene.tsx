@@ -11,7 +11,7 @@ import React, {
 import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
 import { AppContext } from "../App";
-import { GameBoard, type GameTile } from "../board/GameBoard";
+import { GameBoard, type GameBoardTile } from "../board/GameBoard";
 import { HtmlOverlay3D } from "../utils/HtmlOverlay";
 import {
   type IcosphereEdge,
@@ -43,7 +43,7 @@ const StyledLabel: FC<
       x={position.x}
       y={position.y}
       z={position.z}
-      noOcclusion
+      noOcclusion={!is3D}
     >
       <StyledHtml $color={color ?? "white"}>{children}</StyledHtml>
     </HtmlOverlay3D>
@@ -98,7 +98,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   const { is3D } = useContext(AppContext);
 
-  const { tiles, chunks } = useMemo(
+  const { tiles, tris, connections } = useMemo(
     () => new GameBoard(resolution),
     [resolution],
   );
@@ -148,7 +148,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   );
 
   const getTileXYZ = useCallback(
-    (tile: GameTile): Vector3 => {
+    (tile: GameBoardTile): Vector3 => {
       const [a, b, c] = getFaceXYZs(tile.face);
       return interpolateOnFace({ a, b, c, p: tile.faceCoords });
     },
@@ -159,37 +159,56 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   return (
     <Fragment key={resolution}>
-      {tiles.map((tile) => {
-        const tilePosition = getTileXYZ(tile);
-        const points = new Array<Vector3>();
+      {false &&
+        tiles.map((tile) => {
+          const tilePosition = getTileXYZ(tile);
+          const points = new Array<Vector3>();
+          /*
         for (const neighbor of tile.neighbors) {
           points.push(
             new Vector3().lerpVectors(tilePosition, getTileXYZ(neighbor), 0.45),
           );
         }
         if (points.length > 0) points.push(points[0], tilePosition);
-        return (
-          <group key={tile.index}>
-            <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
-            {points.length > 0 && <Line points={points} lineWidth={4} />}
-          </group>
-        );
-      })}
-      {chunks.map(({ index, face, faceCoords }) => {
-        const [a, b, c] = getFaceXYZs(face);
-        const point0 = interpolateOnFace({ a, b, c, p: faceCoords.a });
-        const point1 = interpolateOnFace({ a, b, c, p: faceCoords.b });
-        const point2 = interpolateOnFace({ a, b, c, p: faceCoords.c });
+        */
+          return (
+            <group key={tile.index}>
+              <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
+              {points.length > 0 && <Line points={points} lineWidth={4} />}
+            </group>
+          );
+        })}
+      {false &&
+        connections.map((connection) => {
+          const start = getTileXYZ(connection.start);
+          const end = getTileXYZ(connection.end);
+          return (
+            <Line
+              key={`${connection.start.index}-${connection.end.index}`}
+              points={[start, end]}
+              vertexColors={greyAndBlack}
+              lineWidth={4}
+            />
+          );
+        })}
+      {tris.map(({ index, a, b, c }) => {
+        const p0 = getTileXYZ(a);
+        const p1 = getTileXYZ(b);
+        const p2 = getTileXYZ(c);
+        const center = new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0);
+
         const positions = new Float32Array(
-          [point0, point1, point2].flatMap((point) => [
-            point.x,
-            point.y,
-            point.z,
-          ]),
+          [p0, p1, p2].flatMap((point) => [point.x, point.y, point.z]),
         );
-        const colors = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+        const colors = new Float32Array(rgb.flat());
         return (
           <Fragment key={index}>
+            <Line
+              points={[center, p0, center, p1, center, p2]}
+              vertexColors={greyAndBlack}
+              lineWidth={4}
+              segments
+            />
             <mesh>
               <bufferGeometry>
                 <TripleAttribute attribute="position" array={positions} />
@@ -213,12 +232,11 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           </Fragment>
         );
       })}
-      {false &&
-        icosahedron.points.map((point) => (
-          <StyledLabel key={point.index} position={getPointXYZ(point)}>
-            p{point.index}
-          </StyledLabel>
-        ))}
+      {icosahedron.points.map((point) => (
+        <StyledLabel key={point.index} position={getPointXYZ(point)}>
+          p{point.index}
+        </StyledLabel>
+      ))}
       {false &&
         icosahedron.edges.map((edge) => {
           const [start, end] = getEdgeXYZs(edge);
@@ -238,38 +256,37 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             </Fragment>
           );
         })}
-      {false &&
-        icosahedron.faces.map((face) => {
-          const facePoints = getFaceXYZs(face);
-          const faceCenter = new Vector3()
-            .add(facePoints[0])
-            .add(facePoints[1])
-            .add(facePoints[2])
-            .divideScalar(3.0);
-          return (
-            <group key={face.index}>
-              <StyledLabel position={faceCenter}>f{face.index}</StyledLabel>
-              {facePoints.map((point, i) => (
-                <StyledLabel
-                  key={`${point.x},${point.y}${point.z}`}
-                  position={point.clone().lerp(faceCenter, 0.2)}
-                >
-                  {i === 0 ? "a" : i === 1 ? "b" : "c"}
-                </StyledLabel>
-              ))}
-              <Line
-                points={[...facePoints, facePoints[0]].map((point) =>
-                  point.clone().lerp(faceCenter, 0.2),
-                )}
-                vertexColors={[...rgb, rgb[0]]}
-                lineWidth={4}
-                dashed={face.wrapsMeridian}
-                dashSize={0.01}
-                gapSize={0.01}
-              />
-            </group>
-          );
-        })}
+      {icosahedron.faces.map((face) => {
+        const facePoints = getFaceXYZs(face);
+        const faceCenter = new Vector3()
+          .add(facePoints[0])
+          .add(facePoints[1])
+          .add(facePoints[2])
+          .divideScalar(3.0);
+        return (
+          <group key={face.index}>
+            <StyledLabel position={faceCenter}>f{face.index}</StyledLabel>
+            {facePoints.map((point, i) => (
+              <StyledLabel
+                key={`${point.x},${point.y}${point.z}`}
+                position={point.clone().lerp(faceCenter, 0.2)}
+              >
+                {i === 0 ? "a" : i === 1 ? "b" : "c"}
+              </StyledLabel>
+            ))}
+            <Line
+              points={[...facePoints, facePoints[0]].map((point) =>
+                point.clone().lerp(faceCenter, 0.2),
+              )}
+              vertexColors={[...rgb, rgb[0]]}
+              lineWidth={4}
+              dashed={face.wrapsMeridian}
+              dashSize={0.01}
+              gapSize={0.01}
+            />
+          </group>
+        );
+      })}
     </Fragment>
   );
 };

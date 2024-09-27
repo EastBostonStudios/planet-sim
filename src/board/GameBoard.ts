@@ -2,21 +2,25 @@ import { Vector2 } from "three";
 import { type IcosphereFace, icosahedron } from "../icosphere/Icosahedron";
 import { getTriangleNumber } from "../icosphere/utils";
 
-export type GameTile = {
+export type GameBoardTile = {
   readonly index: number;
   readonly face: IcosphereFace;
-  readonly neighbors: GameTile[];
+  readonly neighbors: GameBoardTile[];
   readonly faceCoords: Vector2;
 };
 
-export type GameChunk = {
+export type GameBoardTri = {
   readonly index: number;
   readonly face: IcosphereFace;
-  readonly faceCoords: {
-    readonly a: Vector2;
-    readonly b: Vector2;
-    readonly c: Vector2;
-  };
+  readonly a: GameBoardTile;
+  readonly b: GameBoardTile;
+  readonly c: GameBoardTile;
+};
+
+export type GameBoardConnection = {
+  readonly index: number;
+  readonly start: GameBoardTile;
+  readonly end: GameBoardTile;
 };
 
 //------------------------------------------------------------------------------
@@ -25,25 +29,29 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   public readonly resolution: number;
-  public readonly tiles: GameTile[];
-  public readonly chunks: GameChunk[];
+  public readonly tiles: GameBoardTile[];
+  public readonly tris: GameBoardTri[];
+  public readonly connections: GameBoardConnection[];
 
   //----------------------------------------------------------------------------
 
   public constructor(resolution: number) {
     this.resolution = resolution;
-    this.tiles = new Array<GameTile>(
+    this.tiles = new Array<GameBoardTile>(
       // Preallocate space for all the tiles
       this.getFaceTileIndex(icosahedron.faces.length, 0, 0),
     );
-    this.chunks = new Array<GameChunk>();
+    // TODO: Preallocate these arrays
+    this.tris = new Array<GameBoardTri>();
+    this.connections = new Array<GameBoardConnection>();
 
     this.createTiles();
-    this.createChunks();
+    this.createTris();
+    // this.createConnections();
 
-    for (let f = 0; f < icosahedron.faces.length; f++) {
-      this.stitchFaceTiles(icosahedron.faces[f]);
-    }
+    // for (let f = 0; f < icosahedron.faces.length; f++) {
+    //  this.stitchFaceTiles(icosahedron.faces[f]);
+    //}
 
     // stitchEdgeTiles(0, tiles[0], tiles[1], resolutionPlus1, tiles);
     // stitchEdgeTiles(1, tiles[0], tiles[2], 0, 1, resolutionPlus1, tiles);
@@ -55,8 +63,8 @@ export class GameBoard {
       "Tile indices incorrect!",
     );
     console.assert(
-      this.chunks.every((chunk, i) => chunk.index === i),
-      "Chunk indices incorrect!",
+      this.tris.every((chunk, i) => chunk.index === i),
+      "Tri indices incorrect!",
     );
   }
 
@@ -178,9 +186,26 @@ export class GameBoard {
     }
   };
 
+  private readonly createConnections = () => {
+    for (let edgeIndex = 0; edgeIndex < 30; edgeIndex++) {
+      for (let i = 1; i < (this.resolution + 1) * 5; i++) {
+        const index =
+          12 + edgeIndex * ((this.resolution + 1) * 5 - 1) + (i - 1);
+        const start = i === 1 ? null : this.tiles[index];
+        const end =
+          i === (this.resolution + 1) * 5 - 1 ? null : this.tiles[index + 1];
+        if (!!start && !!end) this.connections.push({ index, start, end });
+      }
+    }
+  };
+
   //----------------------------------------------------------------------------
 
-  private readonly addNeighbor = (tile: GameTile, i: number, j: number) => {
+  private readonly addNeighbor = (
+    tile: GameBoardTile,
+    i: number,
+    j: number,
+  ) => {
     const neighborIndex = this.getFaceTileIndex(tile.face.index, i, j);
     const neighbor = this.tiles[neighborIndex];
     return tile.neighbors.push(neighbor);
@@ -210,83 +235,57 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
-  private readonly createChunks = () => {
-    let index = 0;
-    for (let f = 0; f < icosahedron.faces.length; f++) {
-      const face = icosahedron.faces[f];
-      for (let y = 0; y < this.resolution + 1; y++) {
-        // noinspection PointlessArithmeticExpressionJS
-        for (let x = y + 0; x < this.resolution + 1; x++) {
-          const p00 = new Vector2(
-            x / (this.resolution + 1.0),
-            y / (this.resolution + 1.0),
-          );
-          const p10 = new Vector2(
-            (x + 1.0) / (this.resolution + 1.0),
-            y / (this.resolution + 1.0),
-          );
-          const p11 = new Vector2(
-            (x + 1) / (this.resolution + 1.0),
-            (y + 1) / (this.resolution + 1.0),
-          );
-          const mod = index % 3;
-          this.chunks.push({
-            index: index++,
-            face,
-            faceCoords:
-              mod === 0
-                ? { a: p00, b: p10, c: p11 }
-                : mod === 1
-                  ? { a: p11, b: p00, c: p10 }
-                  : { a: p10, b: p11, c: p00 },
-          });
+  private readonly createTris = () => {
+    const getTile = (f: number, i: number, j: number) => {
+      const maxIJ = (this.resolution + 1) * 5 - 2;
+      if (i === -1 && j === -1) {
+        if (f < 4) return this.tiles[0];
+        return null;
+      }
+      if (i === -1 && j === maxIJ) return null;
+      if (i === maxIJ && j === -1) return null;
+      if (i === maxIJ && j === maxIJ) return null;
+
+      if (j === i) {
+        if (f < 4) {
+          const e = f + 1;
+          return this.tiles[this.getEdgeTileIndex(e, j + 1)];
         }
-        for (let x = y + 1; x < this.resolution + 1; x++) {
-          const p00 = new Vector2(
-            x / (this.resolution + 1.0),
-            y / (this.resolution + 1.0),
-          );
-          const p01 = new Vector2(
-            x / (this.resolution + 1.0),
-            (y + 1.0) / (this.resolution + 1.0),
-          );
-          const p11 = new Vector2(
-            (x + 1.0) / (this.resolution + 1.0),
-            (y + 1.0) / (this.resolution + 1.0),
-          );
-          const mod = index % 3;
-          this.chunks.push({
-            index: index++,
-            face,
-            faceCoords:
-              mod === 0
-                ? { a: p11, b: p01, c: p00 }
-                : mod === 1
-                  ? { a: p00, b: p11, c: p01 }
-                  : { a: p01, b: p00, c: p11 },
-          });
+        return null;
+      }
+      if (i < 0 || j < 0) {
+        if (f < 5) {
+          const e = f;
+          return this.tiles[this.getEdgeTileIndex(e, i + 1)];
+        }
+        return null;
+      }
+      if (i > maxIJ || j > maxIJ) {
+        return null;
+      }
+      return this.tiles[this.getFaceTileIndex(f, i, j)];
+    };
+
+    for (let f = 0; f < icosahedron.faces.length; f++) {
+      // -1 represents off of the face tiles (connecting to the edge tiles)
+      for (let i = -1; i < (this.resolution + 1) * 5 - 1; i++) {
+        for (let j = -1; j <= i; j++) {
+          if (j > -1) {
+            const index = this.tris.length;
+            const a = getTile(f, i + 1, j);
+            const b = getTile(f, i, j);
+            const c = getTile(f, i, j - 1);
+            if (a && b && c)
+              this.tris.push({ index, face: icosahedron.faces[f], a, b, c });
+          }
+          const index = this.tris.length;
+          const a = getTile(f, i, j);
+          const b = getTile(f, i + 1, j);
+          const c = getTile(f, i + 1, j + 1);
+          if (a && b && c)
+            this.tris.push({ index, face: icosahedron.faces[f], a, b, c });
         }
       }
     }
   };
 }
-
-/*
-const stitchEdgeTiles = (
-  edgeIndex: number,
-  startTile: Tile,
-  endTile: Tile,
-  leftFace: number,
-  rightFace: number,
-  resolutionPlus1: number,
-  tiles: Array<Tile>,
-) => {
-  for (let i = 1; i < resolutionPlus1 * 5; i++) {
-    const index = 12 + edgeIndex * (resolutionPlus1 * 5 - 1) + (i - 1);
-    const back = i === 1 ? startTile : tiles[index - 1];
-
-    const front = i === resolutionPlus1 * 5 - 1 ? endTile : tiles[index + 1];
-    tiles[index].neighbors.push(back, front);
-  }
-};
-*/
