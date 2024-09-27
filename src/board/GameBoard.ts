@@ -45,8 +45,11 @@ export class GameBoard {
       // Preallocate space for all the tiles
       this.getFaceTileIndex(icosahedron.faces.length, 0, 0),
     );
+    this.tris = new Array<GameBoardTri>(
+      // Preallocate space for all the tris
+      icosahedron.faces.length * ((resolution + 1) * (resolution + 1) * 25),
+    );
     // TODO: Preallocate these arrays
-    this.tris = new Array<GameBoardTri>();
     this.connections = new Array<GameBoardConnection>();
 
     this.createTiles();
@@ -283,21 +286,24 @@ export class GameBoard {
       return this.tiles[this.getFaceTileIndex(f, i, j)];
     };
 
+    let index =
+      face.index * ((this.resolution + 1) * (this.resolution + 1) * 25);
+
     // -1 represents off of the face tiles (connecting to the edge tiles)
     for (let i = -1; i < (this.resolution + 1) * 5 - 1; i++) {
       for (let j = -1; j <= i; j++) {
         if (j > -1) {
-          const index = this.tris.length;
           const a = getTile(face.index, i + 1, j, flipAB, flipBC);
           const b = getTile(face.index, i, j, flipAB, flipBC);
           const c = getTile(face.index, i, j - 1, flipAB, flipBC);
-          if (a && b && c) this.tris.push({ index, face, a, b, c });
+          this.tris[index] = { index, face, a, b, c };
+          index++;
         }
-        const index = this.tris.length;
         const a = getTile(face.index, i, j, flipAB, flipBC);
         const b = getTile(face.index, i + 1, j, flipAB, flipBC);
         const c = getTile(face.index, i + 1, j + 1, flipAB, flipBC);
-        if (a && b && c) this.tris.push({ index, face, a, b, c });
+        this.tris[index] = { index, face, a, b, c };
+        index++;
       }
     }
   };
