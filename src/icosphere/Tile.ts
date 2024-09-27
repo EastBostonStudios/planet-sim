@@ -24,14 +24,15 @@ const getFaceTileIndex = (
   i: number,
   j: number,
 ) => {
-  if (i < 1 || i >= resolutionPlus1 * 5)
+  const faceInnerLength = resolutionPlus1 * 5 - 2;
+  if (i < 0 || i > faceInnerLength)
     throw new Error(`(${i}, ${j}) out of bounds!`);
-  if (j < 1 || j > i || j >= resolutionPlus1 * 5)
+  if (j < 0 || j > i || j > faceInnerLength)
     throw new Error(`(${i}, ${j}) out of bounds!`);
   return (
-    getEdgeTileIndex(resolutionPlus1, 30, 0) +
-    face.index * getTriangleNumber(resolutionPlus1 * 5 - 2) +
-    getTriangleNumber(i - 2) +
+    getEdgeTileIndex(resolutionPlus1, 30, 1) +
+    face.index * getTriangleNumber(faceInnerLength) +
+    getTriangleNumber(i - 1) +
     j
   );
 };
@@ -87,11 +88,11 @@ const createFaceTiles = (
   face: IcosphereFace,
 ) => {
   // console.log("face", face.index);
-  for (let i = 1; i < resolutionPlus1 * 5; i++) {
-    for (let j = 1; j < i; j++) {
+  for (let i = 0; i < resolutionPlus1 * 5 - 1; i++) {
+    for (let j = 0; j < i; j++) {
       const index = getFaceTileIndex(resolutionPlus1, face, i, j);
-      const s = i / (resolutionPlus1 * 5.0);
-      const t = j / (resolutionPlus1 * 5.0);
+      const s = (i + 1.0) / (resolutionPlus1 * 5.0);
+      const t = (j + 1.0) / (resolutionPlus1 * 5.0);
       // console.log(index, "vs", tiles.length);
       tiles.push(createTile(index, face, new Vector2(s, t)));
     }
@@ -116,11 +117,11 @@ const stitchFaceTiles = (
   resolutionPlus1: number,
   face: IcosphereFace,
 ) => {
-  for (let i = 1; i < resolutionPlus1 * 5; i++) {
-    const isAtMinI = i === 1;
-    const isAtMaxI = i === resolutionPlus1 * 5 - 1;
-    for (let j = 1; j < i - 1 /*TODO PAC: drop the -1?*/; j++) {
-      const isAtMinJ = j === 1;
+  for (let i = 0; i < resolutionPlus1 * 5 - 1; i++) {
+    const isAtMinI = i === 0;
+    const isAtMaxI = i === resolutionPlus1 * 5 - 2;
+    for (let j = 0; j < i - 1; j++) {
+      const isAtMinJ = j === 0;
       const isAtMaxJ = j === i - 1;
 
       const tile = tiles[getFaceTileIndex(resolutionPlus1, face, i, j)];
@@ -248,7 +249,22 @@ export const getTiles = (
   createEdgeTiles(28, tiles, resolutionPlus1, icosahedron.faces[18], true);
   createEdgeTiles(29, tiles, resolutionPlus1, icosahedron.faces[19], true);
 
+  false &&
+    console.log(
+      "edges",
+      getEdgeTileIndex(resolutionPlus1, 30, 0),
+      "vs",
+      tiles.length,
+    );
+
   for (let f = 0; f < icosahedron.faces.length; f++) {
+    false &&
+      console.log(
+        "faces",
+        getFaceTileIndex(resolutionPlus1, icosahedron.faces[f], 0, 0) + 1,
+        "vs",
+        tiles.length,
+      );
     createFaceTiles(tiles, resolutionPlus1, icosahedron.faces[f]);
   }
 
