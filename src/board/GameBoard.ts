@@ -2,6 +2,7 @@ import { Vector2 } from "three";
 import {
   type IcosphereEdge,
   type IcosphereFace,
+  type IcospherePoint,
   icosahedron,
 } from "../icosphere/Icosahedron";
 import { getTriangleNumber } from "../icosphere/utils";
@@ -98,6 +99,14 @@ export class GameBoard {
     );
   };
 
+  private readonly getEdgeTile = (edgeIndex: number, i: number) =>
+    this.tiles[this.getEdgeTileIndex(edgeIndex, i)];
+
+  private readonly getFaceTile = (faceIndex: number, i: number, j: number) =>
+    this.tiles[this.getFaceTileIndex(faceIndex, i, j)];
+
+  //----------------------------------------------------------------------------
+
   private readonly createTile = (
     index: number,
     face: IcosphereFace,
@@ -193,28 +202,116 @@ export class GameBoard {
     }
   };
 
-  private readonly createConnections = () => {
-    for (let edgeIndex = 0; edgeIndex < 30; edgeIndex++) {
-      for (let i = 1; i < (this.resolution + 1) * 5; i++) {
-        const index =
-          12 + edgeIndex * ((this.resolution + 1) * 5 - 1) + (i - 1);
-        const start = i === 1 ? null : this.tiles[index];
-        const end =
-          i === (this.resolution + 1) * 5 - 1 ? null : this.tiles[index + 1];
-        if (!!start && !!end) this.connections.push({ index, start, end });
+  //----------------------------------------------------------------------------
+
+  private readonly createFaceTris = (
+    a: IcospherePoint,
+    b: IcospherePoint,
+    c: IcospherePoint,
+    ab: IcosphereEdge,
+    bc: IcosphereEdge,
+    ca: IcosphereEdge,
+    face: IcosphereFace,
+  ) => {
+    const maxIJ = (this.resolution + 1) * 5 - 1;
+
+    const flipAB = face.index > 14;
+    const flipBC = face.index > 4;
+
+    const getTile = (f: number, i: number, j: number): GameBoardTile => {
+      // Corners
+      if (i === -1 && j === -1) return this.tiles[a.index];
+      if (i === maxIJ && j === -1) return this.tiles[b.index];
+      if (i === maxIJ && j === maxIJ) return this.tiles[c.index];
+
+      // a -> b
+      if (j < 0) return this.getEdgeTile(ab.index, flipAB ? maxIJ - i : i + 1);
+      // b -> c
+      if (i === maxIJ) return this.getEdgeTile(bc.index, maxIJ - j);
+      // c -> a
+      if (j === i)
+        return this.getEdgeTile(ca.index, flipBC ? maxIJ - j : j + 1);
+
+      // Default case
+      return this.getFaceTile(f, i, j);
+    };
+
+    let index =
+      face.index * ((this.resolution + 1) * (this.resolution + 1) * 25);
+
+    // -1 represents off of the face tiles (connecting to the edge tiles)
+    for (let i = -1; i < maxIJ; i++) {
+      for (let j = -1; j <= i; j++) {
+        if (j > -1) {
+          const pa = getTile(face.index, i + 1, j);
+          const pb = getTile(face.index, i, j);
+          const pc = getTile(face.index, i, j - 1);
+          this.tris[index] = { index, face, a: pa, b: pb, c: pc };
+          index++;
+        }
+        const pa = getTile(face.index, i, j);
+        const pb = getTile(face.index, i + 1, j);
+        const pc = getTile(face.index, i + 1, j + 1);
+        this.tris[index] = { index, face, a: pa, b: pb, c: pc };
+        index++;
       }
     }
   };
 
+  private readonly createTris = () => {
+    const f = icosahedron.faces;
+    const e = icosahedron.edges;
+    const p = icosahedron.points;
+
+    // Top row
+    this.createFaceTris(p[0], p[1], p[2], e[0], e[5], e[1], f[0]);
+    this.createFaceTris(p[0], p[2], p[3], e[1], e[6], e[2], f[1]);
+    this.createFaceTris(p[0], p[3], p[4], e[2], e[7], e[3], f[2]);
+    this.createFaceTris(p[0], p[4], p[5], e[3], e[8], e[4], f[3]);
+    this.createFaceTris(p[0], p[5], p[1], e[4], e[9], e[0], f[4]);
+
+    // Second row
+    this.createFaceTris(p[1], p[6], p[2], e[10], e[11], e[5], f[5]);
+    this.createFaceTris(p[6], p[7], p[2], e[20], e[12], e[11], f[6]);
+    this.createFaceTris(p[2], p[7], p[3], e[12], e[13], e[6], f[7]);
+    this.createFaceTris(p[7], p[8], p[3], e[21], e[14], e[13], f[8]);
+    this.createFaceTris(p[3], p[8], p[4], e[14], e[15], e[7], f[9]);
+    this.createFaceTris(p[8], p[9], p[4], e[22], e[16], e[15], f[10]);
+    this.createFaceTris(p[4], p[9], p[5], e[16], e[17], e[8], f[11]);
+    this.createFaceTris(p[9], p[10], p[5], e[23], e[18], e[17], f[12]);
+    this.createFaceTris(p[5], p[10], p[7], e[18], e[19], e[9], f[13]);
+    this.createFaceTris(p[10], p[6], p[1], e[24], e[10], e[19], f[14]);
+
+    // Bottom row
+    this.createFaceTris(p[11], p[7], p[6], e[26], e[20], e[25], f[15]);
+    this.createFaceTris(p[11], p[8], p[7], e[27], e[21], e[26], f[16]);
+    this.createFaceTris(p[11], p[9], p[8], e[28], e[22], e[27], f[17]);
+    this.createFaceTris(p[11], p[10], p[9], e[29], e[23], e[28], f[18]);
+    this.createFaceTris(p[11], p[6], p[10], e[25], e[24], e[29], f[19]);
+  };
+
   //----------------------------------------------------------------------------
+
+  /*
+  private readonly createConnections = () => {
+    for (let edgeIndex = 0; edgeIndex < 30; edgeIndex++) {
+      for (let i = 1; i < (this.resolution + 1) * 5; i++) {
+        const index =
+            12 + edgeIndex * ((this.resolution + 1) * 5 - 1) + (i - 1);
+        const start = i === 1 ? null : this.tiles[index];
+        const end =
+            i === (this.resolution + 1) * 5 - 1 ? null : this.tiles[index + 1];
+        if (!!start && !!end) this.connections.push({ index, start, end });
+      }
+    }
+  };
 
   private readonly addNeighbor = (
     tile: GameBoardTile,
     i: number,
     j: number,
   ) => {
-    const neighborIndex = this.getFaceTileIndex(tile.face.index, i, j);
-    const neighbor = this.tiles[neighborIndex];
+    const neighbor = this.getFaceTile(tile.face.index, i, j);
     return tile.neighbors.push(neighbor);
   };
 
@@ -225,7 +322,7 @@ export class GameBoard {
       for (let j = 0; j < i - 1; j++) {
         const isAtMinJ = j === 0;
         const isAtMaxJ = j === i - 1;
-        const tile = this.tiles[this.getFaceTileIndex(face.index, i, j)];
+        const tile = this.getFaceTile(face.index, i, j);
         if (!isAtMinI) {
           this.addNeighbor(tile, i - 1, j);
           if (!isAtMinJ) this.addNeighbor(tile, i - 1, j - 1);
@@ -239,102 +336,5 @@ export class GameBoard {
       }
     }
   };
-
-  //----------------------------------------------------------------------------
-
-  private readonly creatTris = (
-    face: IcosphereFace,
-    a: GameBoardTile,
-    b: GameBoardTile,
-    c: GameBoardTile,
-    ab: number,
-    bc: number,
-    ca: number,
-    flipAB?: boolean,
-    flipBC?: boolean,
-  ) => {
-    const getTile = (
-      f: number,
-      i: number,
-      j: number,
-      flipAB?: boolean,
-      flipBC?: boolean,
-    ) => {
-      const maxIJ = (this.resolution + 1) * 5 - 1;
-
-      // Corners
-      if (i === -1 && j === -1) return a;
-      if (i === maxIJ && j === -1) return b;
-      if (i === maxIJ && j === maxIJ) return c;
-
-      // a -> b
-      if (j < 0) {
-        if (flipAB) return this.tiles[this.getEdgeTileIndex(ab, maxIJ - i)];
-        return this.tiles[this.getEdgeTileIndex(ab, i + 1)];
-      }
-
-      // b -> c
-      if (i === maxIJ) return this.tiles[this.getEdgeTileIndex(bc, maxIJ - j)];
-
-      // c -> a
-      if (j === i) {
-        if (flipBC) return this.tiles[this.getEdgeTileIndex(ca, maxIJ - j)];
-        return this.tiles[this.getEdgeTileIndex(ca, j + 1)];
-      }
-
-      // Default case
-      return this.tiles[this.getFaceTileIndex(f, i, j)];
-    };
-
-    let index =
-      face.index * ((this.resolution + 1) * (this.resolution + 1) * 25);
-
-    // -1 represents off of the face tiles (connecting to the edge tiles)
-    for (let i = -1; i < (this.resolution + 1) * 5 - 1; i++) {
-      for (let j = -1; j <= i; j++) {
-        if (j > -1) {
-          const a = getTile(face.index, i + 1, j, flipAB, flipBC);
-          const b = getTile(face.index, i, j, flipAB, flipBC);
-          const c = getTile(face.index, i, j - 1, flipAB, flipBC);
-          this.tris[index] = { index, face, a, b, c };
-          index++;
-        }
-        const a = getTile(face.index, i, j, flipAB, flipBC);
-        const b = getTile(face.index, i + 1, j, flipAB, flipBC);
-        const c = getTile(face.index, i + 1, j + 1, flipAB, flipBC);
-        this.tris[index] = { index, face, a, b, c };
-        index++;
-      }
-    }
-  };
-
-  private readonly createTris = () => {
-    const [t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11] = this.tiles;
-
-    // Top row
-    this.creatTris(icosahedron.faces[0], t0, t1, t2, 0, 5, 1);
-    this.creatTris(icosahedron.faces[1], t0, t2, t3, 1, 6, 2);
-    this.creatTris(icosahedron.faces[2], t0, t3, t4, 2, 7, 3);
-    this.creatTris(icosahedron.faces[3], t0, t4, t5, 3, 8, 4);
-    this.creatTris(icosahedron.faces[4], t0, t5, t1, 4, 9, 0);
-
-    // Second row
-    this.creatTris(icosahedron.faces[5], t1, t6, t2, 10, 11, 5, false, true);
-    this.creatTris(icosahedron.faces[6], t6, t7, t2, 20, 12, 11, false, true);
-    this.creatTris(icosahedron.faces[7], t2, t7, t3, 12, 13, 6, false, true);
-    this.creatTris(icosahedron.faces[8], t7, t8, t3, 21, 14, 13, false, true);
-    this.creatTris(icosahedron.faces[9], t3, t8, t4, 14, 15, 7, false, true);
-    this.creatTris(icosahedron.faces[10], t8, t9, t4, 22, 16, 15, false, true);
-    this.creatTris(icosahedron.faces[11], t4, t9, t5, 16, 17, 8, false, true);
-    this.creatTris(icosahedron.faces[12], t9, t10, t5, 23, 18, 17, false, true);
-    this.creatTris(icosahedron.faces[13], t5, t10, t7, 18, 19, 9, false, true);
-    this.creatTris(icosahedron.faces[14], t10, t6, t1, 24, 10, 19, false, true);
-
-    // Bottom row
-    this.creatTris(icosahedron.faces[15], t11, t7, t6, 26, 20, 25, true, true);
-    this.creatTris(icosahedron.faces[16], t11, t8, t7, 27, 21, 26, true, true);
-    this.creatTris(icosahedron.faces[17], t11, t9, t8, 28, 22, 27, true, true);
-    this.creatTris(icosahedron.faces[18], t11, t10, t9, 29, 23, 28, true, true);
-    this.creatTris(icosahedron.faces[19], t11, t6, t10, 25, 24, 29, true, true);
-  };
+  */
 }
