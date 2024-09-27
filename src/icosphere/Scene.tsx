@@ -158,17 +158,17 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
     <Fragment key={resolution}>
       {tiles.map((tile) => {
         const tilePosition = getTileXYZ(tile);
-        const points = new Array<Vector3>(tilePosition);
+        const points = new Array<Vector3>();
         for (const neighbor of tile.neighbors) {
           points.push(
             new Vector3().lerpVectors(tilePosition, getTileXYZ(neighbor), 0.45),
           );
         }
-        points.push(tilePosition);
+        if (points.length > 0) points.push(points[0], tilePosition);
         return (
           <group key={tile.index}>
             <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
-            {points.length > 2 && <Line points={points} lineWidth={4} />}
+            {points.length > 0 && <Line points={points} lineWidth={4} />}
           </group>
         );
       })}

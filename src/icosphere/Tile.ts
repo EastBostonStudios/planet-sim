@@ -20,7 +20,7 @@ const getEdgeTileIndex = (
 
 const getFaceTileIndex = (
   resolutionPlus1: number,
-  faceIndex: number,
+  face: IcosphereFace,
   i: number,
   j: number,
 ) => {
@@ -30,7 +30,7 @@ const getFaceTileIndex = (
     throw new Error(`(${i}, ${j}) out of bounds!`);
   return (
     getEdgeTileIndex(resolutionPlus1, 30, 0) +
-    faceIndex * getTriangleNumber(resolutionPlus1 * 5 - 2) +
+    face.index * getTriangleNumber(resolutionPlus1 * 5 - 2) +
     getTriangleNumber(i - 2) +
     j
   );
@@ -86,11 +86,13 @@ const createFaceTiles = (
   resolutionPlus1: number,
   face: IcosphereFace,
 ) => {
+  // console.log("face", face.index);
   for (let i = 1; i < resolutionPlus1 * 5; i++) {
     for (let j = 1; j < i; j++) {
-      const index = getFaceTileIndex(resolutionPlus1, face.index, i, j);
+      const index = getFaceTileIndex(resolutionPlus1, face, i, j);
       const s = i / (resolutionPlus1 * 5.0);
       const t = j / (resolutionPlus1 * 5.0);
+      // console.log(index, "vs", tiles.length);
       tiles.push(createTile(index, face, new Vector2(s, t)));
     }
   }
@@ -105,9 +107,7 @@ const addNeighbor = (
   i: number,
   j: number,
 ) => {
-  const neighbor =
-    tiles[getFaceTileIndex(resolutionPlus1, tile.face.index, i, j)];
-  console.assert(neighbor.face === tile.face);
+  const neighbor = tiles[getFaceTileIndex(resolutionPlus1, tile.face, i, j)];
   return tile.neighbors.push(neighbor);
 };
 
@@ -116,35 +116,25 @@ const stitchFaceTiles = (
   resolutionPlus1: number,
   face: IcosphereFace,
 ) => {
-  for (let i = 1; i < resolutionPlus1 * 5 - 1; i++) {
-    for (let j = 1; j < i; j++) {
-      const isAtMinI = i === 1;
-      const isAtMaxI = i === resolutionPlus1 * 5 - 1;
+  for (let i = 1; i < resolutionPlus1 * 5; i++) {
+    const isAtMinI = i === 1;
+    const isAtMaxI = i === resolutionPlus1 * 5 - 1;
+    for (let j = 1; j < i - 1 /*TODO PAC: drop the -1?*/; j++) {
       const isAtMinJ = j === 1;
-      const isAtMaxJ = j === i;
+      const isAtMaxJ = j === i - 1;
 
-      const tile = tiles[getFaceTileIndex(resolutionPlus1, face.index, i, j)];
-      if (i > 1) {
+      const tile = tiles[getFaceTileIndex(resolutionPlus1, face, i, j)];
+      if (!isAtMinI) {
+        //console.log(`(${i},${j}) | (${i - 1},${j})`);
         addNeighbor(resolutionPlus1, tiles, tile, i - 1, j);
+        if (!isAtMinJ) addNeighbor(resolutionPlus1, tiles, tile, i - 1, j - 1);
       }
-
-      /*
-      if (!isAtMinJ) {
-         if (!isAtMinI) addNeighbor(resolutionPlus1, tiles, tile, i - 1, j - 1);
-        addNeighbor(resolutionPlus1, tiles, tile, i, j - 1);
+      if (!isAtMinJ) addNeighbor(resolutionPlus1, tiles, tile, i, j - 1);
+      if (!isAtMaxI) {
+        addNeighbor(resolutionPlus1, tiles, tile, i + 1, j);
+        if (!isAtMaxJ) addNeighbor(resolutionPlus1, tiles, tile, i + 1, j + 1);
       }
-      */
-      //if (!isAtMaxI) addNeighbor(resolutionPlus1, tiles, tile, i + 1, j);
-      /*
-      if (!isAtMaxJ) {
-        if (!isAtMaxI) addNeighbor(resolutionPlus1, tiles, tile, i + 1, j + 1);
-        addNeighbor(resolutionPlus1, tiles, tile, i, j + 1);
-      }*/
-
-      /*
-      if (i < maxI - 1)
-        addNeighbor(resolutionPlus1, tiles, tile, i + 1, j - 1);*/
-      //if (i > 1) addNeighbor(resolutionPlus1, tiles, tile, i - 1, j + 1);
+      if (!isAtMaxI) addNeighbor(resolutionPlus1, tiles, tile, i, j + 1);
     }
   }
 };
@@ -154,6 +144,7 @@ export const getTiles = (
 ): { tiles: ReadonlyArray<Tile>; chunks: ReadonlyArray<Chunk> } => {
   const resolutionPlus1 = resolution + 1;
   const chunks = new Array<Chunk>();
+
   let index = 0;
   for (let f = 0; f < icosahedron.faces.length; f++) {
     const face = icosahedron.faces[f];
@@ -265,6 +256,21 @@ export const getTiles = (
     stitchFaceTiles(tiles, resolutionPlus1, icosahedron.faces[f]);
   }
 
+  /*
+  let asdf = 0;
+  for (let i = 1; i < resolutionPlus1 * 5 - 1; i++) {
+    for (let j = 1; j < i; j++, asdf++) {
+      console.log(
+        i,
+        j,
+        ")",
+        asdf,
+        getTriangleNumber(i - 2) + j - 1,
+        asdf === getTriangleNumber(i - 2) + j - 1 ? "" : "FALSE",
+      );
+    }
+  }
+*/
   // stitchEdgeTiles(0, tiles[0], tiles[1], resolutionPlus1, tiles);
   // stitchEdgeTiles(1, tiles[0], tiles[2], 0, 1, resolutionPlus1, tiles);
   //stitchEdgeTiles(2, tiles[0], tiles[3], resolutionPlus1, tiles);
