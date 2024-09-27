@@ -12,6 +12,7 @@ import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
 import { AppContext } from "../App";
 import { HtmlOverlay3D } from "../utils/HtmlOverlay";
+import { GameBoard, type GameTile } from "./GameBoard";
 import {
   type IcosphereEdge,
   type IcosphereFace,
@@ -19,7 +20,6 @@ import {
   distBetweenPoints,
   icosahedron,
 } from "./Icosahedron";
-import { type Tile, getTiles } from "./Tile";
 import { interpolateOnFace } from "./utils";
 
 const StyledHtml = styled.strong<{ $color: string }>`
@@ -98,7 +98,10 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   const { is3D } = useContext(AppContext);
 
-  const { tiles, chunks } = useMemo(() => getTiles(resolution), [resolution]);
+  const { tiles, chunks } = useMemo(
+    () => new GameBoard(resolution),
+    [resolution],
+  );
 
   const getFaceXYZs = useCallback(
     (face: IcosphereFace): [Vector3, Vector3, Vector3] => {
@@ -145,7 +148,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   );
 
   const getTileXYZ = useCallback(
-    (tile: Tile): Vector3 => {
+    (tile: GameTile): Vector3 => {
       const [a, b, c] = getFaceXYZs(tile.face);
       return interpolateOnFace({ a, b, c, p: tile.faceCoords });
     },
