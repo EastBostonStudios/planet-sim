@@ -196,6 +196,8 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
         const p1 = getTileXYZ(b);
         const p2 = getTileXYZ(c);
         const center = new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0);
+        if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
+          return null; // TODO PAC: figure out how to wrap
 
         const positions = new Float32Array(
           [p0, p1, p2].flatMap((point) => [point.x, point.y, point.z]),
@@ -237,25 +239,22 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           p{point.index}
         </StyledLabel>
       ))}
-      {false &&
-        icosahedron.edges.map((edge) => {
-          const [start, end] = getEdgeXYZs(edge);
-          return (
-            <Fragment key={edge.index}>
-              <StyledLabel
-                position={new Vector3().lerpVectors(start, end, 0.5)}
-              >
-                e{edge.index}
-              </StyledLabel>
-              <Line
-                points={[start, end]}
-                vertexColors={greyAndBlack}
-                lineWidth={4}
-                segments
-              />
-            </Fragment>
-          );
-        })}
+      {icosahedron.edges.map((edge) => {
+        const [start, end] = getEdgeXYZs(edge);
+        return (
+          <Fragment key={edge.index}>
+            <StyledLabel position={new Vector3().lerpVectors(start, end, 0.5)}>
+              e{edge.index}
+            </StyledLabel>
+            <Line
+              points={[start, end]}
+              vertexColors={greyAndBlack}
+              lineWidth={4}
+              segments
+            />
+          </Fragment>
+        );
+      })}
       {icosahedron.faces.map((face) => {
         const facePoints = getFaceXYZs(face);
         const faceCenter = new Vector3()
@@ -274,16 +273,18 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                 {i === 0 ? "a" : i === 1 ? "b" : "c"}
               </StyledLabel>
             ))}
-            <Line
-              points={[...facePoints, facePoints[0]].map((point) =>
-                point.clone().lerp(faceCenter, 0.2),
-              )}
-              vertexColors={[...rgb, rgb[0]]}
-              lineWidth={4}
-              dashed={face.wrapsMeridian}
-              dashSize={0.01}
-              gapSize={0.01}
-            />
+            {false && (
+              <Line
+                points={[...facePoints, facePoints[0]].map((point) =>
+                  point.clone().lerp(faceCenter, 0.2),
+                )}
+                vertexColors={[...rgb, rgb[0]]}
+                lineWidth={4}
+                dashed={face.wrapsMeridian}
+                dashSize={0.01}
+                gapSize={0.01}
+              />
+            )}
           </group>
         );
       })}
