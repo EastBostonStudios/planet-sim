@@ -1,6 +1,6 @@
 import { Vector2 } from "three";
-import { type IcosphereFace, icosahedron } from "./Icosahedron";
-import { getTriangleNumber } from "./utils";
+import { type IcosphereFace, icosahedron } from "../icosphere/Icosahedron";
+import { getTriangleNumber } from "../icosphere/utils";
 
 export type GameTile = {
   readonly index: number;
@@ -32,13 +32,14 @@ export class GameBoard {
 
   public constructor(resolution: number) {
     this.resolution = resolution;
-    this.chunks = new Array<GameChunk>();
     this.tiles = new Array<GameTile>(
       // Preallocate space for all the tiles
       this.getFaceTileIndex(icosahedron.faces.length, 0, 0),
     );
-    this.createChunks();
+    this.chunks = new Array<GameChunk>();
+
     this.createTiles();
+    this.createChunks();
 
     for (let f = 0; f < icosahedron.faces.length; f++) {
       this.stitchFaceTiles(icosahedron.faces[f]);
@@ -46,12 +47,16 @@ export class GameBoard {
 
     // stitchEdgeTiles(0, tiles[0], tiles[1], resolutionPlus1, tiles);
     // stitchEdgeTiles(1, tiles[0], tiles[2], 0, 1, resolutionPlus1, tiles);
-    //stitchEdgeTiles(2, tiles[0], tiles[3], resolutionPlus1, tiles);
-    //stitchEdgeTiles(3, tiles[0], tiles[4], resolutionPlus1, tiles);
+    // stitchEdgeTiles(2, tiles[0], tiles[3], resolutionPlus1, tiles);
+    // stitchEdgeTiles(3, tiles[0], tiles[4], resolutionPlus1, tiles);
 
     console.assert(
       this.tiles.every((tile, i) => tile.index === i),
       "Tile indices incorrect!",
+    );
+    console.assert(
+      this.chunks.every((chunk, i) => chunk.index === i),
+      "Chunk indices incorrect!",
     );
   }
 
@@ -113,6 +118,7 @@ export class GameBoard {
   };
 
   private readonly createTiles = () => {
+    // Pentagonal tiles at the twelve icosahedron points
     this.createTile(0, icosahedron.faces[0], new Vector2(0.0, 0.0));
     this.createTile(1, icosahedron.faces[0], new Vector2(1.0, 0.0));
     this.createTile(2, icosahedron.faces[1], new Vector2(1.0, 0.0));
@@ -126,21 +132,21 @@ export class GameBoard {
     this.createTile(10, icosahedron.faces[14], new Vector2(0.0, 0.0));
     this.createTile(11, icosahedron.faces[19], new Vector2(0.0, 0.0));
 
-    // Diagonal
+    // Diagonal edges starting at p0
     this.createEdgeTiles(0, icosahedron.faces[0], false);
     this.createEdgeTiles(1, icosahedron.faces[1], false);
     this.createEdgeTiles(2, icosahedron.faces[2], false);
     this.createEdgeTiles(3, icosahedron.faces[3], false);
     this.createEdgeTiles(4, icosahedron.faces[4], false);
 
-    // Horizontal
+    // First horizontal edge row
     this.createEdgeTiles(5, icosahedron.faces[5], true);
     this.createEdgeTiles(6, icosahedron.faces[7], true);
     this.createEdgeTiles(7, icosahedron.faces[9], true);
     this.createEdgeTiles(8, icosahedron.faces[11], true);
     this.createEdgeTiles(9, icosahedron.faces[13], true);
 
-    // Diagonal
+    // Diagonal edges
     this.createEdgeTiles(10, icosahedron.faces[5], false);
     this.createEdgeTiles(11, icosahedron.faces[6], true);
     this.createEdgeTiles(12, icosahedron.faces[7], false);
@@ -152,20 +158,21 @@ export class GameBoard {
     this.createEdgeTiles(18, icosahedron.faces[13], false);
     this.createEdgeTiles(19, icosahedron.faces[14], true);
 
-    // Horizontal
+    // Second horizontal edge row
     this.createEdgeTiles(20, icosahedron.faces[6], false);
     this.createEdgeTiles(21, icosahedron.faces[8], false);
     this.createEdgeTiles(22, icosahedron.faces[10], false);
     this.createEdgeTiles(23, icosahedron.faces[12], false);
     this.createEdgeTiles(24, icosahedron.faces[14], false);
 
-    // Diagonal
+    // Diagonal edges ending at p11
     this.createEdgeTiles(25, icosahedron.faces[15], true);
     this.createEdgeTiles(26, icosahedron.faces[16], true);
     this.createEdgeTiles(27, icosahedron.faces[17], true);
     this.createEdgeTiles(28, icosahedron.faces[18], true);
     this.createEdgeTiles(29, icosahedron.faces[19], true);
 
+    // Tiles for each icosahedron face
     for (let f = 0; f < icosahedron.faces.length; f++) {
       this.createFaceTiles(icosahedron.faces[f]);
     }
@@ -174,7 +181,8 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly addNeighbor = (tile: GameTile, i: number, j: number) => {
-    const neighbor = this.tiles[this.getFaceTileIndex(tile.face.index, i, j)];
+    const neighborIndex = this.getFaceTileIndex(tile.face.index, i, j);
+    const neighbor = this.tiles[neighborIndex];
     return tile.neighbors.push(neighbor);
   };
 
@@ -185,7 +193,6 @@ export class GameBoard {
       for (let j = 0; j < i - 1; j++) {
         const isAtMinJ = j === 0;
         const isAtMaxJ = j === i - 1;
-
         const tile = this.tiles[this.getFaceTileIndex(face.index, i, j)];
         if (!isAtMinI) {
           this.addNeighbor(tile, i - 1, j);

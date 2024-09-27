@@ -11,8 +11,8 @@ import React, {
 import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
 import { AppContext } from "../App";
+import { GameBoard, type GameTile } from "../board/GameBoard";
 import { HtmlOverlay3D } from "../utils/HtmlOverlay";
-import { GameBoard, type GameTile } from "./GameBoard";
 import {
   type IcosphereEdge,
   type IcosphereFace,
