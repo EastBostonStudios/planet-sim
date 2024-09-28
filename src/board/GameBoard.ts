@@ -243,19 +243,25 @@ export class GameBoard {
       for (let j = 0; j <= i; j++) {
         const chunkJ = Math.trunc(j / chunkSize);
         const jOnChunk = j % chunkSize;
-        if (face.index === 0) console.log(chunkI, chunkJ);
+        // if (face.index === 0) console.log(chunkI, chunkJ);
+
+        const chunkIndex = getTriangleNumber(chunkI - 1) + chunkJ;
 
         if (j < i) {
           const pa = getTile(face, i, j);
           const pb = getTile(face, i - 1, j);
           const pc = getTile(face, i - 1, j - 1);
-          this.tris[index] = { index, face, a: pa, b: pb, c: pc };
+          const tri = { index, face, a: pa, b: pb, c: pc };
+          this.tris[index] = tri;
+          this.chunks[chunkIndex].tris.push(tri);
           index++;
         }
         const pa = getTile(face, i - 1, j - 1);
         const pb = getTile(face, i, j - 1);
         const pc = getTile(face, i, j);
-        this.tris[index] = { index, face, a: pa, b: pb, c: pc };
+        const tri = { index, face, a: pa, b: pb, c: pc };
+        this.tris[index] = tri;
+        this.chunks[chunkIndex].tris.push(tri);
         index++;
       }
     }
@@ -265,6 +271,19 @@ export class GameBoard {
     const f = icosahedron.faces;
     const e = icosahedron.edges;
     const p = icosahedron.points;
+
+    for (let faceIndex = 0; faceIndex < f.length; faceIndex++) {
+      const faceChunkStartIndex =
+        faceIndex * getTriangleNumber(this.resolution + 1);
+      for (let i = 0; i < this.resolution + 1; i++) {
+        for (let j = 0; j <= i; j++) {
+          const index = faceChunkStartIndex + getTriangleNumber(i) + j;
+          const face = f[faceIndex];
+          const tris = new Array(chunkSize * chunkSize);
+          this.chunks[index] = { index, face, tris: [] };
+        }
+      }
+    }
 
     // Top row
     this.createFaceTris(p[0], p[1], p[2], e[0], e[5], e[1], f[0]);
