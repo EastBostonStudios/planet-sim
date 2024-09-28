@@ -104,7 +104,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   const { is3D } = useContext(AppContext);
 
-  const { tiles, chunks, connections } = useMemo(
+  const { tiles, chunks } = useMemo(
     () => new GameBoard(resolution),
     [resolution],
   );
@@ -178,8 +178,6 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             new Vector3().lerpVectors(tilePosition, neighborPosition, 0.45),
           );
         }
-        //    if (points.length > 0) points.push(points[0], tilePosition);
-
         const vec =
           points.length >= 2
             ? new Vector3()
@@ -216,108 +214,94 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                   points[(i + 1) % points.length],
                 ])}
                 vertexColors={points.flatMap((_, i) => [
-                  getColorForIndex(i + 5),
-                  getColorForIndex(i + 5),
+                  getColorForIndex(tile.index + i + 5),
+                  getColorForIndex(tile.index + i + 5),
                 ])}
                 segments
                 lineWidth={8}
+                polygonOffset={true}
+                polygonOffsetFactor={-100}
+                polygonOffsetUnits={-100}
               />
             )}
           </group>
         );
       })}
-      {false &&
-        connections.map((connection) => {
-          const start = getTileXYZ(connection.start);
-          const end = getTileXYZ(connection.end);
-          return (
-            <Line
-              key={`${connection.start.index}-${connection.end.index}`}
-              points={[start, end]}
-              vertexColors={greyAndBlack}
-              lineWidth={4}
-            />
+      {chunks.flatMap((chunk) => {
+        const points = new Array<Vector3>();
+        const triCenters = new Array<Vector3>();
+        const chunkCenter = new Vector3();
+        for (const tri of chunk.tris) {
+          if (!tri) continue;
+          const p0 = getTileXYZ(tri.a);
+          const p1 = getTileXYZ(tri.b);
+          const p2 = getTileXYZ(tri.c);
+          if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
+            continue; // TODO: figure out wrapping
+          points.push(p0, p1, p2);
+          chunkCenter.add(p0).add(p1).add(p2);
+          triCenters.push(
+            new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0),
           );
-        })}
-      {false &&
-        chunks.flatMap((chunk) => {
-          const points = new Array<Vector3>();
-          const triCenters = new Array<Vector3>();
-          const chunkCenter = new Vector3();
-          for (const tri of chunk.tris) {
-            if (!tri) continue;
-            const p0 = getTileXYZ(tri.a);
-            const p1 = getTileXYZ(tri.b);
-            const p2 = getTileXYZ(tri.c);
-            if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
-              continue; // TODO: figure out wrapping
-            points.push(p0, p1, p2);
-            chunkCenter.add(p0).add(p1).add(p2);
-            triCenters.push(
-              new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0),
-            );
-          }
-          chunkCenter.divideScalar(points.length);
+        }
+        chunkCenter.divideScalar(points.length);
 
-          const positions = new Float32Array(
-            points.flatMap(({ x, y, z }) => [x, y, z]),
-          );
-          const colors = new Float32Array(
-            points.flatMap(() => getColorForIndex(chunk.index) /*rgb.flat()*/),
-          );
+        const positions = new Float32Array(
+          points.flatMap(({ x, y, z }) => [x, y, z]),
+        );
+        const colors = new Float32Array(
+          points.flatMap(() => getColorForIndex(chunk.index) /*rgb.flat()*/),
+        );
 
-          //if (chunk.face.index === 0) console.log(chunk.index, chunk.tris);
+        //if (chunk.face.index === 0) console.log(chunk.index, chunk.tris);
 
-          return positions.length === 0 ? null : (
-            <Fragment key={chunk.index}>
-              {false && <Line points={triCenters} lineWidth={4} />}
-              {false &&
-                chunk.tris.map((tri) => {
-                  if (!tri) return null;
-                  const p0 = getTileXYZ(tri.a);
-                  const p1 = getTileXYZ(tri.b);
-                  const p2 = getTileXYZ(tri.c);
-                  if (
-                    Math.abs(p1.x - p0.x) > 0.8 ||
-                    Math.abs(p2.x - p0.x) > 0.8
-                  )
-                    return null;
-                  const center = new Vector3()
-                    .add(p0)
-                    .add(p1)
-                    .add(p2)
-                    .divideScalar(3.0);
-                  return (
-                    <StyledLabel key={tri.index} position={center}>
-                      t{tri.index}
-                    </StyledLabel>
-                  );
-                })}
-              {false && (
-                <StyledLabel position={chunkCenter}>c{chunk.index}</StyledLabel>
-              )}
-              <mesh>
-                <bufferGeometry>
-                  <TripleAttribute attribute="position" array={positions} />
-                  <TripleAttribute attribute="color" array={colors} />
-                </bufferGeometry>
-                <meshBasicMaterial
-                  vertexColors={true}
-                  transparent={true}
-                  polygonOffset={true}
-                  polygonOffsetFactor={10}
-                  polygonOffsetUnits={10}
-                />
-              </mesh>
-              <mesh>
-                <bufferGeometry>
-                  <TripleAttribute attribute="position" array={positions} />
-                </bufferGeometry>
-                <meshBasicMaterial wireframe={true} color={"black"} />
-              </mesh>
-            </Fragment>
-          );
-        })}
+        return positions.length === 0 ? null : (
+          <Fragment key={chunk.index}>
+            {false && <Line points={triCenters} lineWidth={4} />}
+            {false &&
+              chunk.tris.map((tri) => {
+                if (!tri) return null;
+                const p0 = getTileXYZ(tri.a);
+                const p1 = getTileXYZ(tri.b);
+                const p2 = getTileXYZ(tri.c);
+                if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
+                  return null;
+                const center = new Vector3()
+                  .add(p0)
+                  .add(p1)
+                  .add(p2)
+                  .divideScalar(3.0);
+                return (
+                  <StyledLabel key={tri.index} position={center}>
+                    t{tri.index}
+                  </StyledLabel>
+                );
+              })}
+            {false && (
+              <StyledLabel position={chunkCenter}>c{chunk.index}</StyledLabel>
+            )}
+            <mesh>
+              <bufferGeometry>
+                <TripleAttribute attribute="position" array={positions} />
+                <TripleAttribute attribute="color" array={colors} />
+              </bufferGeometry>
+              <meshBasicMaterial
+                vertexColors={true}
+                transparent={true}
+                polygonOffset={true}
+                polygonOffsetFactor={10}
+                polygonOffsetUnits={10}
+              />
+            </mesh>
+            <mesh>
+              <bufferGeometry>
+                <TripleAttribute attribute="position" array={positions} />
+              </bufferGeometry>
+              <meshBasicMaterial wireframe={true} color={"black"} />
+            </mesh>
+          </Fragment>
+        );
+      })}
       {false &&
         icosahedron.points.map((point) => (
           <StyledLabel key={point.index} position={getPointXYZ(point)}>
