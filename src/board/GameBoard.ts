@@ -24,6 +24,12 @@ export type GameBoardTri = {
   readonly c: GameBoardTile;
 };
 
+export type GameBoardChunk = {
+  readonly index: number;
+  readonly face: IcosphereFace;
+  readonly tris: GameBoardTri[];
+};
+
 export type GameBoardConnection = {
   readonly index: number;
   readonly start: GameBoardTile;
@@ -38,6 +44,7 @@ export class GameBoard {
   public readonly resolution: number;
   public readonly tiles: GameBoardTile[];
   public readonly tris: GameBoardTri[];
+  public readonly chunks: GameBoardChunk[];
   public readonly connections: GameBoardConnection[];
 
   //----------------------------------------------------------------------------
@@ -48,9 +55,12 @@ export class GameBoard {
     this.tiles = new Array<GameBoardTile>(
       this.getFaceTileIndex(icosahedron.faces.length, 0, 0),
     );
-    this.tris = new Array<GameBoardChunk>(
+    this.tris = new Array<GameBoardTri>(
       icosahedron.faces.length *
         ((resolution + 1) * (resolution + 1) * chunkSize * chunkSize),
+    );
+    this.chunks = new Array<GameBoardChunk>(
+      icosahedron.faces.length * (resolution + 1) * (resolution + 1),
     );
     // TODO: Preallocate these arrays
     this.connections = new Array<GameBoardConnection>();
@@ -226,18 +236,25 @@ export class GameBoard {
       ((this.resolution + 1) * (this.resolution + 1) * chunkSize * chunkSize);
 
     // -1 represents off of the face tiles (connecting to the edge tiles)
-    for (let i = -1; i < maxIJ; i++) {
-      for (let j = -1; j <= i; j++) {
-        if (j > -1) {
-          const pa = getTile(face, i + 1, j);
-          const pb = getTile(face, i, j);
-          const pc = getTile(face, i, j - 1);
+    for (let i = 0; i <= maxIJ; i++) {
+      const chunkI = Math.trunc(i / chunkSize);
+      const iOnChunk = i % chunkSize;
+
+      for (let j = 0; j <= i; j++) {
+        const chunkJ = Math.trunc(j / chunkSize);
+        const jOnChunk = j % chunkSize;
+        if (face.index === 0) console.log(chunkI, chunkJ);
+
+        if (j < i) {
+          const pa = getTile(face, i, j);
+          const pb = getTile(face, i - 1, j);
+          const pc = getTile(face, i - 1, j - 1);
           this.tris[index] = { index, face, a: pa, b: pb, c: pc };
           index++;
         }
-        const pa = getTile(face, i, j);
-        const pb = getTile(face, i + 1, j);
-        const pc = getTile(face, i + 1, j + 1);
+        const pa = getTile(face, i - 1, j - 1);
+        const pb = getTile(face, i, j - 1);
+        const pc = getTile(face, i, j);
         this.tris[index] = { index, face, a: pa, b: pb, c: pc };
         index++;
       }
