@@ -23,6 +23,8 @@ export type IcosphereFace = {
   e0: IcosphereEdge;
   e1: IcosphereEdge;
   e2: IcosphereEdge;
+  ab: IcosphereEdge;
+  bc: IcosphereEdge;
   wrapsMeridian: boolean;
 };
 
@@ -61,7 +63,9 @@ const createFace = (
   const wrapsMeridian =
     e0.wrapsMeridian || e1.wrapsMeridian || e2.wrapsMeridian;
 
-  return { index, a, b, c, e0, e1, e2, wrapsMeridian };
+  const ab = isPolar ? e0 : e1;
+  const bc = isPolar ? e1 : e0;
+  return { index, a, b, c, e0, e1, e2, ab, bc, wrapsMeridian };
 };
 
 //----------------------------------------------------------------------------------------------------------------------

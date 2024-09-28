@@ -243,13 +243,11 @@ export class GameBoard {
     if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
 
     const isPolar = face.a === p00 || face.a === p11;
-    const ab = isPolar ? face.e0 : face.e1;
-    const bc = isPolar ? face.e1 : face.e0;
     const ca = face.e2;
     const flipCA = !isPolar;
 
-    if (j < 0) return this.getEdgeTile(ab, i + 1); // a -> b
-    if (i === maxIJ) return this.getEdgeTile(bc, maxIJ - j); // b -> c
+    if (j < 0) return this.getEdgeTile(face.ab, i + 1); // a -> b
+    if (i === maxIJ) return this.getEdgeTile(face.bc, maxIJ - j); // b -> c
     if (j === i) return this.getEdgeTile(ca, flipCA ? maxIJ - j : j + 1); // c -> a
 
     // Default case
