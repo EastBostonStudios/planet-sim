@@ -20,11 +20,10 @@ export type IcosphereFace = {
   a: IcospherePoint;
   b: IcospherePoint;
   c: IcospherePoint;
-  e0: IcosphereEdge;
-  e1: IcosphereEdge;
-  e2: IcosphereEdge;
   ab: IcosphereEdge;
-  bc: IcosphereEdge;
+  cb: IcosphereEdge;
+  ca: IcosphereEdge;
+  isPolar: boolean;
   wrapsMeridian: boolean;
 };
 
@@ -50,22 +49,22 @@ const createEdge = (
 
 const createFace = (
   index: number,
-  e0: IcosphereEdge,
-  e1: IcosphereEdge,
-  e2: IcosphereEdge,
+  ab: IcosphereEdge,
+  cb: IcosphereEdge,
+  ca: IcosphereEdge,
 ): IcosphereFace => {
   // Flip "a" and "c' around for the 10 polar faces
-  const isPolar = e0.start === p00 || e2.start === p11;
-  const a = isPolar ? e0.start : e1.start;
-  const b = e0.end;
-  const c = isPolar ? e1.start : e0.start;
+  const a = ab.start;
+  const b = ab.end;
+  const c = cb.start;
   console.assert(a !== b && b !== c && c !== a);
+  console.assert(ab.start === a && ab.end === b);
+  console.assert(cb.start === c && cb.end === b);
+  const isPolar = a === p00 || a === p11;
   const wrapsMeridian =
-    e0.wrapsMeridian || e1.wrapsMeridian || e2.wrapsMeridian;
+    ab.wrapsMeridian || cb.wrapsMeridian || ca.wrapsMeridian;
 
-  const ab = isPolar ? e0 : e1;
-  const bc = isPolar ? e1 : e0;
-  return { index, a, b, c, e0, e1, e2, ab, bc, wrapsMeridian };
+  return { index, a, b, c, ab, cb, ca, isPolar, wrapsMeridian };
 };
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -133,16 +132,16 @@ export const f02 = createFace(2, e02, e07, e03);
 export const f03 = createFace(3, e03, e08, e04);
 export const f04 = createFace(4, e04, e09, e00);
 
-export const f05 = createFace(5, e11, e10, e05);
-export const f06 = createFace(6, e12, e20, e11);
-export const f07 = createFace(7, e13, e12, e06);
-export const f08 = createFace(8, e14, e21, e13);
-export const f09 = createFace(9, e15, e14, e07);
-export const f10 = createFace(10, e16, e22, e15);
-export const f11 = createFace(11, e17, e16, e08);
-export const f12 = createFace(12, e18, e23, e17);
-export const f13 = createFace(13, e19, e18, e09);
-export const f14 = createFace(14, e10, e24, e19);
+export const f05 = createFace(5, e10, e11, e05);
+export const f06 = createFace(6, e20, e12, e11);
+export const f07 = createFace(7, e12, e13, e06);
+export const f08 = createFace(8, e21, e14, e13);
+export const f09 = createFace(9, e14, e15, e07);
+export const f10 = createFace(10, e22, e16, e15);
+export const f11 = createFace(11, e16, e17, e08);
+export const f12 = createFace(12, e23, e18, e17);
+export const f13 = createFace(13, e18, e19, e09);
+export const f14 = createFace(14, e24, e10, e19);
 
 export const f15 = createFace(15, e26, e20, e25);
 export const f16 = createFace(16, e27, e21, e26);
