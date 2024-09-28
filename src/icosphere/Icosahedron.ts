@@ -57,6 +57,7 @@ const createFace = (
   const a = isPolar ? e0.start : e1.start;
   const b = e0.end;
   const c = isPolar ? e1.start : e0.start;
+  console.assert(a !== b && b !== c && c !== a);
   const wrapsMeridian =
     e0.wrapsMeridian || e1.wrapsMeridian || e2.wrapsMeridian;
 

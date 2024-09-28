@@ -230,6 +230,32 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
+  private readonly getTile = (
+    face: IcosphereFace,
+    i: number,
+    j: number,
+  ): GameBoardTile => {
+    const maxIJ = (this.resolution + 1) * chunkSize - 1;
+
+    // Corners
+    if (i === -1 && j === -1) return this.tiles[face.a.index];
+    if (i === maxIJ && j === -1) return this.tiles[face.b.index];
+    if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
+
+    const isPolar = face.a === p00 || face.a === p11;
+    const ab = isPolar ? face.e0 : face.e1;
+    const bc = isPolar ? face.e1 : face.e0;
+    const ca = face.e2;
+    const flipCA = !isPolar;
+
+    if (j < 0) return this.getEdgeTile(ab, i + 1); // a -> b
+    if (i === maxIJ) return this.getEdgeTile(bc, maxIJ - j); // b -> c
+    if (j === i) return this.getEdgeTile(ca, flipCA ? maxIJ - j : j + 1); // c -> a
+
+    // Default case
+    return this.getFaceTile(face, i, j);
+  };
+
   private readonly createFaceTris = (face: IcosphereFace) => {
     const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
     for (let c = 0; c < chunksPerFace; c++) {
@@ -238,31 +264,9 @@ export class GameBoard {
       this.chunks[index] = { index, face, tris };
     }
 
-    const isPolar = face.a === p00 || face.a === p11;
-    const ab = isPolar ? face.e0 : face.e1;
-    const bc = isPolar ? face.e1 : face.e0;
-    const ca = face.e2;
-
-    const maxIJ = (this.resolution + 1) * chunkSize - 1;
-    const flipCA = !isPolar;
-
-    const getTile = (f: IcosphereFace, i: number, j: number): GameBoardTile => {
-      // Corners
-      if (i === -1 && j === -1) return this.tiles[face.a.index];
-      if (i === maxIJ && j === -1) return this.tiles[face.b.index];
-      if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
-
-      if (j < 0) return this.getEdgeTile(ab, i + 1); // a -> b
-      if (i === maxIJ) return this.getEdgeTile(bc, maxIJ - j); // b -> c
-      if (j === i) return this.getEdgeTile(ca, flipCA ? maxIJ - j : j + 1); // c -> a
-
-      // Default case
-      return this.getFaceTile(f, i, j);
-    };
-
     let index = face.index * (chunksPerFace * chunkSize * chunkSize);
 
-    for (let i = 0; i <= maxIJ; i++) {
+    for (let i = 0; i <= (this.resolution + 1) * chunkSize - 1; i++) {
       const chunkI = Math.trunc(i / chunkSize);
       const iOnChunk = i % chunkSize;
 
@@ -275,9 +279,9 @@ export class GameBoard {
 
         if (j < i) {
           // -1 represents off of the face tiles (connecting to the edge tiles)
-          const pa = getTile(face, i, j);
-          const pb = getTile(face, i - 1, j);
-          const pc = getTile(face, i - 1, j - 1);
+          const pa = this.getTile(face, i, j);
+          const pb = this.getTile(face, i - 1, j);
+          const pc = this.getTile(face, i - 1, j - 1);
           const tri = { index, face, a: pa, b: pb, c: pc };
           this.tris[index] = tri;
 
@@ -292,9 +296,9 @@ export class GameBoard {
           index++;
         }
 
-        const pa = getTile(face, i - 1, j - 1);
-        const pb = getTile(face, i, j - 1);
-        const pc = getTile(face, i, j);
+        const pa = this.getTile(face, i - 1, j - 1);
+        const pb = this.getTile(face, i, j - 1);
+        const pc = this.getTile(face, i, j);
         const tri = { index, face, a: pa, b: pb, c: pc };
         this.tris[index] = tri;
 
