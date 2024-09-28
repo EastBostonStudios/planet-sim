@@ -8,7 +8,7 @@ const chunkSize = 3;
 export type GameBoardTile = {
   readonly index: number;
   readonly face: Icosahedron.Face;
-  readonly neighbors: (GameBoardTile | null)[];
+  readonly neighbors: (GameBoardTile | null)[]; // TODO: Drop nulls
   readonly faceCoords: Vector2;
 };
 

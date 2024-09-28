@@ -1,54 +1,24 @@
 import { Line } from "@react-three/drei";
-import type { GroupProps } from "@react-three/fiber";
 import React, {
   type FC,
   Fragment,
-  type ReactNode,
   useCallback,
   useContext,
   useMemo,
 } from "react";
-import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
-import { AppContext } from "./App";
-import { GameBoard, type GameBoardTile } from "./board/GameBoard";
-import * as Icosahedron from "./board/Icosahedron";
-import { HtmlOverlay3D } from "./utils/HtmlOverlay";
-import { interpolateOnFace } from "./utils/mathUtils";
-
-const StyledHtml = styled.strong<{ $color: string }>`
-  color: ${({ $color }) => $color};
-  pointer-events: none;
-  font-size: 12px;
-  text-shadow: 1px 1px black;
-`;
+import { AppContext } from "../App";
+import { GameBoard, type GameBoardTile } from "../board/GameBoard";
+import * as Icosahedron from "../board/Icosahedron";
+import { interpolateOnFace } from "../utils/mathUtils";
+import { IcoMeshes } from "./IcoMeshes";
+import { StyledLabel } from "./StyledLabel";
 
 const getColorForIndex = (index: number): [number, number, number] => [
   ((index % 3) + 2) / 10,
   ((index % 7) + 2) / 11,
   ((index % 11) + 2) / 15,
 ];
-
-const StyledLabel: FC<
-  {
-    color?: string;
-    position: Vector3;
-    children: ReactNode;
-  } & Partial<GroupProps>
-> = ({ color, position, children }) => {
-  const { is3D } = useContext(AppContext);
-  return (
-    <HtmlOverlay3D
-      key={is3D ? "3D" : "2D"}
-      x={position.x}
-      y={position.y}
-      z={position.z}
-      noOcclusion
-    >
-      <StyledHtml $color={color ?? "white"}>{children}</StyledHtml>
-    </HtmlOverlay3D>
-  );
-};
 
 const TripleAttribute: FC<{ attribute: string; array: Float32Array }> = ({
   attribute,
@@ -63,17 +33,6 @@ const TripleAttribute: FC<{ attribute: string; array: Float32Array }> = ({
     />
   );
 };
-
-const rgb: [number, number, number][] = [
-  [1, 0, 0],
-  [0, 1, 0],
-  [0, 0, 1],
-];
-
-const greyAndBlack: [number, number, number][] = [
-  [0.5, 0.5, 0.5],
-  [0, 0, 0],
-];
 
 const theta = Math.PI + 1.0172219678840608; // atan(phi, 1) Rotates 0 down to y = -1
 
@@ -103,7 +62,6 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
     () => new GameBoard(resolution),
     [resolution],
   );
-
   const getFaceXYZs = useCallback(
     (face: Icosahedron.Face): [Vector3, Vector3, Vector3] => {
       if (is3D) {
@@ -121,29 +79,6 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
         if (c.x === 0) c = c.clone().setX(5.0);
       }
       return [project2D(a), project2D(b), project2D(c)];
-    },
-    [is3D],
-  );
-
-  const getEdgeXYZs = useCallback(
-    (edge: Icosahedron.Edge): [Vector3, Vector3] => {
-      if (is3D)
-        return [project3D(edge.start.coords3D), project3D(edge.end.coords3D)];
-      let start = edge.start.coords2D;
-      let end = edge.end.coords2D;
-      if (edge.wrapsMeridian) {
-        if (start.x === 0) start = start.clone().setX(5.0);
-        if (end.x === 0) end = end.clone().setX(5.0);
-      }
-      return [project2D(start), project2D(end)];
-    },
-    [is3D],
-  );
-
-  const getPointXYZ = useCallback(
-    (point: Icosahedron.Point): Vector3 => {
-      if (is3D) return project3D(point.coords3D);
-      return project2D(point.coords2D);
     },
     [is3D],
   );
@@ -297,65 +232,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           </Fragment>
         );
       })}
-      {false &&
-        Icosahedron.points.map((point) => (
-          <StyledLabel key={point.index} position={getPointXYZ(point)}>
-            p{point.index}
-          </StyledLabel>
-        ))}
-      {false &&
-        Icosahedron.edges.map((edge) => {
-          const [start, end] = getEdgeXYZs(edge);
-          return (
-            <Fragment key={edge.index}>
-              <StyledLabel
-                position={new Vector3().lerpVectors(start, end, 0.5)}
-              >
-                <h2>e{edge.index}</h2>
-              </StyledLabel>
-              <Line
-                points={[start, end]}
-                vertexColors={greyAndBlack}
-                lineWidth={4}
-                segments
-              />
-            </Fragment>
-          );
-        })}
-      {false &&
-        Icosahedron.faces.map((face) => {
-          const facePoints = getFaceXYZs(face);
-          const faceCenter = new Vector3()
-            .add(facePoints[0])
-            .add(facePoints[1])
-            .add(facePoints[2])
-            .divideScalar(3.0);
-          return (
-            <group key={face.index}>
-              <StyledLabel position={faceCenter}>f{face.index}</StyledLabel>
-              {facePoints.map((point, i) => (
-                <StyledLabel
-                  key={`${point.x},${point.y}${point.z}`}
-                  position={point.clone().lerp(faceCenter, 0.2)}
-                >
-                  {i === 0 ? "a" : i === 1 ? "b" : "c"}
-                </StyledLabel>
-              ))}
-              {false && (
-                <Line
-                  points={[...facePoints, facePoints[0]].map((point) =>
-                    point.clone().lerp(faceCenter, 0.2),
-                  )}
-                  vertexColors={[...rgb, rgb[0]]}
-                  lineWidth={4}
-                  dashed={face.wrapsMeridian}
-                  dashSize={0.01}
-                  gapSize={0.01}
-                />
-              )}
-            </group>
-          );
-        })}
+      <IcoMeshes showPoints={false} showEdges={false} showFaces={false} />
     </Fragment>
   );
 };

@@ -11,8 +11,8 @@ import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { DoubleSide } from "three";
-import { Scene } from "./Scene";
 import * as Icosahedron from "./board/Icosahedron";
+import { Scene } from "./scene/Scene";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 
 const StyledApp = styled.div`
