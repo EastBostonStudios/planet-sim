@@ -2,7 +2,6 @@ import { Vector2 } from "three";
 import {
   type IcosphereEdge,
   type IcosphereFace,
-  type IcospherePoint,
   icosahedron,
   p00,
   p11,
