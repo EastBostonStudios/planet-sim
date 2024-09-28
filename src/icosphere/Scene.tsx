@@ -30,9 +30,9 @@ const StyledHtml = styled.strong<{ $color: string }>`
 `;
 
 const getColorForIndex = (index: number) => [
-  (index % 2) / 1,
-  (index % 4) / 3,
-  (index % 8) / 7,
+  ((index % 3) + 2) / 10,
+  ((index % 7) + 2) / 11,
+  ((index % 11) + 2) / 15,
 ];
 
 const StyledLabel: FC<
@@ -108,7 +108,6 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
     () => new GameBoard(resolution),
     [resolution],
   );
-  console.log(chunks[2].tris);
 
   const getFaceXYZs = useCallback(
     (face: IcosphereFace): [Vector3, Vector3, Vector3] => {

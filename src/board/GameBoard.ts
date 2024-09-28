@@ -205,9 +205,6 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly createFaceTris = (
-    a: IcospherePoint,
-    b: IcospherePoint,
-    c: IcospherePoint,
     ab: IcosphereEdge,
     bc: IcosphereEdge,
     ca: IcosphereEdge,
@@ -226,9 +223,9 @@ export class GameBoard {
 
     const getTile = (f: IcosphereFace, i: number, j: number): GameBoardTile => {
       // Corners
-      if (i === -1 && j === -1) return this.tiles[a.index];
-      if (i === maxIJ && j === -1) return this.tiles[b.index];
-      if (i === maxIJ && j === maxIJ) return this.tiles[c.index];
+      if (i === -1 && j === -1) return this.tiles[face.a.index];
+      if (i === maxIJ && j === -1) return this.tiles[face.b.index];
+      if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
 
       if (j < 0) return this.getEdgeTile(ab, flipAB ? maxIJ - i : i + 1); // a -> b
       if (i === maxIJ) return this.getEdgeTile(bc, maxIJ - j); // b -> c
@@ -295,30 +292,30 @@ export class GameBoard {
     const p = icosahedron.points;
 
     // Top row
-    this.createFaceTris(p[0], p[1], p[2], e[0], e[5], e[1], f[0]);
-    this.createFaceTris(p[0], p[2], p[3], e[1], e[6], e[2], f[1]);
-    this.createFaceTris(p[0], p[3], p[4], e[2], e[7], e[3], f[2]);
-    this.createFaceTris(p[0], p[4], p[5], e[3], e[8], e[4], f[3]);
-    this.createFaceTris(p[0], p[5], p[1], e[4], e[9], e[0], f[4]);
+    this.createFaceTris(e[0], e[5], e[1], f[0]);
+    this.createFaceTris(e[1], e[6], e[2], f[1]);
+    this.createFaceTris(e[2], e[7], e[3], f[2]);
+    this.createFaceTris(e[3], e[8], e[4], f[3]);
+    this.createFaceTris(e[4], e[9], e[0], f[4]);
 
     // Second row
-    this.createFaceTris(p[1], p[6], p[2], e[10], e[11], e[5], f[5]);
-    this.createFaceTris(p[6], p[7], p[2], e[20], e[12], e[11], f[6]);
-    this.createFaceTris(p[2], p[7], p[3], e[12], e[13], e[6], f[7]);
-    this.createFaceTris(p[7], p[8], p[3], e[21], e[14], e[13], f[8]);
-    this.createFaceTris(p[3], p[8], p[4], e[14], e[15], e[7], f[9]);
-    this.createFaceTris(p[8], p[9], p[4], e[22], e[16], e[15], f[10]);
-    this.createFaceTris(p[4], p[9], p[5], e[16], e[17], e[8], f[11]);
-    this.createFaceTris(p[9], p[10], p[5], e[23], e[18], e[17], f[12]);
-    this.createFaceTris(p[5], p[10], p[7], e[18], e[19], e[9], f[13]);
-    this.createFaceTris(p[10], p[6], p[1], e[24], e[10], e[19], f[14]);
+    this.createFaceTris(e[10], e[11], e[5], f[5]);
+    this.createFaceTris(e[20], e[12], e[11], f[6]);
+    this.createFaceTris(e[12], e[13], e[6], f[7]);
+    this.createFaceTris(e[21], e[14], e[13], f[8]);
+    this.createFaceTris(e[14], e[15], e[7], f[9]);
+    this.createFaceTris(e[22], e[16], e[15], f[10]);
+    this.createFaceTris(e[16], e[17], e[8], f[11]);
+    this.createFaceTris(e[23], e[18], e[17], f[12]);
+    this.createFaceTris(e[18], e[19], e[9], f[13]);
+    this.createFaceTris(e[24], e[10], e[19], f[14]);
 
     // Bottom row
-    this.createFaceTris(p[11], p[7], p[6], e[26], e[20], e[25], f[15]);
-    this.createFaceTris(p[11], p[8], p[7], e[27], e[21], e[26], f[16]);
-    this.createFaceTris(p[11], p[9], p[8], e[28], e[22], e[27], f[17]);
-    this.createFaceTris(p[11], p[10], p[9], e[29], e[23], e[28], f[18]);
-    this.createFaceTris(p[11], p[6], p[10], e[25], e[24], e[29], f[19]);
+    this.createFaceTris(e[26], e[20], e[25], f[15]);
+    this.createFaceTris(e[27], e[21], e[26], f[16]);
+    this.createFaceTris(e[28], e[22], e[27], f[17]);
+    this.createFaceTris(e[29], e[23], e[28], f[18]);
+    this.createFaceTris(e[25], e[24], e[29], f[19]);
   };
 
   //----------------------------------------------------------------------------
