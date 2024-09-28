@@ -4,6 +4,8 @@ import {
   type IcosphereFace,
   type IcospherePoint,
   icosahedron,
+  p00,
+  p11,
 } from "../icosphere/Icosahedron";
 import { getTriangleNumber } from "../icosphere/utils";
 
@@ -128,30 +130,30 @@ export class GameBoard {
     }
 
     // Top row
-    this.createFaceTris(f[0], e[0], e[5], e[1]);
-    this.createFaceTris(f[1], e[1], e[6], e[2]);
-    this.createFaceTris(f[2], e[2], e[7], e[3]);
-    this.createFaceTris(f[3], e[3], e[8], e[4]);
-    this.createFaceTris(f[4], e[4], e[9], e[0]);
+    this.createFaceTris(f[0]);
+    this.createFaceTris(f[1]);
+    this.createFaceTris(f[2]);
+    this.createFaceTris(f[3]);
+    this.createFaceTris(f[4]);
 
     // Second row
-    this.createFaceTris(f[5], e[10], e[11], e[5]);
-    this.createFaceTris(f[6], e[20], e[12], e[11]);
-    this.createFaceTris(f[7], e[12], e[13], e[6]);
-    this.createFaceTris(f[8], e[21], e[14], e[13]);
-    this.createFaceTris(f[9], e[14], e[15], e[7]);
-    this.createFaceTris(f[10], e[22], e[16], e[15]);
-    this.createFaceTris(f[11], e[16], e[17], e[8]);
-    this.createFaceTris(f[12], e[23], e[18], e[17]);
-    this.createFaceTris(f[13], e[18], e[19], e[9]);
-    this.createFaceTris(f[14], e[24], e[10], e[19]);
+    this.createFaceTris(f[5]);
+    this.createFaceTris(f[6]);
+    this.createFaceTris(f[7]);
+    this.createFaceTris(f[8]);
+    this.createFaceTris(f[9]);
+    this.createFaceTris(f[10]);
+    this.createFaceTris(f[11]);
+    this.createFaceTris(f[12]);
+    this.createFaceTris(f[13]);
+    this.createFaceTris(f[14]);
 
     // Bottom row
-    this.createFaceTris(f[15], e[26], e[20], e[25]);
-    this.createFaceTris(f[16], e[27], e[21], e[26]);
-    this.createFaceTris(f[17], e[28], e[22], e[27]);
-    this.createFaceTris(f[18], e[29], e[23], e[28]);
-    this.createFaceTris(f[19], e[25], e[24], e[29]);
+    this.createFaceTris(f[15]);
+    this.createFaceTris(f[16]);
+    this.createFaceTris(f[17]);
+    this.createFaceTris(f[18]);
+    this.createFaceTris(f[19]);
 
     this.validate();
   }
@@ -226,12 +228,7 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
-  private readonly createFaceTris = (
-    face: IcosphereFace,
-    ab: IcosphereEdge,
-    bc: IcosphereEdge,
-    ca: IcosphereEdge,
-  ) => {
+  private readonly createFaceTris = (face: IcosphereFace) => {
     const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
     for (let c = 0; c < chunksPerFace; c++) {
       const index = face.index * chunksPerFace + c;
@@ -239,9 +236,14 @@ export class GameBoard {
       this.chunks[index] = { index, face, tris };
     }
 
+    const isPolar = face.a === p00 || face.a === p11;
+    const ab = isPolar ? face.e0 : face.e1;
+    const bc = isPolar ? face.e1 : face.e0;
+    const ca = face.e2;
+
     const maxIJ = (this.resolution + 1) * chunkSize - 1;
-    const flipAB = face.index > 14;
-    const flipCA = face.index > 4;
+    const flipAB = isPolar && face.a !== icosahedron.points[0];
+    const flipCA = face.a !== icosahedron.points[0];
 
     const getTile = (f: IcosphereFace, i: number, j: number): GameBoardTile => {
       // Corners

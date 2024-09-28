@@ -20,6 +20,9 @@ export type IcosphereFace = {
   a: IcospherePoint;
   b: IcospherePoint;
   c: IcospherePoint;
+  e0: IcosphereEdge;
+  e1: IcosphereEdge;
+  e2: IcosphereEdge;
   wrapsMeridian: boolean;
 };
 
@@ -40,41 +43,24 @@ const createEdge = (
   index: number,
   start: IcospherePoint,
   end: IcospherePoint,
-  wrapsMeridian?: true,
-): IcosphereEdge => ({
-  index,
-  start,
-  end,
-  wrapsMeridian: wrapsMeridian ?? false,
-});
+  wrapsX?: true,
+): IcosphereEdge => ({ index, start, end, wrapsMeridian: wrapsX ?? false });
 
 const createFace = (
   index: number,
-  firstEdge: IcosphereEdge,
-  secondEdge: IcosphereEdge,
-  thirdEdge: IcosphereEdge,
+  e0: IcosphereEdge,
+  e1: IcosphereEdge,
+  e2: IcosphereEdge,
 ): IcosphereFace => {
-  let a = firstEdge.start;
-  const b = firstEdge.end;
-  let c = secondEdge.start;
-  console.assert(firstEdge.start === a && thirdEdge.start === a);
-  console.assert(firstEdge.end === b && secondEdge.end === b);
-  console.assert(secondEdge.start === c && thirdEdge.end === c);
-
-  const flipped =
-    a !== p00 && b !== p00 && c !== p00 && a !== p11 && b !== p11 && c !== p11;
-  if (flipped) {
-    const swap = a;
-    a = c;
-    c = swap;
-  }
-
+  // Flip "a" and "c' around for the 10 polar faces
+  const isPolar = e0.start === p00 || e2.start === p11;
+  const a = isPolar ? e0.start : e1.start;
+  const b = e0.end;
+  const c = isPolar ? e1.start : e0.start;
   const wrapsMeridian =
-    firstEdge.wrapsMeridian ||
-    secondEdge.wrapsMeridian ||
-    thirdEdge.wrapsMeridian;
+    e0.wrapsMeridian || e1.wrapsMeridian || e2.wrapsMeridian;
 
-  return { index, a, b, c, wrapsMeridian };
+  return { index, a, b, c, e0, e1, e2, wrapsMeridian };
 };
 
 //----------------------------------------------------------------------------------------------------------------------
