@@ -29,6 +29,19 @@ const StyledHtml = styled.strong<{ $color: string }>`
   text-shadow: 1px 1px black;
 `;
 
+const getColorForIndex = (index: number) =>
+  index % 6 === 0
+    ? [1, 0, 0]
+    : index % 6 === 1
+      ? [0, 1, 0]
+      : index % 6 === 2
+        ? [0, 0, 1]
+        : index % 6 === 3
+          ? [1, 1, 0]
+          : index % 6 === 4
+            ? [0, 1, 1]
+            : [1, 0, 1];
+
 const StyledLabel: FC<
   {
     color?: string;
@@ -58,7 +71,7 @@ const TripleAttribute: FC<{ attribute: string; array: Float32Array }> = ({
     <bufferAttribute
       attach={`attributes-${attribute}`}
       array={array}
-      count={3}
+      count={array.length / 3}
       itemSize={3}
     />
   );
@@ -199,11 +212,9 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           const p1 = getTileXYZ(tri.b);
           const p2 = getTileXYZ(tri.c);
           if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
-            continue;
+            continue; // TODO: figure out wrapping
           points.push(p0, p1, p2);
-          chunkCenter.add(p0);
-          chunkCenter.add(p1);
-          chunkCenter.add(p2);
+          chunkCenter.add(p0).add(p1).add(p2);
         }
         chunkCenter.divideScalar(points.length);
 
@@ -213,7 +224,10 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
         const colors = new Float32Array(
           points.flatMap(() => getColorForIndex(chunk.index) /*rgb.flat()*/),
         );
-        return (
+
+        if (chunk.face.index === 0) console.log(chunk.index, chunk.tris);
+
+        return positions.length === 0 ? null : (
           <Fragment key={chunk.index}>
             {false &&
               chunk.tris.map((tri) => {

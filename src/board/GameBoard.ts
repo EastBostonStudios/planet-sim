@@ -213,6 +213,13 @@ export class GameBoard {
     ca: IcosphereEdge,
     face: IcosphereFace,
   ) => {
+    const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
+    for (let c = 0; c < chunksPerFace; c++) {
+      const index = face.index * chunksPerFace + c;
+      const tris = new Array(chunkSize * chunkSize);
+      this.chunks[index] = { index, face, tris: [] };
+    }
+
     const maxIJ = (this.resolution + 1) * chunkSize - 1;
     const flipAB = face.index > 14;
     const flipCA = face.index > 4;
@@ -231,9 +238,7 @@ export class GameBoard {
       return this.getFaceTile(f, i, j);
     };
 
-    let index =
-      face.index *
-      ((this.resolution + 1) * (this.resolution + 1) * chunkSize * chunkSize);
+    let index = face.index * (chunksPerFace * chunkSize * chunkSize);
 
     // -1 represents off of the face tiles (connecting to the edge tiles)
     for (let i = 0; i <= maxIJ; i++) {
@@ -245,7 +250,10 @@ export class GameBoard {
         const jOnChunk = j % chunkSize;
         // if (face.index === 0) console.log(chunkI, chunkJ);
 
-        const chunkIndex = getTriangleNumber(chunkI - 1) + chunkJ;
+        const chunkIndex =
+          face.index * ((this.resolution + 1) * (this.resolution + 1)) +
+          getTriangleNumber(chunkI) +
+          chunkJ;
 
         if (j < i) {
           const pa = getTile(face, i, j);
@@ -271,19 +279,6 @@ export class GameBoard {
     const f = icosahedron.faces;
     const e = icosahedron.edges;
     const p = icosahedron.points;
-
-    for (let faceIndex = 0; faceIndex < f.length; faceIndex++) {
-      const faceChunkStartIndex =
-        faceIndex * getTriangleNumber(this.resolution + 1);
-      for (let i = 0; i < this.resolution + 1; i++) {
-        for (let j = 0; j <= i; j++) {
-          const index = faceChunkStartIndex + getTriangleNumber(i) + j;
-          const face = f[faceIndex];
-          const tris = new Array(chunkSize * chunkSize);
-          this.chunks[index] = { index, face, tris: [] };
-        }
-      }
-    }
 
     // Top row
     this.createFaceTris(p[0], p[1], p[2], e[0], e[5], e[1], f[0]);

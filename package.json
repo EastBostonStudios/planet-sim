@@ -1,6 +1,7 @@
 {
   "name": "planet-sim",
   "version": "1.0.0",
+  "type": "module",
   "homepage": "https://eastbostonstudios.github.io/planet-sim",
   "scripts": {
     "predeploy": "npm run build",
