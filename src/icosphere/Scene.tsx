@@ -199,6 +199,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
         })}
       {chunks.flatMap((chunk) => {
         const points = new Array<Vector3>();
+        const triCenters = new Array<Vector3>();
         const chunkCenter = new Vector3();
         for (const tri of chunk.tris) {
           if (!tri) continue;
@@ -209,6 +210,9 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             continue; // TODO: figure out wrapping
           points.push(p0, p1, p2);
           chunkCenter.add(p0).add(p1).add(p2);
+          triCenters.push(
+            new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0),
+          );
         }
         chunkCenter.divideScalar(points.length);
 
@@ -223,6 +227,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
         return positions.length === 0 ? null : (
           <Fragment key={chunk.index}>
+            <Line points={triCenters} lineWidth={4} />
             {false &&
               chunk.tris.map((tri) => {
                 if (!tri) return null;

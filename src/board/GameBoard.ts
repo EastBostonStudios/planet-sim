@@ -7,7 +7,7 @@ import {
 } from "../icosphere/Icosahedron";
 import { getTriangleNumber } from "../icosphere/utils";
 
-const chunkSize = 5;
+const chunkSize = 15;
 
 export type GameBoardTile = {
   readonly index: number;
@@ -65,8 +65,94 @@ export class GameBoard {
     // TODO: Preallocate these arrays
     this.connections = new Array<GameBoardConnection>();
 
-    this.createTiles();
-    this.createTris();
+    const f = icosahedron.faces;
+    const e = icosahedron.edges;
+
+    // Pentagonal tiles at the twelve icosahedron points
+    this.createTile(0, f[0], new Vector2(0.0, 0.0));
+    this.createTile(1, f[0], new Vector2(1.0, 0.0));
+    this.createTile(2, f[1], new Vector2(1.0, 0.0));
+    this.createTile(3, f[2], new Vector2(1.0, 0.0));
+    this.createTile(4, f[3], new Vector2(1.0, 0.0));
+    this.createTile(5, f[4], new Vector2(1.0, 0.0));
+    this.createTile(6, f[6], new Vector2(0.0, 0.0));
+    this.createTile(7, f[8], new Vector2(0.0, 0.0));
+    this.createTile(8, f[10], new Vector2(0.0, 0.0));
+    this.createTile(9, f[12], new Vector2(0.0, 0.0));
+    this.createTile(10, f[14], new Vector2(0.0, 0.0));
+    this.createTile(11, f[19], new Vector2(0.0, 0.0));
+
+    // Diagonal edges starting at p0
+    this.createEdgeTiles(e[0], f[0], false);
+    this.createEdgeTiles(e[1], f[1], false);
+    this.createEdgeTiles(e[2], f[2], false);
+    this.createEdgeTiles(e[3], f[3], false);
+    this.createEdgeTiles(e[4], f[4], false);
+
+    // First horizontal edge row
+    this.createEdgeTiles(e[5], f[5], true);
+    this.createEdgeTiles(e[6], f[7], true);
+    this.createEdgeTiles(e[7], f[9], true);
+    this.createEdgeTiles(e[8], f[11], true);
+    this.createEdgeTiles(e[9], f[13], true);
+
+    // Diagonal edges
+    this.createEdgeTiles(e[10], f[5], false);
+    this.createEdgeTiles(e[11], f[6], true);
+    this.createEdgeTiles(e[12], f[7], false);
+    this.createEdgeTiles(e[13], f[8], true);
+    this.createEdgeTiles(e[14], f[9], false);
+    this.createEdgeTiles(e[15], f[10], true);
+    this.createEdgeTiles(e[16], f[11], false);
+    this.createEdgeTiles(e[17], f[12], true);
+    this.createEdgeTiles(e[18], f[13], false);
+    this.createEdgeTiles(e[19], f[14], true);
+
+    // Second horizontal edge row
+    this.createEdgeTiles(e[20], f[6], false);
+    this.createEdgeTiles(e[21], f[8], false);
+    this.createEdgeTiles(e[22], f[10], false);
+    this.createEdgeTiles(e[23], f[12], false);
+    this.createEdgeTiles(e[24], f[14], false);
+
+    // Diagonal edges ending at p11
+    this.createEdgeTiles(e[25], f[15], true);
+    this.createEdgeTiles(e[26], f[16], true);
+    this.createEdgeTiles(e[27], f[17], true);
+    this.createEdgeTiles(e[28], f[18], true);
+    this.createEdgeTiles(e[29], f[19], true);
+
+    // Tiles for each icosahedron face
+    for (let f = 0; f < icosahedron.faces.length; f++) {
+      this.createFaceTiles(icosahedron.faces[f]);
+    }
+
+    // Top row
+    this.createFaceTris(f[0], e[0], e[5], e[1]);
+    this.createFaceTris(f[1], e[1], e[6], e[2]);
+    this.createFaceTris(f[2], e[2], e[7], e[3]);
+    this.createFaceTris(f[3], e[3], e[8], e[4]);
+    this.createFaceTris(f[4], e[4], e[9], e[0]);
+
+    // Second row
+    this.createFaceTris(f[5], e[10], e[11], e[5]);
+    this.createFaceTris(f[6], e[20], e[12], e[11]);
+    this.createFaceTris(f[7], e[12], e[13], e[6]);
+    this.createFaceTris(f[8], e[21], e[14], e[13]);
+    this.createFaceTris(f[9], e[14], e[15], e[7]);
+    this.createFaceTris(f[10], e[22], e[16], e[15]);
+    this.createFaceTris(f[11], e[16], e[17], e[8]);
+    this.createFaceTris(f[12], e[23], e[18], e[17]);
+    this.createFaceTris(f[13], e[18], e[19], e[9]);
+    this.createFaceTris(f[14], e[24], e[10], e[19]);
+
+    // Bottom row
+    this.createFaceTris(f[15], e[26], e[20], e[25]);
+    this.createFaceTris(f[16], e[27], e[21], e[26]);
+    this.createFaceTris(f[17], e[28], e[22], e[27]);
+    this.createFaceTris(f[18], e[29], e[23], e[28]);
+    this.createFaceTris(f[19], e[25], e[24], e[29]);
+
     this.validate();
   }
 
@@ -138,77 +224,13 @@ export class GameBoard {
     }
   };
 
-  private readonly createTiles = () => {
-    const f = icosahedron.faces;
-    const e = icosahedron.edges;
-
-    // Pentagonal tiles at the twelve icosahedron points
-    this.createTile(0, f[0], new Vector2(0.0, 0.0));
-    this.createTile(1, f[0], new Vector2(1.0, 0.0));
-    this.createTile(2, f[1], new Vector2(1.0, 0.0));
-    this.createTile(3, f[2], new Vector2(1.0, 0.0));
-    this.createTile(4, f[3], new Vector2(1.0, 0.0));
-    this.createTile(5, f[4], new Vector2(1.0, 0.0));
-    this.createTile(6, f[6], new Vector2(0.0, 0.0));
-    this.createTile(7, f[8], new Vector2(0.0, 0.0));
-    this.createTile(8, f[10], new Vector2(0.0, 0.0));
-    this.createTile(9, f[12], new Vector2(0.0, 0.0));
-    this.createTile(10, f[14], new Vector2(0.0, 0.0));
-    this.createTile(11, f[19], new Vector2(0.0, 0.0));
-
-    // Diagonal edges starting at p0
-    this.createEdgeTiles(e[0], f[0], false);
-    this.createEdgeTiles(e[1], f[1], false);
-    this.createEdgeTiles(e[2], f[2], false);
-    this.createEdgeTiles(e[3], f[3], false);
-    this.createEdgeTiles(e[4], f[4], false);
-
-    // First horizontal edge row
-    this.createEdgeTiles(e[5], f[5], true);
-    this.createEdgeTiles(e[6], f[7], true);
-    this.createEdgeTiles(e[7], f[9], true);
-    this.createEdgeTiles(e[8], f[11], true);
-    this.createEdgeTiles(e[9], f[13], true);
-
-    // Diagonal edges
-    this.createEdgeTiles(e[10], f[5], false);
-    this.createEdgeTiles(e[11], f[6], true);
-    this.createEdgeTiles(e[12], f[7], false);
-    this.createEdgeTiles(e[13], f[8], true);
-    this.createEdgeTiles(e[14], f[9], false);
-    this.createEdgeTiles(e[15], f[10], true);
-    this.createEdgeTiles(e[16], f[11], false);
-    this.createEdgeTiles(e[17], f[12], true);
-    this.createEdgeTiles(e[18], f[13], false);
-    this.createEdgeTiles(e[19], f[14], true);
-
-    // Second horizontal edge row
-    this.createEdgeTiles(e[20], f[6], false);
-    this.createEdgeTiles(e[21], f[8], false);
-    this.createEdgeTiles(e[22], f[10], false);
-    this.createEdgeTiles(e[23], f[12], false);
-    this.createEdgeTiles(e[24], f[14], false);
-
-    // Diagonal edges ending at p11
-    this.createEdgeTiles(e[25], f[15], true);
-    this.createEdgeTiles(e[26], f[16], true);
-    this.createEdgeTiles(e[27], f[17], true);
-    this.createEdgeTiles(e[28], f[18], true);
-    this.createEdgeTiles(e[29], f[19], true);
-
-    // Tiles for each icosahedron face
-    for (let f = 0; f < icosahedron.faces.length; f++) {
-      this.createFaceTiles(icosahedron.faces[f]);
-    }
-  };
-
   //----------------------------------------------------------------------------
 
   private readonly createFaceTris = (
+    face: IcosphereFace,
     ab: IcosphereEdge,
     bc: IcosphereEdge,
     ca: IcosphereEdge,
-    face: IcosphereFace,
   ) => {
     const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
     for (let c = 0; c < chunksPerFace; c++) {
@@ -286,38 +308,6 @@ export class GameBoard {
     }
   };
 
-  private readonly createTris = () => {
-    const f = icosahedron.faces;
-    const e = icosahedron.edges;
-    const p = icosahedron.points;
-
-    // Top row
-    this.createFaceTris(e[0], e[5], e[1], f[0]);
-    this.createFaceTris(e[1], e[6], e[2], f[1]);
-    this.createFaceTris(e[2], e[7], e[3], f[2]);
-    this.createFaceTris(e[3], e[8], e[4], f[3]);
-    this.createFaceTris(e[4], e[9], e[0], f[4]);
-
-    // Second row
-    this.createFaceTris(e[10], e[11], e[5], f[5]);
-    this.createFaceTris(e[20], e[12], e[11], f[6]);
-    this.createFaceTris(e[12], e[13], e[6], f[7]);
-    this.createFaceTris(e[21], e[14], e[13], f[8]);
-    this.createFaceTris(e[14], e[15], e[7], f[9]);
-    this.createFaceTris(e[22], e[16], e[15], f[10]);
-    this.createFaceTris(e[16], e[17], e[8], f[11]);
-    this.createFaceTris(e[23], e[18], e[17], f[12]);
-    this.createFaceTris(e[18], e[19], e[9], f[13]);
-    this.createFaceTris(e[24], e[10], e[19], f[14]);
-
-    // Bottom row
-    this.createFaceTris(e[26], e[20], e[25], f[15]);
-    this.createFaceTris(e[27], e[21], e[26], f[16]);
-    this.createFaceTris(e[28], e[22], e[27], f[17]);
-    this.createFaceTris(e[29], e[23], e[28], f[18]);
-    this.createFaceTris(e[25], e[24], e[29], f[19]);
-  };
-
   //----------------------------------------------------------------------------
 
   private readonly validate = () => {
@@ -326,8 +316,20 @@ export class GameBoard {
       "Tile indices incorrect!",
     );
     console.assert(
-      this.tris.every((chunk, i) => chunk.index === i),
+      this.tris.every((tri, i) => tri.index === i),
       "Tri indices incorrect!",
+    );
+    console.assert(
+      this.chunks.every((chunk, i) => chunk.index === i),
+      "Chunk indices incorrect!",
+    );
+    console.assert(
+      this.chunks.every((chunk) => {
+        for (let i = 0; i < chunk.tris.length; ++i)
+          if (!chunk.tris[i]) return false;
+        return true;
+      }),
+      "Chunk missing tris!",
     );
   };
 }
