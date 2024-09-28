@@ -6,13 +6,19 @@ import {
 } from "../icosphere/Icosahedron";
 import { getTriangleNumber } from "../icosphere/utils";
 
-const chunkSize = 4;
+const chunkSize = 3;
 
 export type GameBoardTile = {
   readonly index: number;
   readonly face: IcosphereFace;
   readonly neighbors: (GameBoardTile | null)[];
   readonly faceCoords: Vector2;
+};
+
+export type GameBoardConnection = {
+  readonly index: number;
+  readonly start: GameBoardTile;
+  readonly end: GameBoardTile;
 };
 
 export type GameBoardTri = {
@@ -27,12 +33,6 @@ export type GameBoardChunk = {
   readonly index: number;
   readonly face: IcosphereFace;
   readonly tris: GameBoardTri[];
-};
-
-export type GameBoardConnection = {
-  readonly index: number;
-  readonly start: GameBoardTile;
-  readonly end: GameBoardTile;
 };
 
 //------------------------------------------------------------------------------
@@ -118,6 +118,16 @@ export class GameBoard {
     this.createEdgeTiles(icosahedron.edges[28], icosahedron.faces[18]);
     this.createEdgeTiles(icosahedron.edges[29], icosahedron.faces[19]);
 
+    const foo = (this.resolution + 1) * chunkSize;
+    this.tiles[0].neighbors[0] = this.getEdgeTile(icosahedron.edges[0], foo);
+    this.tiles[0].neighbors[1] = this.getEdgeTile(icosahedron.edges[1], foo);
+    this.tiles[0].neighbors[2] = this.getEdgeTile(icosahedron.edges[2], foo);
+    this.tiles[0].neighbors[3] = this.getEdgeTile(icosahedron.edges[3], foo);
+    this.tiles[0].neighbors[4] = this.getEdgeTile(icosahedron.edges[4], foo);
+    this.tiles[0].neighbors[5] = this.getEdgeTile(icosahedron.edges[5], foo);
+
+    console.log(this.tiles[0].neighbors.map((a) => a?.index));
+
     // Create face tiles, chunks, and tris
     for (let f = 0; f < icosahedron.faces.length; f++) {
       this.populateFace(icosahedron.faces[f]);
@@ -157,6 +167,28 @@ export class GameBoard {
 
   private readonly getFaceTile = (face: IcosphereFace, i: number, j: number) =>
     this.tiles[this.getFaceTileIndex(face.index, i, j)];
+
+  private readonly getTile = (
+    face: IcosphereFace,
+    i: number,
+    j: number,
+  ): GameBoardTile => {
+    // The maximum "i" or "j" value on a face is the edge length minus 1
+    const maxIJ = (this.resolution + 1) * chunkSize - 1;
+
+    // Corners
+    if (i === -1 && j === -1) return this.tiles[face.a.index];
+    if (i === maxIJ && j === -1) return this.tiles[face.b.index];
+    if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
+
+    if (j < 0) return this.getEdgeTile(face.ab, i + 1);
+    if (i === maxIJ) return this.getEdgeTile(face.cb, maxIJ - j);
+    if (j === i)
+      return this.getEdgeTile(face.ca, face.isPolar ? j + 1 : maxIJ - j);
+
+    // Default case
+    return this.getFaceTile(face, i, j);
+  };
 
   //----------------------------------------------------------------------------
 
@@ -199,31 +231,10 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
-  private readonly getTile = (
-    face: IcosphereFace,
-    i: number,
-    j: number,
-  ): GameBoardTile => {
-    const maxIJ = (this.resolution + 1) * chunkSize - 1;
-
-    // Corners
-    if (i === -1 && j === -1) return this.tiles[face.a.index];
-    if (i === maxIJ && j === -1) return this.tiles[face.b.index];
-    if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
-
-    if (j < 0) return this.getEdgeTile(face.ab, i + 1);
-    if (i === maxIJ) return this.getEdgeTile(face.cb, maxIJ - j);
-    if (j === i)
-      return this.getEdgeTile(face.ca, face.isPolar ? j + 1 : maxIJ - j);
-
-    // Default case
-    return this.getFaceTile(face, i, j);
-  };
-
   private readonly populateFace = (face: IcosphereFace) => {
-    const maxIJ = (this.resolution + 1) * chunkSize - 1;
+    const edgeLength = (this.resolution + 1) * chunkSize;
 
-    for (let i = 0; i < maxIJ; i++) {
+    for (let i = 0; i < edgeLength - 1; i++) {
       for (let j = 0; j < i; j++) {
         const index = this.getFaceTileIndex(face.index, i, j);
         const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
@@ -241,7 +252,7 @@ export class GameBoard {
 
     let index = face.index * (chunksPerFace * chunkSize * chunkSize);
 
-    for (let i = 0; i <= maxIJ; i++) {
+    for (let i = 0; i < edgeLength; i++) {
       const chunkI = Math.trunc(i / chunkSize);
       const iOnChunk = i % chunkSize;
 
@@ -291,7 +302,15 @@ export class GameBoard {
       }
     }
 
-    for (let i = 0; i < maxIJ; i++) {
+    /*
+    for (let i = 0; i < edgeLength - 1; i++) {
+      const tile = this.getTile(face, i, 0);
+      tile.neighbors[0] = this.getTile(face, i, -1);
+      tile.neighbors[1] = this.getTile(face, i + 1, 0);
+      tile.neighbors[2] = this.getTile(face, i + 1, 1);
+    }*/
+
+    for (let i = 0; i < edgeLength - 1; i++) {
       for (let j = 0; j < i; j++) {
         const tile = this.getTile(face, i, j);
         tile.neighbors[0] = this.getTile(face, i + 1, j);
@@ -307,25 +326,17 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly validate = () => {
-    console.assert(
-      this.tiles.every((tile, i) => tile.index === i),
-      "Tile indices incorrect!",
-    );
-    console.assert(
-      this.tris.every((tri, i) => tri.index === i),
-      "Tri indices incorrect!",
-    );
-    console.assert(
-      this.chunks.every((chunk, i) => chunk.index === i),
-      "Chunk indices incorrect!",
-    );
-    console.assert(
-      this.chunks.every((chunk) => {
-        for (let i = 0; i < chunk.tris.length; ++i)
-          if (!chunk.tris[i]) return false;
-        return true;
-      }),
-      "Chunk missing tris!",
-    );
+    for (let i = 0; i < this.tiles.length; i++) {
+      console.assert(this.tiles[i].index === i, "Tile indices incorrect!");
+    }
+    for (let i = 0; i < this.tris.length; i++) {
+      console.assert(this.tris[i].index === i, "Tri indices incorrect!");
+    }
+    for (let i = 0; i < this.chunks.length; i++) {
+      console.assert(this.chunks[i].index === i, "Chunk indices incorrect!");
+      for (let j = 0; j < this.chunks[i].tris.length; j++) {
+        console.assert(!!this.chunks[i].tris[j], "Chunk missing tris!");
+      }
+    }
   };
 }

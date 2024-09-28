@@ -29,7 +29,7 @@ const StyledHtml = styled.strong<{ $color: string }>`
   text-shadow: 1px 1px black;
 `;
 
-const getColorForIndex = (index: number) => [
+const getColorForIndex = (index: number): [number, number, number] => [
   ((index % 3) + 2) / 10,
   ((index % 7) + 2) / 11,
   ((index % 11) + 2) / 15,
@@ -168,19 +168,35 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
       {tiles.map((tile) => {
         const tilePosition = getTileXYZ(tile);
         const points = new Array<Vector3>();
+
         for (const neighbor of tile.neighbors) {
           if (!neighbor) continue;
           const neighborPosition = getTileXYZ(neighbor);
           if (neighborPosition.distanceTo(tilePosition) > 0.333) continue;
+
           points.push(
             new Vector3().lerpVectors(tilePosition, neighborPosition, 0.45),
           );
         }
         if (points.length > 0) points.push(points[0], tilePosition);
+
         return (
           <group key={tile.index}>
             <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
-            {points.length > 0 && <Line points={points} lineWidth={4} />}
+            {points.length > 0 && (
+              <Line
+                points={points.flatMap((p, i) => [
+                  p,
+                  points[(i + 1) % points.length],
+                ])}
+                vertexColors={points.flatMap((_, i) => [
+                  getColorForIndex(i),
+                  getColorForIndex(i),
+                ])}
+                segments
+                lineWidth={8}
+              />
+            )}
           </group>
         );
       })}
@@ -272,11 +288,12 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           </Fragment>
         );
       })}
-      {icosahedron.points.map((point) => (
-        <StyledLabel key={point.index} position={getPointXYZ(point)}>
-          p{point.index}
-        </StyledLabel>
-      ))}
+      {false &&
+        icosahedron.points.map((point) => (
+          <StyledLabel key={point.index} position={getPointXYZ(point)}>
+            p{point.index}
+          </StyledLabel>
+        ))}
       {false &&
         icosahedron.edges.map((edge) => {
           const [start, end] = getEdgeXYZs(edge);
