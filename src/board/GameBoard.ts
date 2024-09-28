@@ -117,11 +117,11 @@ export class GameBoard {
     this.createEdgeTiles(e[24], f[14], false);
 
     // Diagonal edges ending at p11
-    this.createEdgeTiles(e[25], f[15], true);
-    this.createEdgeTiles(e[26], f[16], true);
-    this.createEdgeTiles(e[27], f[17], true);
-    this.createEdgeTiles(e[28], f[18], true);
-    this.createEdgeTiles(e[29], f[19], true);
+    this.createEdgeTiles(e[25], f[15], true, true);
+    this.createEdgeTiles(e[26], f[16], true, true);
+    this.createEdgeTiles(e[27], f[17], true, true);
+    this.createEdgeTiles(e[28], f[18], true, true);
+    this.createEdgeTiles(e[29], f[19], true, true);
 
     // Tiles for each icosahedron face
     for (let f = 0; f < icosahedron.faces.length; f++) {
@@ -203,13 +203,16 @@ export class GameBoard {
     edge: IcosphereEdge,
     face: IcosphereFace,
     useBCEdge: boolean,
+    useCAEdge?: boolean,
   ) => {
     for (let i = 1; i < (this.resolution + 1) * chunkSize; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
       const s = i / ((this.resolution + 1) * chunkSize);
-      const faceCoords = useBCEdge
-        ? new Vector2(1.0 - s, 1.0 - s)
-        : new Vector2(s, 0.0);
+      const faceCoords = useCAEdge
+        ? new Vector2(s, s)
+        : useBCEdge
+          ? new Vector2(1.0 - s, 1.0 - s)
+          : new Vector2(s, 0.0);
       this.createTile(index, face, faceCoords);
     }
   };
@@ -241,8 +244,7 @@ export class GameBoard {
     const ca = face.e2;
 
     const maxIJ = (this.resolution + 1) * chunkSize - 1;
-    const flipAB = isPolar && face.a !== icosahedron.points[0];
-    const flipCA = face.a !== icosahedron.points[0];
+    const flipCA = !isPolar;
 
     const getTile = (f: IcosphereFace, i: number, j: number): GameBoardTile => {
       // Corners
@@ -250,7 +252,7 @@ export class GameBoard {
       if (i === maxIJ && j === -1) return this.tiles[face.b.index];
       if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
 
-      if (j < 0) return this.getEdgeTile(ab, flipAB ? maxIJ - i : i + 1); // a -> b
+      if (j < 0) return this.getEdgeTile(ab, i + 1); // a -> b
       if (i === maxIJ) return this.getEdgeTile(bc, maxIJ - j); // b -> c
       if (j === i) return this.getEdgeTile(ca, flipCA ? maxIJ - j : j + 1); // c -> a
 
