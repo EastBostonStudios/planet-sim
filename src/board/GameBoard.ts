@@ -217,7 +217,7 @@ export class GameBoard {
     for (let c = 0; c < chunksPerFace; c++) {
       const index = face.index * chunksPerFace + c;
       const tris = new Array(chunkSize * chunkSize);
-      this.chunks[index] = { index, face, tris: [] };
+      this.chunks[index] = { index, face, tris };
     }
 
     const maxIJ = (this.resolution + 1) * chunkSize - 1;
@@ -240,7 +240,6 @@ export class GameBoard {
 
     let index = face.index * (chunksPerFace * chunkSize * chunkSize);
 
-    // -1 represents off of the face tiles (connecting to the edge tiles)
     for (let i = 0; i <= maxIJ; i++) {
       const chunkI = Math.trunc(i / chunkSize);
       const iOnChunk = i % chunkSize;
@@ -253,22 +252,38 @@ export class GameBoard {
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
         if (j < i) {
+          // -1 represents off of the face tiles (connecting to the edge tiles)
           const pa = getTile(face, i, j);
           const pb = getTile(face, i - 1, j);
           const pc = getTile(face, i - 1, j - 1);
           const tri = { index, face, a: pa, b: pb, c: pc };
           this.tris[index] = tri;
-          const indexOffset = jOnChunk >= iOnChunk ? 1 : 0;
-          this.chunks[chunkIndex + indexOffset].tris.push(tri);
+
+          // Check if this sits on the flipped chunk or not
+          if (jOnChunk >= iOnChunk) {
+            const triIndex = jOnChunk * jOnChunk + iOnChunk * 2;
+            this.chunks[chunkIndex + 1].tris[triIndex] = tri;
+          } else {
+            const triIndex = iOnChunk * iOnChunk + jOnChunk * 2 + 1;
+            this.chunks[chunkIndex].tris[triIndex] = tri;
+          }
           index++;
         }
+
         const pa = getTile(face, i - 1, j - 1);
         const pb = getTile(face, i, j - 1);
         const pc = getTile(face, i, j);
         const tri = { index, face, a: pa, b: pb, c: pc };
         this.tris[index] = tri;
-        const indexOffset = jOnChunk > iOnChunk ? 1 : 0;
-        this.chunks[chunkIndex + indexOffset].tris.push(tri);
+
+        // Check if this sits on the flipped chunk or not
+        if (jOnChunk > iOnChunk) {
+          const triIndex = jOnChunk * jOnChunk + iOnChunk * 2 + 1;
+          this.chunks[chunkIndex + 1].tris[triIndex] = tri;
+        } else {
+          const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
+          this.chunks[chunkIndex].tris[triIndex] = tri;
+        }
         index++;
       }
     }
@@ -304,8 +319,6 @@ export class GameBoard {
     this.createFaceTris(p[11], p[9], p[8], e[28], e[22], e[27], f[17]);
     this.createFaceTris(p[11], p[10], p[9], e[29], e[23], e[28], f[18]);
     this.createFaceTris(p[11], p[6], p[10], e[25], e[24], e[29], f[19]);
-
-    console.log(this.chunks.map((a) => a.tris.length));
   };
 
   //----------------------------------------------------------------------------

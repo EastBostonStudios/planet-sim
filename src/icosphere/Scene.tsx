@@ -108,6 +108,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
     () => new GameBoard(resolution),
     [resolution],
   );
+  console.log(chunks[2].tris);
 
   const getFaceXYZs = useCallback(
     (face: IcosphereFace): [Vector3, Vector3, Vector3] => {
@@ -201,6 +202,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
         const points = new Array<Vector3>();
         const chunkCenter = new Vector3();
         for (const tri of chunk.tris) {
+          if (!tri) continue;
           const p0 = getTileXYZ(tri.a);
           const p1 = getTileXYZ(tri.b);
           const p2 = getTileXYZ(tri.c);
@@ -224,6 +226,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           <Fragment key={chunk.index}>
             {false &&
               chunk.tris.map((tri) => {
+                if (!tri) return null;
                 const p0 = getTileXYZ(tri.a);
                 const p1 = getTileXYZ(tri.b);
                 const p2 = getTileXYZ(tri.c);
