@@ -4,6 +4,7 @@ import { defineConfig } from "vite";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // This must match "homepage" in package.json to work with GitHub pages
   base: "/planet-sim",
   plugins: [
     react(),
