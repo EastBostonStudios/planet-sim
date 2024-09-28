@@ -179,7 +179,7 @@ export class GameBoard {
         const faceCoords = new Vector2(s, s);
         this.createTile(index, face, faceCoords);
       } else if (
-        edge.index > 5 &&
+        edge.index > 4 &&
         edge.index < 20 &&
         (edge.index < 10 || edge.index % 2 === 1)
       ) {
