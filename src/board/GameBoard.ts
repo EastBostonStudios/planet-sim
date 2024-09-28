@@ -118,10 +118,9 @@ export class GameBoard {
     this.createEdgeTiles(icosahedron.edges[28], icosahedron.faces[18]);
     this.createEdgeTiles(icosahedron.edges[29], icosahedron.faces[19]);
 
-    // Tiles for each icosahedron face
+    // Create face tiles, chunks, and tris
     for (let f = 0; f < icosahedron.faces.length; f++) {
-      this.createFaceTiles(icosahedron.faces[f]);
-      this.createFaceTris(icosahedron.faces[f]);
+      this.populateFace(icosahedron.faces[f]);
     }
 
     this.validate();
@@ -193,17 +192,6 @@ export class GameBoard {
     }
   };
 
-  private readonly createFaceTiles = (face: IcosphereFace) => {
-    for (let i = 0; i < (this.resolution + 1) * chunkSize - 1; i++) {
-      for (let j = 0; j < i; j++) {
-        const index = this.getFaceTileIndex(face.index, i, j);
-        const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
-        const t = (j + 1.0) / ((this.resolution + 1) * chunkSize);
-        this.createTile(index, face, new Vector2(s, t));
-      }
-    }
-  };
-
   //----------------------------------------------------------------------------
 
   private readonly getTile = (
@@ -227,7 +215,15 @@ export class GameBoard {
     return this.getFaceTile(face, i, j);
   };
 
-  private readonly createFaceTris = (face: IcosphereFace) => {
+  private readonly populateFace = (face: IcosphereFace) => {
+    for (let i = 0; i < (this.resolution + 1) * chunkSize - 1; i++) {
+      for (let j = 0; j < i; j++) {
+        const index = this.getFaceTileIndex(face.index, i, j);
+        const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
+        const t = (j + 1.0) / ((this.resolution + 1) * chunkSize);
+        this.createTile(index, face, new Vector2(s, t));
+      }
+    }
     const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
     for (let c = 0; c < chunksPerFace; c++) {
       const index = face.index * chunksPerFace + c;
