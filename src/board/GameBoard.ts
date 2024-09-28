@@ -6,12 +6,12 @@ import {
 } from "../icosphere/Icosahedron";
 import { getTriangleNumber } from "../icosphere/utils";
 
-const chunkSize = 15;
+const chunkSize = 4;
 
 export type GameBoardTile = {
   readonly index: number;
   readonly face: IcosphereFace;
-  readonly neighbors: GameBoardTile[];
+  readonly neighbors: (GameBoardTile | null)[];
   readonly faceCoords: Vector2;
 };
 
@@ -165,7 +165,12 @@ export class GameBoard {
     face: IcosphereFace,
     faceCoords: Vector2,
   ) => {
-    this.tiles[index] = { index, neighbors: [], face, faceCoords };
+    this.tiles[index] = {
+      index,
+      neighbors: [null, null, null, null, null, null],
+      face,
+      faceCoords,
+    };
   };
 
   private readonly createEdgeTiles = (
@@ -216,7 +221,9 @@ export class GameBoard {
   };
 
   private readonly populateFace = (face: IcosphereFace) => {
-    for (let i = 0; i < (this.resolution + 1) * chunkSize - 1; i++) {
+    const maxIJ = (this.resolution + 1) * chunkSize - 1;
+
+    for (let i = 0; i < maxIJ; i++) {
       for (let j = 0; j < i; j++) {
         const index = this.getFaceTileIndex(face.index, i, j);
         const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
@@ -224,6 +231,7 @@ export class GameBoard {
         this.createTile(index, face, new Vector2(s, t));
       }
     }
+
     const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
     for (let c = 0; c < chunksPerFace; c++) {
       const index = face.index * chunksPerFace + c;
@@ -233,7 +241,7 @@ export class GameBoard {
 
     let index = face.index * (chunksPerFace * chunkSize * chunkSize);
 
-    for (let i = 0; i <= (this.resolution + 1) * chunkSize - 1; i++) {
+    for (let i = 0; i <= maxIJ; i++) {
       const chunkI = Math.trunc(i / chunkSize);
       const iOnChunk = i % chunkSize;
 
@@ -244,12 +252,14 @@ export class GameBoard {
         const chunkIndex =
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
+        const tile = this.getTile(face, i, j);
+
         if (j < i) {
           // -1 represents off of the face tiles (connecting to the edge tiles)
-          const pa = this.getTile(face, i, j);
-          const pb = this.getTile(face, i - 1, j);
-          const pc = this.getTile(face, i - 1, j - 1);
-          const tri = { index, face, a: pa, b: pb, c: pc };
+          const a = tile;
+          const b = this.getTile(face, i - 1, j);
+          const c = this.getTile(face, i - 1, j - 1);
+          const tri = { index, face, a, b, c };
           this.tris[index] = tri;
 
           // Check if this sits on the flipped chunk or not
@@ -263,10 +273,10 @@ export class GameBoard {
           index++;
         }
 
-        const pa = this.getTile(face, i - 1, j - 1);
-        const pb = this.getTile(face, i, j - 1);
-        const pc = this.getTile(face, i, j);
-        const tri = { index, face, a: pa, b: pb, c: pc };
+        const a = this.getTile(face, i - 1, j - 1);
+        const b = this.getTile(face, i, j - 1);
+        const c = tile;
+        const tri = { index, face, a, b, c };
         this.tris[index] = tri;
 
         // Check if this sits on the flipped chunk or not
@@ -278,6 +288,18 @@ export class GameBoard {
           this.chunks[chunkIndex].tris[triIndex] = tri;
         }
         index++;
+      }
+    }
+
+    for (let i = 0; i < maxIJ; i++) {
+      for (let j = 0; j < i; j++) {
+        const tile = this.getTile(face, i, j);
+        tile.neighbors[0] = this.getTile(face, i + 1, j);
+        tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+        tile.neighbors[2] = this.getTile(face, i, j + 1);
+        tile.neighbors[3] = this.getTile(face, i - 1, j);
+        tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
+        tile.neighbors[5] = this.getTile(face, i, j - 1);
       }
     }
   };

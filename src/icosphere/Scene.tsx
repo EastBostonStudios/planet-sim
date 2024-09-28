@@ -165,25 +165,25 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   return (
     <Fragment key={resolution}>
-      {false &&
-        tiles.map((tile) => {
-          const tilePosition = getTileXYZ(tile);
-          const points = new Array<Vector3>();
-          /*
+      {tiles.map((tile) => {
+        const tilePosition = getTileXYZ(tile);
+        const points = new Array<Vector3>();
         for (const neighbor of tile.neighbors) {
+          if (!neighbor) continue;
+          const neighborPosition = getTileXYZ(neighbor);
+          if (neighborPosition.distanceTo(tilePosition) > 0.333) continue;
           points.push(
-            new Vector3().lerpVectors(tilePosition, getTileXYZ(neighbor), 0.45),
+            new Vector3().lerpVectors(tilePosition, neighborPosition, 0.45),
           );
         }
         if (points.length > 0) points.push(points[0], tilePosition);
-        */
-          return (
-            <group key={tile.index}>
-              <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
-              {points.length > 0 && <Line points={points} lineWidth={4} />}
-            </group>
-          );
-        })}
+        return (
+          <group key={tile.index}>
+            <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
+            {points.length > 0 && <Line points={points} lineWidth={4} />}
+          </group>
+        );
+      })}
       {false &&
         connections.map((connection) => {
           const start = getTileXYZ(connection.start);
@@ -227,7 +227,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
         return positions.length === 0 ? null : (
           <Fragment key={chunk.index}>
-            <Line points={triCenters} lineWidth={4} />
+            {false && <Line points={triCenters} lineWidth={4} />}
             {false &&
               chunk.tris.map((tri) => {
                 if (!tri) return null;
