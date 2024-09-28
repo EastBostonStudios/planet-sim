@@ -133,8 +133,8 @@ export class GameBoard {
       const neighbors = this.tiles[i + 1].neighbors;
       neighbors[0] = this.getEdgeTile(edges[i + 5], em);
       neighbors[1] = this.getEdgeTile(edges[i], em);
-      neighbors[2] = this.getEdgeTile(edges[i === 1 ? 9 : 4 + i], 0);
-      neighbors[3] = this.getEdgeTile(edges[i === 1 ? 19 : 9 + i * 2], 0);
+      neighbors[2] = this.getEdgeTile(edges[i === 0 ? 9 : 4 + i], 0);
+      neighbors[3] = this.getEdgeTile(edges[i === 0 ? 19 : 9 + i * 2], 0);
       neighbors[4] = this.getEdgeTile(edges[9 + i * 2 + 1], 0);
     }
 

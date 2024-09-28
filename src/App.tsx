@@ -94,7 +94,7 @@ const App = () => {
             <directionalLight rotation={[45, 45, 45]} />
             {is3D ? (
               <group key="3D">
-                <axesHelper args={[5]} />
+                {false && <axesHelper args={[5]} />}
                 <OrbitControls />
                 <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
                 <Scene resolution={resolution} />
