@@ -1,7 +1,3 @@
-import * as React from "react";
-
-import styled from "styled-components";
-
 import {
   Grid,
   MapControls,
@@ -10,10 +6,14 @@ import {
   Stats,
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import * as React from "react";
 import { createContext } from "react";
+import { useSearchParams } from "react-router-dom";
+import styled from "styled-components";
 import { DoubleSide } from "three";
-import { distBetweenPoints } from "./icosphere/Icosahedron";
-import { Scene } from "./icosphere/Scene";
+import { Scene } from "./Scene";
+import * as Icosahedron from "./board/Icosahedron";
+import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -48,7 +48,7 @@ const StyledButtonHolder = styled.div`
 
 const minResolution = 0;
 const maxResolution = 8;
-const defaultResolution = 0;
+const defaultResolution = 1;
 
 export const AppContext = createContext<{ is3D: boolean }>({ is3D: false });
 
@@ -60,9 +60,12 @@ const App = () => {
     };
   }, []);
 
-  const [resolution, setResolution] = React.useState(
-    Math.min(maxResolution, Math.max(minResolution, defaultResolution)),
-  );
+  const [searchParams, setSearchParams] = useSearchParams();
+  const resolution = React.useMemo(() => {
+    const param = searchParams.get("resolution");
+    if (Number.isNaN(param)) return defaultResolution;
+    return Math.min(maxResolution, Math.max(minResolution, Number(param)));
+  }, [searchParams]);
   const [is3D, setIs3D] = React.useState(false);
 
   return (
@@ -76,7 +79,7 @@ const App = () => {
               min={minResolution}
               max={maxResolution}
               value={resolution}
-              onChange={(e) => setResolution(Number(e.target.value))}
+              onChange={(e) => setSearchParams({ resolution: e.target.value })}
             />
             <StyledButtonHolder>
               <button type="button" onClick={() => setIs3D((prev) => !prev)}>
@@ -85,46 +88,48 @@ const App = () => {
             </StyledButtonHolder>
           </StyledToolbar>
         </StyledTopBar>
-        <Canvas>
-          <Stats />
-          <directionalLight rotation={[45, 45, 45]} />
-          {is3D ? (
-            <group key="3D">
-              <axesHelper args={[5]} />
-              <OrbitControls />
-              <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
-              <Scene resolution={resolution} />
-            </group>
-          ) : (
-            <group key="2D">
-              <MapControls />
-              <PerspectiveCamera
-                makeDefault
-                position={[0, 6, 0]}
-                rotation={[Math.PI / 2.0, 0, 0]}
-              />
-              <group
-                position={[
-                  -distBetweenPoints * 1.75,
-                  0,
-                  distBetweenPoints * 1.25,
-                ]}
-                rotation={[-Math.PI / 2.0, 0, 0]}
-              >
+        <HtmlOverlaysProvider>
+          <Canvas>
+            <Stats />
+            <directionalLight rotation={[45, 45, 45]} />
+            {is3D ? (
+              <group key="3D">
+                {false && <axesHelper args={[5]} />}
+                <OrbitControls />
+                <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
                 <Scene resolution={resolution} />
               </group>
-              <Grid
-                position={[0, 0.01, 0]}
-                side={DoubleSide}
-                cellSize={0.1}
-                cellColor="grey"
-                sectionColor="grey"
-                infiniteGrid={true}
-                followCamera={true}
-              />
-            </group>
-          )}
-        </Canvas>
+            ) : (
+              <group key="2D">
+                <MapControls />
+                <PerspectiveCamera
+                  makeDefault
+                  position={[0, 6, 0]}
+                  rotation={[Math.PI / 2.0, 0, 0]}
+                />
+                <group
+                  position={[
+                    -Icosahedron.distBetweenPoints * 1.75,
+                    0,
+                    Icosahedron.distBetweenPoints * 1.25,
+                  ]}
+                  rotation={[-Math.PI / 2.0, 0, 0]}
+                >
+                  <Scene resolution={resolution} />
+                </group>
+                <Grid
+                  position={[0, 0.01, 0]}
+                  side={DoubleSide}
+                  cellSize={0.1}
+                  cellColor="grey"
+                  sectionColor="grey"
+                  infiniteGrid={true}
+                  followCamera={true}
+                />
+              </group>
+            )}
+          </Canvas>
+        </HtmlOverlaysProvider>
       </StyledApp>
     </AppContext.Provider>
   );
