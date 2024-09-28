@@ -248,12 +248,9 @@ export class GameBoard {
       for (let j = 0; j <= i; j++) {
         const chunkJ = Math.trunc(j / chunkSize);
         const jOnChunk = j % chunkSize;
-        // if (face.index === 0) console.log(chunkI, chunkJ);
 
         const chunkIndex =
-          face.index * ((this.resolution + 1) * (this.resolution + 1)) +
-          getTriangleNumber(chunkI) +
-          chunkJ * 2;
+          face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
         if (j < i) {
           const pa = getTile(face, i, j);
@@ -275,12 +272,6 @@ export class GameBoard {
         index++;
       }
     }
-
-    if (face.index === 0)
-      for (let c = 0; c < chunksPerFace; c++) {
-        const index = face.index * chunksPerFace + c;
-        console.log(this.chunks[index]?.tris);
-      }
   };
 
   private readonly createTris = () => {
@@ -313,6 +304,8 @@ export class GameBoard {
     this.createFaceTris(p[11], p[9], p[8], e[28], e[22], e[27], f[17]);
     this.createFaceTris(p[11], p[10], p[9], e[29], e[23], e[28], f[18]);
     this.createFaceTris(p[11], p[6], p[10], e[25], e[24], e[29], f[19]);
+
+    console.log(this.chunks.map((a) => a.tris.length));
   };
 
   //----------------------------------------------------------------------------
