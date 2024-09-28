@@ -11,8 +11,8 @@ import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { DoubleSide } from "three";
-import { distBetweenPoints } from "./icosphere/Icosahedron";
-import { Scene } from "./icosphere/Scene";
+import { Scene } from "./Scene";
+import * as Icosahedron from "./board/Icosahedron";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 
 const StyledApp = styled.div`
@@ -109,9 +109,9 @@ const App = () => {
                 />
                 <group
                   position={[
-                    -distBetweenPoints * 1.75,
+                    -Icosahedron.distBetweenPoints * 1.75,
                     0,
-                    distBetweenPoints * 1.25,
+                    Icosahedron.distBetweenPoints * 1.25,
                   ]}
                   rotation={[-Math.PI / 2.0, 0, 0]}
                 >

@@ -10,17 +10,11 @@ import React, {
 } from "react";
 import styled from "styled-components";
 import { type Vector2, Vector3 } from "three";
-import { AppContext } from "../App";
-import { GameBoard, type GameBoardTile } from "../board/GameBoard";
-import { HtmlOverlay3D } from "../utils/HtmlOverlay";
-import {
-  type IcosphereEdge,
-  type IcosphereFace,
-  type IcospherePoint,
-  distBetweenPoints,
-  icosahedron,
-} from "./Icosahedron";
-import { interpolateOnFace } from "./utils";
+import { AppContext } from "./App";
+import { GameBoard, type GameBoardTile } from "./board/GameBoard";
+import * as Icosahedron from "./board/Icosahedron";
+import { HtmlOverlay3D } from "./utils/HtmlOverlay";
+import { interpolateOnFace } from "./utils/mathUtils";
 
 const StyledHtml = styled.strong<{ $color: string }>`
   color: ${({ $color }) => $color};
@@ -94,8 +88,9 @@ const project3D = ({ x, y, z }: Vector3) => {
 
 const project2D = (xy: Vector2) =>
   new Vector3(
-    xy.x * distBetweenPoints - xy.y * distBetweenPoints * 0.5,
-    (xy.y * distBetweenPoints * Math.sqrt(3.0)) / 2.0,
+    xy.x * Icosahedron.distBetweenPoints -
+      xy.y * Icosahedron.distBetweenPoints * 0.5,
+    (xy.y * Icosahedron.distBetweenPoints * Math.sqrt(3.0)) / 2.0,
     0,
   );
 
@@ -110,7 +105,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   );
 
   const getFaceXYZs = useCallback(
-    (face: IcosphereFace): [Vector3, Vector3, Vector3] => {
+    (face: Icosahedron.Face): [Vector3, Vector3, Vector3] => {
       if (is3D) {
         const a = face.a.coords3D;
         const b = face.b.coords3D;
@@ -131,7 +126,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   );
 
   const getEdgeXYZs = useCallback(
-    (edge: IcosphereEdge): [Vector3, Vector3] => {
+    (edge: Icosahedron.Edge): [Vector3, Vector3] => {
       if (is3D)
         return [project3D(edge.start.coords3D), project3D(edge.end.coords3D)];
       let start = edge.start.coords2D;
@@ -146,7 +141,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   );
 
   const getPointXYZ = useCallback(
-    (point: IcospherePoint): Vector3 => {
+    (point: Icosahedron.Point): Vector3 => {
       if (is3D) return project3D(point.coords3D);
       return project2D(point.coords2D);
     },
@@ -303,13 +298,13 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
         );
       })}
       {false &&
-        icosahedron.points.map((point) => (
+        Icosahedron.points.map((point) => (
           <StyledLabel key={point.index} position={getPointXYZ(point)}>
             p{point.index}
           </StyledLabel>
         ))}
       {false &&
-        icosahedron.edges.map((edge) => {
+        Icosahedron.edges.map((edge) => {
           const [start, end] = getEdgeXYZs(edge);
           return (
             <Fragment key={edge.index}>
@@ -328,7 +323,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           );
         })}
       {false &&
-        icosahedron.faces.map((face) => {
+        Icosahedron.faces.map((face) => {
           const facePoints = getFaceXYZs(face);
           const faceCenter = new Vector3()
             .add(facePoints[0])

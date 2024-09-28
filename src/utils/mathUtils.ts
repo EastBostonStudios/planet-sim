@@ -16,26 +16,3 @@ export const interpolateOnFace = (props: {
   const ca = new Vector3().lerpVectors(a, c, p.x);
   return new Vector3().lerpVectors(ab, ca, p.y / p.x);
 };
-
-/*
-console.log(
-interpolateOnFace({
-  a: new Vector3(0, 0, 0),
-  b: new Vector3(1, 0, 0),
-  c: new Vector3(1, 1, 0),
-  p: new Vector2(0, 0),
-}),
-interpolateOnFace({
-  a: new Vector3(0, 0, 0),
-  b: new Vector3(1, 0, 0),
-  c: new Vector3(1, 1, 0),
-  p: new Vector2(1, 0),
-}),
-interpolateOnFace({
-  a: new Vector3(0, 0, 0),
-  b: new Vector3(1, 0, 0),
-  c: new Vector3(1, 1, 0),
-  p: new Vector2(1, 1),
-})
-)
-*/

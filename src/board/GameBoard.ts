@@ -1,24 +1,20 @@
 import { Vector2 } from "three";
-import {
-  type IcosphereEdge,
-  type IcosphereFace,
-  type IcospherePoint,
-  icosahedron,
-} from "../icosphere/Icosahedron";
-import { getTriangleNumber } from "../icosphere/utils";
+import { getTriangleNumber } from "../utils/mathUtils";
+
+import * as Icosahedron from "./Icosahedron";
 
 const chunkSize = 3;
 
 export type GameBoardTile = {
   readonly index: number;
-  readonly face: IcosphereFace;
+  readonly face: Icosahedron.Face;
   readonly neighbors: (GameBoardTile | null)[];
   readonly faceCoords: Vector2;
 };
 
 export type GameBoardTri = {
   readonly index: number;
-  readonly face: IcosphereFace;
+  readonly face: Icosahedron.Face;
   readonly a: GameBoardTile;
   readonly b: GameBoardTile;
   readonly c: GameBoardTile;
@@ -26,7 +22,7 @@ export type GameBoardTri = {
 
 export type GameBoardChunk = {
   readonly index: number;
-  readonly face: IcosphereFace;
+  readonly face: Icosahedron.Face;
   readonly tris: GameBoardTri[];
 };
 
@@ -46,7 +42,7 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   public constructor(resolution: number) {
-    const { faces, edges } = icosahedron;
+    const { faces, edges } = Icosahedron;
 
     this.maxIJ = (resolution + 1) * chunkSize - 1;
 
@@ -150,15 +146,6 @@ export class GameBoard {
     this.tiles[11].neighbors[3] = this.getEdgeTile(edges[26], 0);
     this.tiles[11].neighbors[4] = this.getEdgeTile(edges[25], 0);
 
-    for (let e = 0; e < edges.length; e++) {
-      const edge = edges[e];
-      for (let i = 0; i <= em; i++) {
-        const edgeTile = this.getEdgeTile(edge, i);
-        // TODO: add icosphere point start and ends!
-      }
-    }
-    // console.log(this.tiles[3].neighbors.map((a) => a?.index));
-
     // Create face tiles, chunks, and tris
     for (let f = 0; f < faces.length; f++) {
       this.populateFace(faces[f]);
@@ -192,14 +179,17 @@ export class GameBoard {
     );
   };
 
-  private readonly getEdgeTile = (edge: IcosphereEdge, i: number) =>
+  private readonly getEdgeTile = (edge: Icosahedron.Edge, i: number) =>
     this.tiles[this.getEdgeTileIndex(edge.index, i)];
 
-  private readonly getFaceTile = (face: IcosphereFace, i: number, j: number) =>
-    this.tiles[this.getFaceTileIndex(face.index, i, j)];
+  private readonly getFaceTile = (
+    face: Icosahedron.Face,
+    i: number,
+    j: number,
+  ) => this.tiles[this.getFaceTileIndex(face.index, i, j)];
 
   private readonly getTile = (
-    face: IcosphereFace,
+    face: Icosahedron.Face,
     i: number,
     j: number,
   ): GameBoardTile => {
@@ -211,7 +201,10 @@ export class GameBoard {
     if (j < 0) return this.getEdgeTile(face.ab, i);
     if (i === this.maxIJ) return this.getEdgeTile(face.cb, this.maxIJ - j - 1);
     if (j === i)
-      return this.getEdgeTile(face.ca, face.isPolar ? j : this.maxIJ - j - 1);
+      return this.getEdgeTile(
+        face.ca,
+        face.index < 5 || face.index >= 15 ? j : this.maxIJ - j - 1,
+      );
 
     // Default case
     return this.getFaceTile(face, i, j);
@@ -221,12 +214,12 @@ export class GameBoard {
 
   private readonly createTile = (
     index: number,
-    face: IcosphereFace,
+    face: Icosahedron.Face,
     faceCoords: Vector2,
   ) => {
     this.tiles[index] = {
       index,
-      neighbors: [null, null, null, null, null, null],
+      neighbors: new Array(index < Icosahedron.points.length ? 5 : 6),
       face,
       faceCoords,
     };
@@ -235,7 +228,7 @@ export class GameBoard {
 
   private readonly createTri = (
     index: number,
-    face: IcosphereFace,
+    face: Icosahedron.Face,
     a: GameBoardTile,
     b: GameBoardTile,
     c: GameBoardTile,
@@ -247,8 +240,8 @@ export class GameBoard {
   private readonly stitchEdgeTiles = (
     i: number,
     tile: GameBoardTile,
-    startPoint: IcospherePoint,
-    endPoint: IcospherePoint,
+    startPoint: Icosahedron.Point,
+    endPoint: Icosahedron.Point,
   ) => {
     if (i === 0) {
       tile.neighbors[3] = this.tiles[startPoint.index];
@@ -262,8 +255,8 @@ export class GameBoard {
   };
 
   private readonly createEdgeTiles = (
-    edge: IcosphereEdge,
-    face: IcosphereFace,
+    edge: Icosahedron.Edge,
+    face: Icosahedron.Face,
   ) => {
     for (let i = 0; i < this.maxIJ; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
@@ -290,7 +283,7 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
-  private readonly populateFace = (face: IcosphereFace) => {
+  private readonly populateFace = (face: Icosahedron.Face) => {
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
         const index = this.getFaceTileIndex(face.index, i, j);
@@ -441,6 +434,12 @@ export class GameBoard {
   private readonly validate = () => {
     for (let i = 0; i < this.tiles.length; i++) {
       console.assert(this.tiles[i].index === i, "Tile indices incorrect!");
+      for (let j = 0; j < this.tiles[i].neighbors.length; j++) {
+        console.assert(
+          !!this.tiles[i].neighbors[j],
+          "Tiles missing neighbors!",
+        );
+      }
     }
     for (let i = 0; i < this.tris.length; i++) {
       console.assert(this.tris[i].index === i, "Tri indices incorrect!");
