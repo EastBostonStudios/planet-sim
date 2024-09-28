@@ -29,18 +29,11 @@ const StyledHtml = styled.strong<{ $color: string }>`
   text-shadow: 1px 1px black;
 `;
 
-const getColorForIndex = (index: number) =>
-  index % 6 === 0
-    ? [1, 0, 0]
-    : index % 6 === 1
-      ? [0, 1, 0]
-      : index % 6 === 2
-        ? [0, 0, 1]
-        : index % 6 === 3
-          ? [1, 1, 0]
-          : index % 6 === 4
-            ? [0, 1, 1]
-            : [1, 0, 1];
+const getColorForIndex = (index: number) => [
+  (index % 2) / 1,
+  (index % 4) / 3,
+  (index % 8) / 7,
+];
 
 const StyledLabel: FC<
   {
@@ -225,7 +218,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           points.flatMap(() => getColorForIndex(chunk.index) /*rgb.flat()*/),
         );
 
-        if (chunk.face.index === 0) console.log(chunk.index, chunk.tris);
+        //if (chunk.face.index === 0) console.log(chunk.index, chunk.tris);
 
         return positions.length === 0 ? null : (
           <Fragment key={chunk.index}>
@@ -247,7 +240,9 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                   </StyledLabel>
                 );
               })}
-            <StyledLabel position={chunkCenter}>c{chunk.index}</StyledLabel>
+            {false && (
+              <StyledLabel position={chunkCenter}>c{chunk.index}</StyledLabel>
+            )}
             <mesh>
               <bufferGeometry>
                 <TripleAttribute attribute="position" array={positions} />
