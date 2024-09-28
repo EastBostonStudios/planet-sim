@@ -49,88 +49,115 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   public constructor(resolution: number) {
+    const { faces, edges } = icosahedron;
+
     // Initialize variables and pre-allocate space for the arrays
     this.resolution = resolution;
     this.tiles = new Array<GameBoardTile>(
-      this.getFaceTileIndex(icosahedron.faces.length, 0, 0),
+      this.getFaceTileIndex(faces.length, 0, 0),
     );
     this.tris = new Array<GameBoardTri>(
-      icosahedron.faces.length *
+      faces.length *
         ((resolution + 1) * (resolution + 1) * chunkSize * chunkSize),
     );
     this.chunks = new Array<GameBoardChunk>(
-      icosahedron.faces.length * (resolution + 1) * (resolution + 1),
+      faces.length * (resolution + 1) * (resolution + 1),
     );
     // TODO: Preallocate these arrays
     this.connections = new Array<GameBoardConnection>();
 
     // Pentagonal tiles at the twelve icosahedron points
-    this.createTile(0, icosahedron.faces[0], new Vector2(0.0, 0.0));
-    this.createTile(1, icosahedron.faces[0], new Vector2(1.0, 0.0));
-    this.createTile(2, icosahedron.faces[1], new Vector2(1.0, 0.0));
-    this.createTile(3, icosahedron.faces[2], new Vector2(1.0, 0.0));
-    this.createTile(4, icosahedron.faces[3], new Vector2(1.0, 0.0));
-    this.createTile(5, icosahedron.faces[4], new Vector2(1.0, 0.0));
-    this.createTile(6, icosahedron.faces[6], new Vector2(0.0, 0.0));
-    this.createTile(7, icosahedron.faces[8], new Vector2(0.0, 0.0));
-    this.createTile(8, icosahedron.faces[10], new Vector2(0.0, 0.0));
-    this.createTile(9, icosahedron.faces[12], new Vector2(0.0, 0.0));
-    this.createTile(10, icosahedron.faces[14], new Vector2(0.0, 0.0));
-    this.createTile(11, icosahedron.faces[19], new Vector2(0.0, 0.0));
+    this.createTile(0, faces[0], new Vector2(0.0, 0.0));
+    this.createTile(1, faces[0], new Vector2(1.0, 0.0));
+    this.createTile(2, faces[1], new Vector2(1.0, 0.0));
+    this.createTile(3, faces[2], new Vector2(1.0, 0.0));
+    this.createTile(4, faces[3], new Vector2(1.0, 0.0));
+    this.createTile(5, faces[4], new Vector2(1.0, 0.0));
+    this.createTile(6, faces[6], new Vector2(0.0, 0.0));
+    this.createTile(7, faces[8], new Vector2(0.0, 0.0));
+    this.createTile(8, faces[10], new Vector2(0.0, 0.0));
+    this.createTile(9, faces[12], new Vector2(0.0, 0.0));
+    this.createTile(10, faces[14], new Vector2(0.0, 0.0));
+    this.createTile(11, faces[19], new Vector2(0.0, 0.0));
 
     // Diagonal edges starting at p0
-    this.createEdgeTiles(icosahedron.edges[0], icosahedron.faces[0]);
-    this.createEdgeTiles(icosahedron.edges[1], icosahedron.faces[1]);
-    this.createEdgeTiles(icosahedron.edges[2], icosahedron.faces[2]);
-    this.createEdgeTiles(icosahedron.edges[3], icosahedron.faces[3]);
-    this.createEdgeTiles(icosahedron.edges[4], icosahedron.faces[4]);
+    this.createEdgeTiles(edges[0], faces[0]);
+    this.createEdgeTiles(edges[1], faces[1]);
+    this.createEdgeTiles(edges[2], faces[2]);
+    this.createEdgeTiles(edges[3], faces[3]);
+    this.createEdgeTiles(edges[4], faces[4]);
 
     // First horizontal edge row
-    this.createEdgeTiles(icosahedron.edges[5], icosahedron.faces[5]);
-    this.createEdgeTiles(icosahedron.edges[6], icosahedron.faces[7]);
-    this.createEdgeTiles(icosahedron.edges[7], icosahedron.faces[9]);
-    this.createEdgeTiles(icosahedron.edges[8], icosahedron.faces[11]);
-    this.createEdgeTiles(icosahedron.edges[9], icosahedron.faces[13]);
+    this.createEdgeTiles(edges[5], faces[5]);
+    this.createEdgeTiles(edges[6], faces[7]);
+    this.createEdgeTiles(edges[7], faces[9]);
+    this.createEdgeTiles(edges[8], faces[11]);
+    this.createEdgeTiles(edges[9], faces[13]);
 
     // Diagonal edges
-    this.createEdgeTiles(icosahedron.edges[10], icosahedron.faces[5]);
-    this.createEdgeTiles(icosahedron.edges[11], icosahedron.faces[6]);
-    this.createEdgeTiles(icosahedron.edges[12], icosahedron.faces[7]);
-    this.createEdgeTiles(icosahedron.edges[13], icosahedron.faces[8]);
-    this.createEdgeTiles(icosahedron.edges[14], icosahedron.faces[9]);
-    this.createEdgeTiles(icosahedron.edges[15], icosahedron.faces[10]);
-    this.createEdgeTiles(icosahedron.edges[16], icosahedron.faces[11]);
-    this.createEdgeTiles(icosahedron.edges[17], icosahedron.faces[12]);
-    this.createEdgeTiles(icosahedron.edges[18], icosahedron.faces[13]);
-    this.createEdgeTiles(icosahedron.edges[19], icosahedron.faces[14]);
+    this.createEdgeTiles(edges[10], faces[5]);
+    this.createEdgeTiles(edges[11], faces[6]);
+    this.createEdgeTiles(edges[12], faces[7]);
+    this.createEdgeTiles(edges[13], faces[8]);
+    this.createEdgeTiles(edges[14], faces[9]);
+    this.createEdgeTiles(edges[15], faces[10]);
+    this.createEdgeTiles(edges[16], faces[11]);
+    this.createEdgeTiles(edges[17], faces[12]);
+    this.createEdgeTiles(edges[18], faces[13]);
+    this.createEdgeTiles(edges[19], faces[14]);
 
     // Second horizontal edge row
-    this.createEdgeTiles(icosahedron.edges[20], icosahedron.faces[6]);
-    this.createEdgeTiles(icosahedron.edges[21], icosahedron.faces[8]);
-    this.createEdgeTiles(icosahedron.edges[22], icosahedron.faces[10]);
-    this.createEdgeTiles(icosahedron.edges[23], icosahedron.faces[12]);
-    this.createEdgeTiles(icosahedron.edges[24], icosahedron.faces[14]);
+    this.createEdgeTiles(edges[20], faces[6]);
+    this.createEdgeTiles(edges[21], faces[8]);
+    this.createEdgeTiles(edges[22], faces[10]);
+    this.createEdgeTiles(edges[23], faces[12]);
+    this.createEdgeTiles(edges[24], faces[14]);
 
     // Diagonal edges ending at p11
-    this.createEdgeTiles(icosahedron.edges[25], icosahedron.faces[15]);
-    this.createEdgeTiles(icosahedron.edges[26], icosahedron.faces[16]);
-    this.createEdgeTiles(icosahedron.edges[27], icosahedron.faces[17]);
-    this.createEdgeTiles(icosahedron.edges[28], icosahedron.faces[18]);
-    this.createEdgeTiles(icosahedron.edges[29], icosahedron.faces[19]);
+    this.createEdgeTiles(edges[25], faces[15]);
+    this.createEdgeTiles(edges[26], faces[16]);
+    this.createEdgeTiles(edges[27], faces[17]);
+    this.createEdgeTiles(edges[28], faces[18]);
+    this.createEdgeTiles(edges[29], faces[19]);
 
-    const foo = (this.resolution + 1) * chunkSize;
-    this.tiles[0].neighbors[0] = this.getEdgeTile(icosahedron.edges[0], foo);
-    this.tiles[0].neighbors[1] = this.getEdgeTile(icosahedron.edges[1], foo);
-    this.tiles[0].neighbors[2] = this.getEdgeTile(icosahedron.edges[2], foo);
-    this.tiles[0].neighbors[3] = this.getEdgeTile(icosahedron.edges[3], foo);
-    this.tiles[0].neighbors[4] = this.getEdgeTile(icosahedron.edges[4], foo);
-    this.tiles[0].neighbors[5] = this.getEdgeTile(icosahedron.edges[5], foo);
+    // Add neighbors to the 12 icosahedron point tiles
+    const em = (this.resolution + 1) * chunkSize - 2; // "edge max"
 
-    console.log(this.tiles[0].neighbors.map((a) => a?.index));
+    this.tiles[0].neighbors[0] = this.getEdgeTile(edges[0], 0);
+    this.tiles[0].neighbors[1] = this.getEdgeTile(edges[1], 0);
+    this.tiles[0].neighbors[2] = this.getEdgeTile(edges[2], 0);
+    this.tiles[0].neighbors[3] = this.getEdgeTile(edges[3], 0);
+    this.tiles[0].neighbors[4] = this.getEdgeTile(edges[4], 0);
+
+    for (let i = 0; i < 5; i++) {
+      const neighbors = this.tiles[i + 1].neighbors;
+      neighbors[0] = this.getEdgeTile(edges[i + 5], em);
+      neighbors[1] = this.getEdgeTile(edges[i], em);
+      neighbors[2] = this.getEdgeTile(edges[i === 1 ? 9 : 4 + i], 0);
+      neighbors[3] = this.getEdgeTile(edges[i === 1 ? 19 : 9 + i * 2], 0);
+      neighbors[4] = this.getEdgeTile(edges[9 + i * 2 + 1], 0);
+    }
+
+    for (let i = 0; i < 5; i++) {
+      const neighbors = this.tiles[i + 6].neighbors;
+      neighbors[0] = this.getEdgeTile(edges[20 + i], 0);
+      neighbors[1] = this.getEdgeTile(edges[10 + i * 2 + 1], em);
+      neighbors[2] = this.getEdgeTile(edges[10 + i * 2], em);
+      neighbors[3] = this.getEdgeTile(edges[i === 0 ? 24 : 20 + i - 1], em);
+      neighbors[4] = this.getEdgeTile(edges[25 + i], em);
+    }
+
+    this.tiles[11].neighbors[0] = this.getEdgeTile(edges[29], 0);
+    this.tiles[11].neighbors[1] = this.getEdgeTile(edges[28], 0);
+    this.tiles[11].neighbors[2] = this.getEdgeTile(edges[27], 0);
+    this.tiles[11].neighbors[3] = this.getEdgeTile(edges[26], 0);
+    this.tiles[11].neighbors[4] = this.getEdgeTile(edges[25], 0);
+
+    // console.log(this.tiles[3].neighbors.map((a) => a?.index));
 
     // Create face tiles, chunks, and tris
-    for (let f = 0; f < icosahedron.faces.length; f++) {
-      this.populateFace(icosahedron.faces[f]);
+    for (let f = 0; f < faces.length; f++) {
+      this.populateFace(faces[f]);
     }
 
     this.validate();
@@ -139,9 +166,9 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly getEdgeTileIndex = (edgeIndex: number, i: number) => {
-    if (i < 0 || i > (this.resolution + 1) * chunkSize)
+    if (i < 0 || i >= (this.resolution + 1) * chunkSize)
       throw new Error(`${i} out of bounds!`);
-    return 12 + edgeIndex * ((this.resolution + 1) * chunkSize - 1) + (i - 1);
+    return 12 + edgeIndex * ((this.resolution + 1) * chunkSize - 1) + i;
   };
 
   private readonly getFaceTileIndex = (
@@ -181,10 +208,10 @@ export class GameBoard {
     if (i === maxIJ && j === -1) return this.tiles[face.b.index];
     if (i === maxIJ && j === maxIJ) return this.tiles[face.c.index];
 
-    if (j < 0) return this.getEdgeTile(face.ab, i + 1);
-    if (i === maxIJ) return this.getEdgeTile(face.cb, maxIJ - j);
+    if (j < 0) return this.getEdgeTile(face.ab, i);
+    if (i === maxIJ) return this.getEdgeTile(face.cb, maxIJ - j - 1);
     if (j === i)
-      return this.getEdgeTile(face.ca, face.isPolar ? j + 1 : maxIJ - j);
+      return this.getEdgeTile(face.ca, face.isPolar ? j : maxIJ - j - 1);
 
     // Default case
     return this.getFaceTile(face, i, j);
@@ -209,9 +236,9 @@ export class GameBoard {
     edge: IcosphereEdge,
     face: IcosphereFace,
   ) => {
-    for (let i = 1; i < (this.resolution + 1) * chunkSize; i++) {
+    for (let i = 0; i < (this.resolution + 1) * chunkSize - 1; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
-      const s = i / ((this.resolution + 1) * chunkSize);
+      const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
       if (edge.index > 24) {
         const faceCoords = new Vector2(s, s);
         this.createTile(index, face, faceCoords);

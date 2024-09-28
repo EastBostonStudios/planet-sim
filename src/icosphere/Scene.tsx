@@ -178,7 +178,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             new Vector3().lerpVectors(tilePosition, neighborPosition, 0.45),
           );
         }
-        if (points.length > 0) points.push(points[0], tilePosition);
+        //    if (points.length > 0) points.push(points[0], tilePosition);
 
         return (
           <group key={tile.index}>
@@ -190,8 +190,8 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                   points[(i + 1) % points.length],
                 ])}
                 vertexColors={points.flatMap((_, i) => [
-                  getColorForIndex(i),
-                  getColorForIndex(i),
+                  getColorForIndex(i + 5),
+                  getColorForIndex(i + 5),
                 ])}
                 segments
                 lineWidth={8}
@@ -294,25 +294,22 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             p{point.index}
           </StyledLabel>
         ))}
-      {false &&
-        icosahedron.edges.map((edge) => {
-          const [start, end] = getEdgeXYZs(edge);
-          return (
-            <Fragment key={edge.index}>
-              <StyledLabel
-                position={new Vector3().lerpVectors(start, end, 0.5)}
-              >
-                e{edge.index}
-              </StyledLabel>
-              <Line
-                points={[start, end]}
-                vertexColors={greyAndBlack}
-                lineWidth={4}
-                segments
-              />
-            </Fragment>
-          );
-        })}
+      {icosahedron.edges.map((edge) => {
+        const [start, end] = getEdgeXYZs(edge);
+        return (
+          <Fragment key={edge.index}>
+            <StyledLabel position={new Vector3().lerpVectors(start, end, 0.5)}>
+              <h2>e{edge.index}</h2>
+            </StyledLabel>
+            <Line
+              points={[start, end]}
+              vertexColors={greyAndBlack}
+              lineWidth={4}
+              segments
+            />
+          </Fragment>
+        );
+      })}
       {false &&
         icosahedron.faces.map((face) => {
           const facePoints = getFaceXYZs(face);
