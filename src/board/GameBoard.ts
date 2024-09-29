@@ -2,7 +2,7 @@ import { getTriangleNumber } from "../utils/mathUtils";
 
 import * as Icosahedron from "./Icosahedron";
 
-const chunkSize = 3;
+const chunkSize = 5;
 
 export type GameBoardCoords = {
   face: Icosahedron.Face;
