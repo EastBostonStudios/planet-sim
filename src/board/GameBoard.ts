@@ -68,9 +68,9 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
-  public constructor(resolution: number, doSwaps?: boolean) {
-    this.widthInTiles = (resolution + 1) * chunkSize;
-    this.widthInChunks = resolution + 1;
+  public constructor(size: number, doSwaps?: boolean) {
+    this.widthInTiles = (size + 1) * chunkSize;
+    this.widthInChunks = size + 1;
     this.doSwaps = doSwaps ?? true;
 
     // Initialize variables and pre-allocate space for the arrays  -------------
@@ -80,11 +80,10 @@ export class GameBoard {
       this.getFaceTileIndex(faces.length, 0, 0),
     );
     this.triangles = new Array<GameBoardTriangle>(
-      faces.length *
-        ((resolution + 1) * (resolution + 1) * chunkSize * chunkSize),
+      faces.length * this.widthInTiles * this.widthInTiles,
     );
     this.chunks = new Array<GameBoardChunk>(
-      faces.length * (resolution + 1) * (resolution + 1),
+      faces.length * this.widthInChunks * this.widthInChunks,
     );
 
     // Create all icosahedron corner tiles -------------------------------------
@@ -188,7 +187,7 @@ export class GameBoard {
   private readonly getEdgeTileIndex = (edgeIndex: number, i: number) => {
     if (i < 0 || i > this.widthInTiles - 1)
       throw new Error(`${i} out of bounds!`);
-    return 12 + edgeIndex * (this.widthInChunks * chunkSize - 1) + i;
+    return 12 + edgeIndex * (this.widthInTiles - 1) + i;
   };
 
   private readonly getFaceTileIndex = (
@@ -212,7 +211,8 @@ export class GameBoard {
   private readonly getEdgeTile = (edge: Icosahedron.Edge, i: number) =>
     this.tiles[this.getEdgeTileIndex(edge.index, i)];
 
-  private readonly getFaceTile = (
+  // This method's name is super short to make other code concise
+  private readonly find = (
     face: Icosahedron.Face,
     i: number,
     j: number,
@@ -286,7 +286,7 @@ export class GameBoard {
     const shape = GameBoardTileShape.EdgeHexagon;
     for (let i = 0; i < this.widthInTiles - 1; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
-      const s = (i + 1.0) / (this.widthInChunks * chunkSize);
+      const s = (i + 1.0) / this.widthInTiles;
       if (edge.index > 24) {
         const tile = this.createTile(index, face, s, s, shape);
         this.stitchEdgeTiles(i, tile, face.a, face.c);
@@ -366,8 +366,8 @@ export class GameBoard {
     for (let i = 0; i < this.widthInTiles - 1; i++) {
       for (let j = 0; j < i; j++) {
         const index = this.getFaceTileIndex(face.index, i, j);
-        const s = (i + 1.0) / (this.widthInChunks * chunkSize);
-        const t = (j + 1.0) / (this.widthInChunks * chunkSize);
+        const s = (i + 1.0) / this.widthInTiles;
+        const t = (j + 1.0) / this.widthInTiles;
         const ci = i % chunkSize;
         const cj = j % chunkSize;
         this.createTile(index, face, s, t, this.getShapeForChunkCoords(ci, cj));
@@ -396,37 +396,37 @@ export class GameBoard {
         const chunkIndex =
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
-        let a = this.getFaceTile(face, i, j);
+        // These are named "a", "b", "c", and "d" since these names are short
+        const a = this.find(face, i, j);
+        const b = this.find(face, i - 1, j - 1);
+        const c = this.find(face, i, j - 1);
 
         if (j < i) {
-          let b = this.getFaceTile(face, i - 1, j);
-          let c = this.getFaceTile(face, i - 1, j - 1);
-          if (a.shape === GameBoardTileShape.Swap1HeptagonB)
-            c = this.getFaceTile(face, i - 2, j - 1);
-          else if (a.shape === GameBoardTileShape.Swap2PentagonA)
-            c = this.getFaceTile(face, i, j - 1);
-          else if (a.shape === GameBoardTileShape.Swap3PentagonA)
-            b = this.getFaceTile(face, i, j + 1);
-
-          const t = this.createTri(index, face, a, b, c);
+          const d = this.find(face, i - 1, j);
+          const t =
+            a.shape === GameBoardTileShape.Swap1HeptagonB
+              ? this.createTri(index, face, a, d, this.find(face, i - 2, j - 1))
+              : a.shape === GameBoardTileShape.Swap2PentagonA
+                ? this.createTri(index, face, a, d, this.find(face, i, j - 1))
+                : a.shape === GameBoardTileShape.Swap3PentagonA
+                  ? this.createTri(index, face, a, this.find(face, i, j + 1), b)
+                  : this.createTri(index, face, a, d, b);
           const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
           chunk.triangles[cj < ci ? ci * ci + cj * 2 + 1 : cj * cj + ci * 2] =
             t;
           index++;
         }
 
-        const b = this.getFaceTile(face, i - 1, j - 1);
-        let c = this.getFaceTile(face, i, j - 1);
+        // Check if this tile touches swap 3, 2, or 1
+        const t =
+          a.shape === GameBoardTileShape.Swap3HeptagonA
+            ? this.createTri(index, face, a, b, this.find(face, i - 1, j - 2))
+            : a.shape === GameBoardTileShape.Swap2PentagonA
+              ? this.createTri(index, face, this.find(face, i - 1, j), b, c)
+              : a.shape === GameBoardTileShape.Swap1PentagonA
+                ? this.createTri(index, face, this.find(face, i + 1, j), b, c)
+                : this.createTri(index, face, a, b, c);
 
-        // Bottom-left distortion
-        if (a.shape === GameBoardTileShape.Swap1PentagonA)
-          a = this.getFaceTile(face, i + 1, j);
-        else if (a.shape === GameBoardTileShape.Swap2PentagonA)
-          a = this.getFaceTile(face, i - 1, j);
-        else if (a.shape === GameBoardTileShape.Swap3HeptagonA)
-          c = this.getFaceTile(face, i - 1, j - 2);
-
-        const t = this.createTri(index, face, a, b, c);
         const chunk = this.chunks[chunkIndex + (cj > ci ? 1 : 0)];
         chunk.triangles[cj > ci ? cj * cj + ci * 2 + 1 : ci * ci + cj * 2] = t;
         index++;
@@ -437,9 +437,9 @@ export class GameBoard {
 
     // A -> B Edge
     for (let i = 0; i < this.widthInTiles - 1; i++) {
-      const edgeTile = this.getFaceTile(face, i, -1);
-      const n0 = this.getFaceTile(face, i + 1, 0);
-      const n1 = this.getFaceTile(face, i, 0);
+      const edgeTile = this.find(face, i, -1);
+      const n0 = this.find(face, i + 1, 0);
+      const n1 = this.find(face, i, 0);
       if (face.index < 5 || face.index >= 15 || face.index % 2 === 1) {
         edgeTile.neighbors[1] = n0;
         edgeTile.neighbors[2] = n1;
@@ -451,9 +451,9 @@ export class GameBoard {
 
     // B -> C Edge
     for (let i = 0; i < this.widthInTiles - 1; i++) {
-      const edgeTile = this.getFaceTile(face, this.widthInTiles - 1, i);
-      const n0 = this.getFaceTile(face, this.widthInTiles - 2, i);
-      const n1 = this.getFaceTile(face, this.widthInTiles - 2, i - 1);
+      const edgeTile = this.find(face, this.widthInTiles - 1, i);
+      const n0 = this.find(face, this.widthInTiles - 2, i);
+      const n1 = this.find(face, this.widthInTiles - 2, i - 1);
       if (face.index < 5) {
         edgeTile.neighbors[4] = n0;
         edgeTile.neighbors[5] = n1;
@@ -468,9 +468,9 @@ export class GameBoard {
 
     // C -> A Edge
     for (let i = 0; i < this.widthInTiles - 1; i++) {
-      const edgeTile = this.getFaceTile(face, i, i);
-      const n0 = this.getFaceTile(face, i + 1, i);
-      const n1 = this.getFaceTile(face, i, i - 1);
+      const edgeTile = this.find(face, i, i);
+      const n0 = this.find(face, i + 1, i);
+      const n1 = this.find(face, i, i - 1);
       if (face.index < 5 || face.index >= 15) {
         edgeTile.neighbors[5] = n0;
         edgeTile.neighbors[4] = n1;
@@ -487,111 +487,111 @@ export class GameBoard {
 
     for (let i = 0; i < this.widthInTiles - 1; i++) {
       for (let j = 0; j < i; j++) {
-        const tile = this.getFaceTile(face, i, j);
+        const tile = this.find(face, i, j);
         switch (tile.shape) {
           case GameBoardTileShape.Swap1PentagonA:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j);
+            tile.neighbors[4] = this.find(face, i - 1, j - 1);
             break;
           case GameBoardTileShape.Swap1PentagonB:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i - 1, j);
+            tile.neighbors[3] = this.find(face, i - 1, j - 1);
+            tile.neighbors[4] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap1HeptagonA:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 2, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[4] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 2, j + 1);
+            tile.neighbors[2] = this.find(face, i + 1, j + 1);
+            tile.neighbors[3] = this.find(face, i, j + 1);
+            tile.neighbors[4] = this.find(face, i - 1, j);
+            tile.neighbors[5] = this.find(face, i - 1, j - 1);
+            tile.neighbors[6] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap1HeptagonB:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[4] = this.getFaceTile(face, i - 2, j - 1);
-            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j);
+            tile.neighbors[4] = this.find(face, i - 2, j - 1);
+            tile.neighbors[5] = this.find(face, i - 1, j - 1);
+            tile.neighbors[6] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap2PentagonA:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j);
+            tile.neighbors[4] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap2PentagonB:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i, j + 1);
+            tile.neighbors[2] = this.find(face, i - 1, j);
+            tile.neighbors[3] = this.find(face, i - 1, j - 1);
+            tile.neighbors[4] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap2HeptagonA:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[5] = this.getFaceTile(face, i, j - 1);
-            tile.neighbors[6] = this.getFaceTile(face, i + 1, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j);
+            tile.neighbors[4] = this.find(face, i - 1, j - 1);
+            tile.neighbors[5] = this.find(face, i, j - 1);
+            tile.neighbors[6] = this.find(face, i + 1, j - 1);
             break;
           case GameBoardTileShape.Swap2HeptagonB:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j + 1);
-            tile.neighbors[4] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j + 1);
+            tile.neighbors[4] = this.find(face, i - 1, j);
+            tile.neighbors[5] = this.find(face, i - 1, j - 1);
+            tile.neighbors[6] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap3PentagonA:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j - 1);
+            tile.neighbors[4] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap3PentagonB:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[1] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j + 1);
+            tile.neighbors[1] = this.find(face, i, j + 1);
+            tile.neighbors[2] = this.find(face, i - 1, j);
+            tile.neighbors[3] = this.find(face, i - 1, j - 1);
+            tile.neighbors[4] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap3HeptagonA:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 2);
-            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j);
+            tile.neighbors[4] = this.find(face, i - 1, j - 1);
+            tile.neighbors[5] = this.find(face, i - 1, j - 2);
+            tile.neighbors[6] = this.find(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap3HeptagonB:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i + 1, j + 2);
-            tile.neighbors[3] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[4] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i + 1, j + 2);
+            tile.neighbors[3] = this.find(face, i, j + 1);
+            tile.neighbors[4] = this.find(face, i - 1, j);
+            tile.neighbors[5] = this.find(face, i - 1, j - 1);
+            tile.neighbors[6] = this.find(face, i, j - 1);
             break;
           default:
-            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
-            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
-            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
-            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
-            tile.neighbors[5] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[0] = this.find(face, i + 1, j);
+            tile.neighbors[1] = this.find(face, i + 1, j + 1);
+            tile.neighbors[2] = this.find(face, i, j + 1);
+            tile.neighbors[3] = this.find(face, i - 1, j);
+            tile.neighbors[4] = this.find(face, i - 1, j - 1);
+            tile.neighbors[5] = this.find(face, i, j - 1);
             break;
         }
       }
