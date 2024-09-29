@@ -4,6 +4,27 @@ import * as Icosahedron from "./Icosahedron";
 
 const chunkSize = 8;
 
+export enum GameBoardTileShape {
+  //
+  PENTAGON = 0,
+  HEXAGON = 1,
+  //
+  D1_5A = 2,
+  D1_5B = 3,
+  D1_7A = 4,
+  D1_7B = 5,
+  //,
+  D2_5A = 6,
+  D2_5B = 7,
+  D2_7A = 8,
+  D2_7B = 9,
+  //,
+  D3_5A = 10,
+  D3_5B = 11,
+  D3_7A = 12,
+  D3_7B = 13,
+}
+
 export type GameBoardCoords = {
   face: Icosahedron.Face;
   x: number;
@@ -14,7 +35,7 @@ export type GameBoardTile = {
   readonly index: number;
   readonly coords: GameBoardCoords;
   readonly neighbors: GameBoardTile[];
-  readonly label?: true | undefined;
+  readonly shape?: GameBoardTileShape | undefined;
 };
 
 export type GameBoardTri = {
@@ -65,18 +86,18 @@ export class GameBoard {
     );
 
     // Pentagonal tiles at the twelve icosahedron points
-    this.createTile(0, faces[0], 0.0, 0.0);
-    this.createTile(1, faces[0], 1.0, 0.0);
-    this.createTile(2, faces[1], 1.0, 0.0);
-    this.createTile(3, faces[2], 1.0, 0.0);
-    this.createTile(4, faces[3], 1.0, 0.0);
-    this.createTile(5, faces[4], 1.0, 0.0);
-    this.createTile(6, faces[6], 0.0, 0.0);
-    this.createTile(7, faces[8], 0.0, 0.0);
-    this.createTile(8, faces[10], 0.0, 0.0);
-    this.createTile(9, faces[12], 0.0, 0.0);
-    this.createTile(10, faces[14], 0.0, 0.0);
-    this.createTile(11, faces[19], 0.0, 0.0);
+    this.createTile(0, faces[0], 0.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(1, faces[0], 1.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(2, faces[1], 1.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(3, faces[2], 1.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(4, faces[3], 1.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(5, faces[4], 1.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(6, faces[6], 0.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(7, faces[8], 0.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(8, faces[10], 0.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(9, faces[12], 0.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(10, faces[14], 0.0, 0.0, GameBoardTileShape.PENTAGON);
+    this.createTile(11, faces[19], 0.0, 0.0, GameBoardTileShape.PENTAGON);
 
     // Diagonal edges starting at p0
     this.createEdgeTiles(edges[0], faces[0]);
@@ -222,11 +243,25 @@ export class GameBoard {
     face: Icosahedron.Face,
     x: number,
     y: number,
+    shape: GameBoardTileShape,
   ) => {
     this.tiles[index] = {
       index,
-      neighbors: new Array(index < Icosahedron.points.length ? 5 : 7), // TODO: 6 vs 7!!
       coords: { face, x, y },
+      neighbors: new Array(
+        shape === GameBoardTileShape.HEXAGON
+          ? 6
+          : shape === GameBoardTileShape.PENTAGON ||
+              shape === GameBoardTileShape.D1_5A ||
+              shape === GameBoardTileShape.D1_5B ||
+              shape === GameBoardTileShape.D2_5A ||
+              shape === GameBoardTileShape.D2_5B ||
+              shape === GameBoardTileShape.D3_5A ||
+              shape === GameBoardTileShape.D3_5B
+            ? 5
+            : 7,
+      ),
+      shape,
     };
     return this.tiles[index];
   };
@@ -267,23 +302,75 @@ export class GameBoard {
       const index = this.getEdgeTileIndex(edge.index, i);
       const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
       if (edge.index > 24) {
-        const tile = this.createTile(index, face, s, s);
+        const tile = this.createTile(
+          index,
+          face,
+          s,
+          s,
+          GameBoardTileShape.HEXAGON,
+        );
         this.stitchEdgeTiles(i, tile, face.a, face.c);
       } else if (
         edge.index > 4 &&
         edge.index < 20 &&
         (edge.index < 10 || edge.index % 2 === 1)
       ) {
-        const tile = this.createTile(index, face, 1.0 - s, 1.0 - s);
+        const tile = this.createTile(
+          index,
+          face,
+          1.0 - s,
+          1.0 - s,
+          GameBoardTileShape.HEXAGON,
+        );
         this.stitchEdgeTiles(i, tile, face.c, face.a);
       } else {
-        const tile = this.createTile(index, face, s, 0.0);
+        const tile = this.createTile(
+          index,
+          face,
+          s,
+          0.0,
+          GameBoardTileShape.HEXAGON,
+        );
         this.stitchEdgeTiles(i, tile, face.a, face.b);
       }
     }
   };
 
   //----------------------------------------------------------------------------
+
+  private readonly getShapeForChunkCoords = (ci: number, cj: number) => {
+    // Bottom-left distortion
+    if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6))
+      return GameBoardTileShape.D1_5A;
+    if ((ci === 2 && cj === 0) || (ci === 4 && cj === 5))
+      return GameBoardTileShape.D1_5B;
+    if ((ci === 1 && cj === 0) || (ci === 3 && cj === 5))
+      return GameBoardTileShape.D1_7A;
+    if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6))
+      return GameBoardTileShape.D1_7B;
+
+    // Bottom-right distortion
+    if ((ci === 5 && cj === 0) || (ci === 1 && cj === 6))
+      return GameBoardTileShape.D2_5A;
+    if ((ci === 6 && cj === 1) || (ci === 0 && cj === 5))
+      return GameBoardTileShape.D2_5B;
+    if ((ci === 5 && cj === 1) || (ci === 0 && cj === 6))
+      return GameBoardTileShape.D2_7A;
+    if ((ci === 6 && cj === 0) || (ci === 1 && cj === 5))
+      return GameBoardTileShape.D2_7B;
+
+    // Top distortion
+    if ((ci === 6 && cj === 4) || (ci === 6 - 5 && cj === 4 - 2))
+      return GameBoardTileShape.D3_5A;
+    if ((ci === 5 && cj === 4) || (ci === 5 - 5 && cj === 4 - 2))
+      return GameBoardTileShape.D3_5B;
+    if ((ci === 6 && cj === 5) || (ci === 6 - 5 && cj === 5 - 2))
+      return GameBoardTileShape.D3_7A;
+    if ((ci === 5 && cj === 3) || (ci === 5 - 5 && cj === 3 - 2))
+      return GameBoardTileShape.D3_7B;
+
+    return GameBoardTileShape.HEXAGON;
+  };
 
   private readonly getFlippedTriangleDistortion = (ci: number, cj: number) => {
     // Bottom-left distortion
@@ -311,7 +398,9 @@ export class GameBoard {
         const index = this.getFaceTileIndex(face.index, i, j);
         const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
         const t = (j + 1.0) / ((this.resolution + 1) * chunkSize);
-        this.createTile(index, face, s, t);
+        const ci = i % chunkSize;
+        const cj = j % chunkSize;
+        this.createTile(index, face, s, t, this.getShapeForChunkCoords(ci, cj));
       }
     }
 
@@ -419,28 +508,19 @@ export class GameBoard {
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
         const tile = this.getTile(face, i, j);
-        const ci = i % chunkSize;
-        const cj = j % chunkSize;
-
-        // Bottom-left distortion
-        if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6)) {
-          tile.label = "5a";
+        if (tile.shape === GameBoardTileShape.D1_5A) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
           tile.neighbors[3] = this.getTile(face, i - 1, j);
           tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
-          // tile.neighbors[5] = this.getTile(face, i, j - 1);
-        } else if ((ci === 2 && cj === 0) || (ci === 4 && cj === 5)) {
-          tile.label = "5b";
+        } else if (tile.shape === GameBoardTileShape.D1_5B) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
-          // tile.neighbors[2] = this.getTile(face, i, j + 1);
-          tile.neighbors[3] = this.getTile(face, i - 1, j);
-          tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
-          tile.neighbors[5] = this.getTile(face, i, j - 1);
-        } else if ((ci === 1 && cj === 0) || (ci === 3 && cj === 5)) {
-          tile.label = "7a";
+          tile.neighbors[2] = this.getTile(face, i - 1, j);
+          tile.neighbors[3] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[4] = this.getTile(face, i, j - 1);
+        } else if (tile.shape === GameBoardTileShape.D1_7A) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 2, j + 1);
           tile.neighbors[2] = this.getTile(face, i + 1, j + 1);
@@ -448,8 +528,7 @@ export class GameBoard {
           tile.neighbors[4] = this.getTile(face, i - 1, j);
           tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[6] = this.getTile(face, i, j - 1);
-        } else if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6)) {
-          tile.label = "7b";
+        } else if (tile.shape === GameBoardTileShape.D1_7B) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
@@ -457,33 +536,27 @@ export class GameBoard {
           tile.neighbors[4] = this.getTile(face, i - 2, j - 1);
           tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[6] = this.getTile(face, i, j - 1);
-        }
-        // Bottom-right distortion
-        else if ((ci === 5 && cj === 0) || (ci === 1 && cj === 6)) {
-          tile.label = "5a";
+        } else if (tile.shape === GameBoardTileShape.D2_5A) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
           tile.neighbors[3] = this.getTile(face, i - 1, j);
           tile.neighbors[4] = this.getTile(face, i, j - 1);
-        } else if ((ci === 6 && cj === 1) || (ci === 0 && cj === 5)) {
-          tile.label = "5b";
+        } else if (tile.shape === GameBoardTileShape.D2_5B) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i, j + 1);
           tile.neighbors[2] = this.getTile(face, i - 1, j);
           tile.neighbors[3] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[4] = this.getTile(face, i, j - 1);
-        } else if ((ci === 5 && cj === 1) || (ci === 0 && cj === 6)) {
-          tile.label = "7a";
+        } else if (tile.shape === GameBoardTileShape.D2_7A) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
           tile.neighbors[3] = this.getTile(face, i - 1, j);
           tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[5] = this.getTile(face, i, j - 1);
-          tile.neighbors[7] = this.getTile(face, i + 1, j - 1);
-        } else if ((ci === 6 && cj === 0) || (ci === 1 && cj === 5)) {
-          tile.label = "7b";
+          tile.neighbors[6] = this.getTile(face, i + 1, j - 1);
+        } else if (tile.shape === GameBoardTileShape.D2_7B) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
@@ -491,24 +564,19 @@ export class GameBoard {
           tile.neighbors[4] = this.getTile(face, i - 1, j);
           tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[6] = this.getTile(face, i, j - 1);
-        }
-        // Top distortion
-        else if ((ci === 6 && cj === 4) || (ci === 6 - 5 && cj === 4 - 2)) {
-          tile.label = "5a";
+        } else if (tile.shape === GameBoardTileShape.D3_5A) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
           tile.neighbors[3] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[4] = this.getTile(face, i, j - 1);
-        } else if ((ci === 5 && cj === 4) || (ci === 5 - 5 && cj === 4 - 2)) {
-          tile.label = "5b";
+        } else if (tile.shape === GameBoardTileShape.D3_5B) {
           tile.neighbors[0] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[1] = this.getTile(face, i, j + 1);
           tile.neighbors[2] = this.getTile(face, i - 1, j);
           tile.neighbors[3] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[4] = this.getTile(face, i, j - 1);
-        } else if ((ci === 6 && cj === 5) || (ci === 6 - 5 && cj === 5 - 2)) {
-          tile.label = "7a";
+        } else if (tile.shape === GameBoardTileShape.D3_7A) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
@@ -516,8 +584,7 @@ export class GameBoard {
           tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[5] = this.getTile(face, i - 1, j - 2);
           tile.neighbors[6] = this.getTile(face, i, j - 1);
-        } else if ((ci === 5 && cj === 3) || (ci === 5 - 5 && cj === 3 - 2)) {
-          tile.label = "7a";
+        } else if (tile.shape === GameBoardTileShape.D3_7B) {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i + 1, j + 2);
@@ -542,7 +609,6 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly validate = () => {
-    return;
     for (let i = 0; i < this.tiles?.length; i++) {
       console.assert(this.tiles[i]?.index === i, "Tile indices incorrect!");
       for (let j = 0; j < this.tiles[i]?.neighbors.length; j++) {

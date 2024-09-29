@@ -3,7 +3,7 @@ import { folder, useControls } from "leva";
 import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
-import { GameBoard } from "../board/GameBoard";
+import { GameBoard, GameBoardTileShape } from "../board/GameBoard";
 import { getCenter, lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
 import { IcoMeshes } from "./IcoMeshes";
@@ -73,12 +73,41 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                   .normalize()
               : undefined;
 
+          const asdf = () => {
+            switch (tile.shape) {
+              case GameBoardTileShape.D1_5A:
+                return "D1_5A";
+              case GameBoardTileShape.D1_5B:
+                return "D1_5B";
+              case GameBoardTileShape.D1_7A:
+                return "D1_7A";
+              case GameBoardTileShape.D1_7B:
+                return "D1_7B";
+              case GameBoardTileShape.D2_5A:
+                return "D2_5A";
+              case GameBoardTileShape.D2_5B:
+                return "D2_5B";
+              case GameBoardTileShape.D2_7A:
+                return "D2_7A";
+              case GameBoardTileShape.D2_7B:
+                return "D2_7B";
+              case GameBoardTileShape.D3_5A:
+                return "D3_5A";
+              case GameBoardTileShape.D3_5B:
+                return "D3_5B";
+              case GameBoardTileShape.D3_7A:
+                return "D3_7A";
+              case GameBoardTileShape.D3_7B:
+                return "D3_7B";
+              default:
+                return `t${tile.index}`;
+            }
+          };
+
           return (
             <group key={tile.index}>
-              {showTileIndices && !!tile.label && (
-                <StyledLabel position={tilePosition}>
-                  t{tile.label ?? tile.index}
-                </StyledLabel>
+              {showTileIndices && tile.shape !== undefined && (
+                <StyledLabel position={tilePosition}>{asdf()}</StyledLabel>
               )}
               {!vec ? null : (
                 <Line
