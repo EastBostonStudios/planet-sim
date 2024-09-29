@@ -24,28 +24,28 @@ const ArrayAttribute: FC<{
   );
 };
 
-export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
+export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
   //----------------------------------------------------------------------------
 
   const { projectCoords, projectCoordsArray } = useContext(AppContext);
   const { doSwap, showTiles, showTileIndices, showChunks } = useControls({
     tiles: folder({
       doSwap: true,
-      showTiles: true,
+      showTiles: false,
       showTileIndices: true,
       showChunks: true,
     }),
   });
 
   const { tiles, chunks } = useMemo(
-    () => new GameBoard(resolution, doSwap),
-    [resolution, doSwap],
+    () => new GameBoard(icosphereSize, doSwap),
+    [icosphereSize, doSwap],
   );
 
   //----------------------------------------------------------------------------
 
   return (
-    <Fragment key={`${resolution} ${doSwap}`}>
+    <Fragment key={`${icosphereSize} ${doSwap}`}>
       {showTiles &&
         tiles.map((tile) => {
           const [tilePosition, ...coords] = projectCoordsArray(

@@ -79,8 +79,8 @@ const App = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const resolution = React.useMemo(() => {
-    const param = searchParams.get("resolution");
+  const icosphereSize = React.useMemo(() => {
+    const param = searchParams.get("size");
     if (Number.isNaN(param)) return defaultResolution;
     return Math.min(maxResolution, Math.max(minResolution, Number(param)));
   }, [searchParams]);
@@ -207,15 +207,15 @@ const App = () => {
       <StyledApp className="App">
         <StyledTopBar>
           <StyledToolbar>
-            <h4>Resolution: {resolution}</h4>
+            <h4>Icosphere size: {icosphereSize}</h4>
             <input
               type="range"
               min={minResolution}
               max={maxResolution}
-              value={resolution}
+              value={icosphereSize}
               onChange={(e) =>
                 setSearchParams((prev) => {
-                  prev.set("resolution", e.target.value);
+                  prev.set("size", e.target.value);
                   return prev;
                 })
               }
@@ -245,7 +245,7 @@ const App = () => {
                 {false && <axesHelper args={[5]} />}
                 <OrbitControls />
                 <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
-                <Scene resolution={resolution} />
+                <Scene icosphereSize={icosphereSize} />
               </group>
             ) : (
               <group key="2D">
@@ -259,7 +259,7 @@ const App = () => {
                   position={[-dbp * 1.75, 5 /*Temp, prev 0*/, dbp * 1.25]}
                   rotation={[-Math.PI / 2.0, 0, 0]}
                 >
-                  <Scene resolution={resolution} />
+                  <Scene icosphereSize={icosphereSize} />
                 </group>
                 <Grid
                   position={[0, 0.01, 0]}
