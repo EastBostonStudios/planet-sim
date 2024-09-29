@@ -1,4 +1,5 @@
 import { Line } from "@react-three/drei";
+import { folder, useControls } from "leva";
 import React, { Fragment, useContext, type FC } from "react";
 import { AppContext } from "../App";
 import * as Icosahedron from "../board/Icosahedron";
@@ -7,14 +8,18 @@ import { StyledLabel } from "./StyledLabel";
 
 //------------------------------------------------------------------------------
 
-export const IcoMeshes: FC<{
-  showPoints: boolean;
-  showEdges: boolean;
-  showFaces: boolean;
-}> = ({ showPoints, showEdges, showFaces }) => {
+export const IcoMeshes: FC = () => {
   //----------------------------------------------------------------------------
 
   const { pointProjector, projectCoords } = useContext(AppContext);
+  const { showPoints, showEdges, showFaces } = useControls({
+    icosahedron: folder({
+      showPoints: false,
+      showEdges: false,
+      showFaces: false,
+    }),
+  });
+
   return (
     <>
       {showPoints &&

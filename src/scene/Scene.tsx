@@ -1,4 +1,5 @@
 import { Line } from "@react-three/drei";
+import { folder, useControls } from "leva";
 import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
@@ -31,6 +32,11 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   //----------------------------------------------------------------------------
 
   const { projectCoords } = useContext(AppContext);
+  const { showTiles } = useControls({
+    tiles: folder({
+      showTiles: true,
+    }),
+  });
 
   const { tiles, chunks } = useMemo(
     () => new GameBoard(resolution),
@@ -41,68 +47,69 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
   return (
     <Fragment key={resolution}>
-      {tiles.map((tile) => {
-        const tilePosition = projectCoords(tile.coords);
-        const points = new Array<Vector3>();
+      {showTiles &&
+        tiles.map((tile) => {
+          const tilePosition = projectCoords(tile.coords);
+          const points = new Array<Vector3>();
 
-        for (const neighbor of tile.neighbors) {
-          if (!neighbor) continue;
-          const neighborPosition = projectCoords(neighbor.coords);
-          if (neighborPosition.distanceTo(tilePosition) > 0.333) continue;
+          for (const neighbor of tile.neighbors) {
+            if (!neighbor) continue;
+            const neighborPosition = projectCoords(neighbor.coords);
+            if (neighborPosition.distanceTo(tilePosition) > 0.333) continue;
 
-          points.push(
-            new Vector3().lerpVectors(tilePosition, neighborPosition, 0.45),
+            points.push(
+              new Vector3().lerpVectors(tilePosition, neighborPosition, 0.45),
+            );
+          }
+          const vec =
+            points.length >= 2
+              ? new Vector3()
+                  .crossVectors(
+                    new Vector3().subVectors(
+                      points[0].clone().normalize(),
+                      tilePosition.clone().normalize(),
+                    ),
+                    new Vector3().subVectors(
+                      points[1].clone().normalize(),
+                      tilePosition.clone().normalize(),
+                    ),
+                  )
+                  .normalize()
+              : undefined;
+
+          return (
+            <group key={tile.index}>
+              {false && (
+                <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
+              )}
+              {!vec ? null : (
+                <Line
+                  points={[
+                    tilePosition,
+                    new Vector3().copy(tilePosition).addScaledVector(vec, 0.05),
+                  ]}
+                />
+              )}
+              {points.length > 0 && (
+                <Line
+                  points={points.flatMap((p, i) => [
+                    p,
+                    points[(i + 1) % points.length],
+                  ])}
+                  vertexColors={points.flatMap((_, i) => [
+                    getColorForIndex(tile.index + i + 5),
+                    getColorForIndex(tile.index + i + 5),
+                  ])}
+                  segments
+                  lineWidth={8}
+                  polygonOffset={true}
+                  polygonOffsetFactor={-100}
+                  polygonOffsetUnits={-100}
+                />
+              )}
+            </group>
           );
-        }
-        const vec =
-          points.length >= 2
-            ? new Vector3()
-                .crossVectors(
-                  new Vector3().subVectors(
-                    points[0].clone().normalize(),
-                    tilePosition.clone().normalize(),
-                  ),
-                  new Vector3().subVectors(
-                    points[1].clone().normalize(),
-                    tilePosition.clone().normalize(),
-                  ),
-                )
-                .normalize()
-            : undefined;
-
-        return (
-          <group key={tile.index}>
-            {false && (
-              <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
-            )}
-            {!vec ? null : (
-              <Line
-                points={[
-                  tilePosition,
-                  new Vector3().copy(tilePosition).addScaledVector(vec, 0.05),
-                ]}
-              />
-            )}
-            {points.length > 0 && (
-              <Line
-                points={points.flatMap((p, i) => [
-                  p,
-                  points[(i + 1) % points.length],
-                ])}
-                vertexColors={points.flatMap((_, i) => [
-                  getColorForIndex(tile.index + i + 5),
-                  getColorForIndex(tile.index + i + 5),
-                ])}
-                segments
-                lineWidth={8}
-                polygonOffset={true}
-                polygonOffsetFactor={-100}
-                polygonOffsetUnits={-100}
-              />
-            )}
-          </group>
-        );
-      })}
+        })}
       {false &&
         chunks.flatMap((chunk) => {
           const points = new Array<Vector3>();
@@ -194,7 +201,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             </Fragment>
           );
         })}
-      <IcoMeshes showPoints={true} showEdges={true} showFaces={true} />
+      <IcoMeshes />
     </Fragment>
   );
 };
