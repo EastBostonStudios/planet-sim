@@ -225,7 +225,7 @@ export class GameBoard {
   ) => {
     this.tiles[index] = {
       index,
-      neighbors: new Array(index < Icosahedron.points.length ? 5 : 6),
+      neighbors: new Array(index < Icosahedron.points.length ? 5 : 7), // TODO: 6 vs 7!!
       coords: { face, x, y },
     };
     return this.tiles[index];
@@ -427,12 +427,51 @@ export class GameBoard {
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
         const tile = this.getTile(face, i, j);
-        tile.neighbors[0] = this.getTile(face, i + 1, j);
-        tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
-        tile.neighbors[2] = this.getTile(face, i, j + 1);
-        tile.neighbors[3] = this.getTile(face, i - 1, j);
-        tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
-        tile.neighbors[5] = this.getTile(face, i, j - 1);
+        const ci = i % chunkSize;
+        const cj = j % chunkSize;
+
+        if (ci === 2 && cj === 1) {
+          tile.label = "5a";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j);
+          tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
+          // tile.neighbors[5] = this.getTile(face, i, j - 1);
+        } else if (ci === 2 && cj === 0) {
+          tile.label = "5b";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          // tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j);
+          tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[5] = this.getTile(face, i, j - 1);
+        } else if (ci === 1 && cj === 0) {
+          tile.label = "7a";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 2, j + 1);
+          tile.neighbors[2] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[3] = this.getTile(face, i, j + 1);
+          tile.neighbors[4] = this.getTile(face, i - 1, j);
+          tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[6] = this.getTile(face, i, j - 1);
+        } else if (ci === 3 && cj === 1) {
+          tile.label = "7b";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j);
+          tile.neighbors[4] = this.getTile(face, i - 2, j - 1);
+          tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[6] = this.getTile(face, i, j - 1);
+        } else {
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j);
+          tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[5] = this.getTile(face, i, j - 1);
+        }
       }
     }
   };
