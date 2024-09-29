@@ -1,15 +1,19 @@
-import { Vector2 } from "three";
 import { getTriangleNumber } from "../utils/mathUtils";
 
 import * as Icosahedron from "./Icosahedron";
 
 const chunkSize = 3;
 
+export type GameBoardCoords = {
+  face: Icosahedron.Face;
+  x: number;
+  y: number;
+};
+
 export type GameBoardTile = {
   readonly index: number;
-  readonly face: Icosahedron.Face;
+  readonly coords: GameBoardCoords;
   readonly neighbors: (GameBoardTile | null)[]; // TODO: Drop nulls
-  readonly faceCoords: Vector2;
 };
 
 export type GameBoardTri = {
@@ -60,18 +64,18 @@ export class GameBoard {
     );
 
     // Pentagonal tiles at the twelve icosahedron points
-    this.createTile(0, faces[0], new Vector2(0.0, 0.0));
-    this.createTile(1, faces[0], new Vector2(1.0, 0.0));
-    this.createTile(2, faces[1], new Vector2(1.0, 0.0));
-    this.createTile(3, faces[2], new Vector2(1.0, 0.0));
-    this.createTile(4, faces[3], new Vector2(1.0, 0.0));
-    this.createTile(5, faces[4], new Vector2(1.0, 0.0));
-    this.createTile(6, faces[6], new Vector2(0.0, 0.0));
-    this.createTile(7, faces[8], new Vector2(0.0, 0.0));
-    this.createTile(8, faces[10], new Vector2(0.0, 0.0));
-    this.createTile(9, faces[12], new Vector2(0.0, 0.0));
-    this.createTile(10, faces[14], new Vector2(0.0, 0.0));
-    this.createTile(11, faces[19], new Vector2(0.0, 0.0));
+    this.createTile(0, faces[0], 0.0, 0.0);
+    this.createTile(1, faces[0], 1.0, 0.0);
+    this.createTile(2, faces[1], 1.0, 0.0);
+    this.createTile(3, faces[2], 1.0, 0.0);
+    this.createTile(4, faces[3], 1.0, 0.0);
+    this.createTile(5, faces[4], 1.0, 0.0);
+    this.createTile(6, faces[6], 0.0, 0.0);
+    this.createTile(7, faces[8], 0.0, 0.0);
+    this.createTile(8, faces[10], 0.0, 0.0);
+    this.createTile(9, faces[12], 0.0, 0.0);
+    this.createTile(10, faces[14], 0.0, 0.0);
+    this.createTile(11, faces[19], 0.0, 0.0);
 
     // Diagonal edges starting at p0
     this.createEdgeTiles(edges[0], faces[0]);
@@ -215,13 +219,13 @@ export class GameBoard {
   private readonly createTile = (
     index: number,
     face: Icosahedron.Face,
-    faceCoords: Vector2,
+    x: number,
+    y: number,
   ) => {
     this.tiles[index] = {
       index,
       neighbors: new Array(index < Icosahedron.points.length ? 5 : 6),
-      face,
-      faceCoords,
+      coords: { face, x, y },
     };
     return this.tiles[index];
   };
@@ -262,20 +266,17 @@ export class GameBoard {
       const index = this.getEdgeTileIndex(edge.index, i);
       const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
       if (edge.index > 24) {
-        const faceCoords = new Vector2(s, s);
-        const tile = this.createTile(index, face, faceCoords);
+        const tile = this.createTile(index, face, s, s);
         this.stitchEdgeTiles(i, tile, face.a, face.c);
       } else if (
         edge.index > 4 &&
         edge.index < 20 &&
         (edge.index < 10 || edge.index % 2 === 1)
       ) {
-        const faceCoords = new Vector2(1.0 - s, 1.0 - s);
-        const tile = this.createTile(index, face, faceCoords);
+        const tile = this.createTile(index, face, 1.0 - s, 1.0 - s);
         this.stitchEdgeTiles(i, tile, face.c, face.a);
       } else {
-        const faceCoords = new Vector2(s, 0.0);
-        const tile = this.createTile(index, face, faceCoords);
+        const tile = this.createTile(index, face, s, 0.0);
         this.stitchEdgeTiles(i, tile, face.a, face.b);
       }
     }
@@ -289,7 +290,7 @@ export class GameBoard {
         const index = this.getFaceTileIndex(face.index, i, j);
         const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
         const t = (j + 1.0) / ((this.resolution + 1) * chunkSize);
-        this.createTile(index, face, new Vector2(s, t));
+        this.createTile(index, face, s, t);
       }
     }
 

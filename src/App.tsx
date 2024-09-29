@@ -10,10 +10,13 @@ import * as React from "react";
 import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
-import { DoubleSide } from "three";
+import { DoubleSide, Vector3 } from "three";
+import type { GameBoardCoords } from "./board/GameBoard";
 import * as Icosahedron from "./board/Icosahedron";
+import { distBetweenPoints } from "./board/Icosahedron";
 import { Scene } from "./scene/Scene";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
+import { interpolateOnFace } from "./utils/mathUtils";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -50,9 +53,83 @@ const minResolution = 0;
 const maxResolution = 8;
 const defaultResolution = 1;
 
-export const AppContext = createContext<{ is3D: boolean }>({ is3D: false });
+const theta = Math.PI + 1.0172219678840608; // atan(phi, 1) Rotates 0 down to y = -1
+const dbp = Icosahedron.distBetweenPoints;
+
+//------------------------------------------------------------------------------
+
+export const AppContext = createContext<{
+  is3D: boolean;
+  pointProjector: (point: Icosahedron.Point) => Vector3;
+  projectCoords: (coords: GameBoardCoords) => Vector3;
+}>({
+  is3D: false,
+  pointProjector: () => new Vector3(),
+  projectCoords: () => {
+    throw new Error("Method not implemented");
+  },
+});
 
 const App = () => {
+  //----------------------------------------------------------------------------
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const resolution = React.useMemo(() => {
+    const param = searchParams.get("resolution");
+    if (Number.isNaN(param)) return defaultResolution;
+    return Math.min(maxResolution, Math.max(minResolution, Number(param)));
+  }, [searchParams]);
+
+  const is3D = React.useMemo(
+    () => searchParams.get("is3D") === "true",
+    [searchParams],
+  );
+
+  const { pointProjector, projectCoords } = React.useMemo(() => {
+    const projector3D: (point: Icosahedron.Point) => Vector3 = (point) =>
+      new Vector3(
+        point.coords3D.x * Math.cos(theta) - point.coords3D.y * Math.sin(theta),
+        point.coords3D.x * Math.sin(theta) + point.coords3D.y * Math.cos(theta),
+        point.coords3D.z,
+      );
+
+    const projector2D: (point: Icosahedron.Point) => Vector3 = (point) =>
+      new Vector3(
+        point.coords2D.x * dbp - point.coords2D.y * dbp * 0.5,
+        (point.coords2D.y * dbp * Math.sqrt(3.0)) / 2.0,
+        0,
+      );
+
+    const projectCoords: (coords: GameBoardCoords) => Vector3 = is3D
+      ? (coords) => {
+          const a = projector3D(coords.face.a);
+          const b = projector3D(coords.face.b);
+          const c = projector3D(coords.face.c);
+          return interpolateOnFace(a, b, c, coords.x, coords.y);
+        }
+      : (coords) => {
+          const a = projector2D(coords.face.a);
+          const b = projector2D(coords.face.b);
+          const c = projector2D(coords.face.c);
+
+          const faceIndex = coords.face.index;
+          if (faceIndex === 14 || faceIndex === 19)
+            b.add(new Vector3(5 * distBetweenPoints, 0, 0));
+          if (faceIndex === 4 || faceIndex === 13 || faceIndex === 14)
+            c.add(new Vector3(5 * distBetweenPoints, 0, 0));
+
+          return interpolateOnFace(a, b, c, coords.x, coords.y);
+        };
+
+    return {
+      pointProjector: is3D ? projector3D : projector2D,
+      projectCoords,
+    };
+  }, [is3D]);
+
+  //----------------------------------------------------------------------------
+
   React.useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -60,16 +137,10 @@ const App = () => {
     };
   }, []);
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const resolution = React.useMemo(() => {
-    const param = searchParams.get("resolution");
-    if (Number.isNaN(param)) return defaultResolution;
-    return Math.min(maxResolution, Math.max(minResolution, Number(param)));
-  }, [searchParams]);
-  const [is3D, setIs3D] = React.useState(false);
+  //----------------------------------------------------------------------------
 
   return (
-    <AppContext.Provider value={{ is3D }}>
+    <AppContext.Provider value={{ is3D, pointProjector, projectCoords }}>
       <StyledApp className="App">
         <StyledTopBar>
           <StyledToolbar>
@@ -79,10 +150,24 @@ const App = () => {
               min={minResolution}
               max={maxResolution}
               value={resolution}
-              onChange={(e) => setSearchParams({ resolution: e.target.value })}
+              onChange={(e) =>
+                setSearchParams((prev) => {
+                  prev.set("resolution", e.target.value);
+                  return prev;
+                })
+              }
             />
             <StyledButtonHolder>
-              <button type="button" onClick={() => setIs3D((prev) => !prev)}>
+              <button
+                type="button"
+                onClick={() =>
+                  setSearchParams((prev) => {
+                    const prevValue = prev.get("is3D") === "true";
+                    prev.set("is3D", prevValue ? "false" : "true");
+                    return prev;
+                  })
+                }
+              >
                 {is3D ? "3D" : "2D"}
               </button>
             </StyledButtonHolder>
@@ -108,11 +193,7 @@ const App = () => {
                   rotation={[Math.PI / 2.0, 0, 0]}
                 />
                 <group
-                  position={[
-                    -Icosahedron.distBetweenPoints * 1.75,
-                    0,
-                    Icosahedron.distBetweenPoints * 1.25,
-                  ]}
+                  position={[-dbp * 1.75, 0, dbp * 1.25]}
                   rotation={[-Math.PI / 2.0, 0, 0]}
                 >
                   <Scene resolution={resolution} />
@@ -123,8 +204,8 @@ const App = () => {
                   cellSize={0.1}
                   cellColor="grey"
                   sectionColor="grey"
-                  infiniteGrid={true}
-                  followCamera={true}
+                  infiniteGrid
+                  followCamera
                 />
               </group>
             )}
