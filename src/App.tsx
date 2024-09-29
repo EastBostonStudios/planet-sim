@@ -62,10 +62,14 @@ export const AppContext = createContext<{
   is3D: boolean;
   pointProjector: (point: Icosahedron.Point) => Vector3;
   projectCoords: (coords: GameBoardCoords) => Vector3;
+  projectCoordsArray: (coords: GameBoardCoords[]) => Vector3[];
 }>({
   is3D: false,
   pointProjector: () => new Vector3(),
   projectCoords: () => {
+    throw new Error("Method not implemented");
+  },
+  projectCoordsArray: () => {
     throw new Error("Method not implemented");
   },
 });
@@ -86,47 +90,122 @@ const App = () => {
     [searchParams],
   );
 
-  const { pointProjector, projectCoords } = React.useMemo(() => {
-    const projector3D: (point: Icosahedron.Point) => Vector3 = (point) =>
-      new Vector3(
-        point.coords3D.x * Math.cos(theta) - point.coords3D.y * Math.sin(theta),
-        point.coords3D.x * Math.sin(theta) + point.coords3D.y * Math.cos(theta),
-        point.coords3D.z,
-      );
+  const { pointProjector, projectCoords, projectCoordsArray } =
+    React.useMemo(() => {
+      const projector3D: (point: Icosahedron.Point) => Vector3 = (point) =>
+        new Vector3(
+          point.coords3D.x * Math.cos(theta) -
+            point.coords3D.y * Math.sin(theta),
+          point.coords3D.x * Math.sin(theta) +
+            point.coords3D.y * Math.cos(theta),
+          point.coords3D.z,
+        );
 
-    const projector2D: (point: Icosahedron.Point) => Vector3 = (point) =>
-      new Vector3(
-        point.coords2D.x * dbp - point.coords2D.y * dbp * 0.5,
-        (point.coords2D.y * dbp * Math.sqrt(3.0)) / 2.0,
-        0,
-      );
+      const projector2D: (point: Icosahedron.Point) => Vector3 = (point) =>
+        new Vector3(
+          point.coords2D.x * dbp - point.coords2D.y * dbp * 0.5,
+          (point.coords2D.y * dbp * Math.sqrt(3.0)) / 2.0,
+          0,
+        );
 
-    const projectCoords: (coords: GameBoardCoords) => Vector3 = is3D
-      ? (coords) => {
-          const a = projector3D(coords.face.a);
-          const b = projector3D(coords.face.b);
-          const c = projector3D(coords.face.c);
-          return interpolateOnFace(a, b, c, coords.x, coords.y);
-        }
-      : (coords) => {
-          const a = projector2D(coords.face.a);
-          const b = projector2D(coords.face.b);
-          const c = projector2D(coords.face.c);
+      const projectCoords: (coords: GameBoardCoords) => Vector3 = is3D
+        ? (coords) => {
+            const a = projector3D(coords.face.a);
+            const b = projector3D(coords.face.b);
+            const c = projector3D(coords.face.c);
+            return interpolateOnFace(a, b, c, coords.x, coords.y);
+          }
+        : (coords) => {
+            const a = projector2D(coords.face.a);
+            const b = projector2D(coords.face.b);
+            const c = projector2D(coords.face.c);
 
-          const faceIndex = coords.face.index;
-          if (faceIndex === 14 || faceIndex === 19)
-            b.add(new Vector3(5 * distBetweenPoints, 0, 0));
-          if (faceIndex === 4 || faceIndex === 13 || faceIndex === 14)
-            c.add(new Vector3(5 * distBetweenPoints, 0, 0));
+            const faceIndex = coords.face.index;
+            if (faceIndex === 14 || faceIndex === 19)
+              b.add(new Vector3(5 * distBetweenPoints, 0, 0));
+            if (faceIndex === 4 || faceIndex === 13 || faceIndex === 14)
+              c.add(new Vector3(5 * distBetweenPoints, 0, 0));
 
-          return interpolateOnFace(a, b, c, coords.x, coords.y);
-        };
+            return interpolateOnFace(a, b, c, coords.x, coords.y);
+          };
 
-    return {
-      pointProjector: is3D ? projector3D : projector2D,
-      projectCoords,
-    };
-  }, [is3D]);
+      const projectCoordsArray: (coords: GameBoardCoords[]) => Vector3[] = is3D
+        ? (coordsArray) =>
+            coordsArray.map((coords) => {
+              const a = projector3D(coords.face.a);
+              const b = projector3D(coords.face.b);
+              const c = projector3D(coords.face.c);
+              return interpolateOnFace(a, b, c, coords.x, coords.y);
+            })
+        : (coordsArray) => {
+            const doesWrap =
+              /*
+              coordsArray.some(
+                (coords) =>
+                  coords.face.index === 4 ||
+                  coords.face.index === 13 ||
+                  coords.face.index === 14 ||
+                  coords.face.index === 19,
+              ) &&*/
+              coordsArray.some(
+                (coords) =>
+                  coords.face.index === 0 ||
+                  coords.face.index === 5 ||
+                  coords.face.index === 6 ||
+                  coords.face.index === 15,
+              );
+            const result = coordsArray.map((coords) => {
+              const faceIndex = coords.face.index;
+              const a = projector2D(coords.face.a);
+              const b = projector2D(coords.face.b);
+              const c = projector2D(coords.face.c);
+
+              if (faceIndex === 14 || faceIndex === 19)
+                b.add(new Vector3(5 * distBetweenPoints, 0, 0));
+              if (faceIndex === 4 || faceIndex === 13 || faceIndex === 14)
+                c.add(new Vector3(5 * distBetweenPoints, 0, 0));
+
+              if (doesWrap) {
+                if (faceIndex === 0) {
+                  //a.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                  b.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                  // c.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                } /*else if (faceIndex === 5) {
+                  a.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                  b.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                  c.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                } else if (faceIndex === 15) {
+                  // a.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                  b.add(new Vector3(0.75 * distBetweenPoints, 0, 0));
+                  c.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                }*/
+              }
+              /*
+              if (faceIndex === 14 || faceIndex === 19) {
+              } else if (
+                faceIndex === 4 ||
+                faceIndex === 13 ||
+                faceIndex === 14
+              ) {
+              } else if (!doesWrap) {
+              } else if (coords.face.b.index === 1 || coords.face.b.index === 6)
+                b.add(new Vector3(5 * distBetweenPoints, 0, 0));
+              else if (coords.face.c.index === 2 || coords.face.c.index === 6)
+                c.add(new Vector3(5 * distBetweenPoints, 0, 0));
+              else if (coords.face.a.index === 2)
+                a.add(new Vector3(5 * distBetweenPoints, 0, 0));
+*/
+              return interpolateOnFace(a, b, c, coords.x, coords.y);
+            });
+            return result;
+          };
+
+      return {
+        pointProjector: is3D ? projector3D : projector2D,
+        projectCoords,
+        projectCoordsArray,
+      };
+    }, [is3D]);
 
   //----------------------------------------------------------------------------
 
@@ -140,7 +219,9 @@ const App = () => {
   //----------------------------------------------------------------------------
 
   return (
-    <AppContext.Provider value={{ is3D, pointProjector, projectCoords }}>
+    <AppContext.Provider
+      value={{ is3D, pointProjector, projectCoords, projectCoordsArray }}
+    >
       <StyledApp className="App">
         <StyledTopBar>
           <StyledToolbar>

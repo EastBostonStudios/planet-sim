@@ -4,14 +4,10 @@ import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
 import { GameBoard } from "../board/GameBoard";
+import { lerpToward } from "../utils/mathUtils";
+import { getColorForIndex } from "../utils/renderingUtils";
 import { IcoMeshes } from "./IcoMeshes";
 import { StyledLabel } from "./StyledLabel";
-
-const getColorForIndex = (index: number): [number, number, number] => [
-  ((index % 3) + 2) / 10,
-  ((index % 7) + 2) / 11,
-  ((index % 11) + 2) / 15,
-];
 
 const ArrayAttribute: FC<{
   attribute: string;
@@ -31,7 +27,7 @@ const ArrayAttribute: FC<{
 export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   //----------------------------------------------------------------------------
 
-  const { projectCoords } = useContext(AppContext);
+  const { projectCoords, projectCoordsArray } = useContext(AppContext);
   const { showTiles } = useControls({
     tiles: folder({
       showTiles: true,
@@ -50,17 +46,11 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
       {showTiles &&
         tiles.map((tile) => {
           const tilePosition = projectCoords(tile.coords);
-          const points = new Array<Vector3>();
-
-          for (const neighbor of tile.neighbors) {
-            if (!neighbor) continue;
-            const neighborPosition = projectCoords(neighbor.coords);
-            if (neighborPosition.distanceTo(tilePosition) > 0.333) continue;
-
-            points.push(
-              new Vector3().lerpVectors(tilePosition, neighborPosition, 0.45),
-            );
-          }
+          const points = projectCoordsArray(
+            tile.neighbors
+              .map((neighbor) => neighbor?.coords)
+              .filter((coords) => !!coords),
+          ).map((point) => lerpToward(tilePosition, point, 0.45));
           const vec =
             points.length >= 2
               ? new Vector3()
@@ -101,7 +91,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                     getColorForIndex(tile.index + i + 5),
                   ])}
                   segments
-                  lineWidth={8}
+                  lineWidth={4}
                   polygonOffset={true}
                   polygonOffsetFactor={-100}
                   polygonOffsetUnits={-100}

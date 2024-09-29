@@ -9,7 +9,7 @@ import {
   HtmlOverlayPriority,
   useHtmlOverlays,
 } from "./HtmlOverlaysProvider";
-import { RenderLayerID } from "./renderingDefines";
+import { RenderLayerID } from "./renderingUtils";
 
 export const HtmlOverlay3D: React.FC<{
   x: number;
