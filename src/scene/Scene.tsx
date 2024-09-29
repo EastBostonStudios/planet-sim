@@ -4,7 +4,7 @@ import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
 import { GameBoard } from "../board/GameBoard";
-import { lerpToward } from "../utils/mathUtils";
+import { getCenter, lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
 import { IcoMeshes } from "./IcoMeshes";
 import { StyledLabel } from "./StyledLabel";
@@ -121,7 +121,9 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           const p2 = projectCoords(tri.c.coords);
           if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
             continue; // TODO: figure out wrapping
-          points.push(p0, p1, p2);
+          points.push(
+            ...[p0, p1, p2].map((p) => lerpToward(p, getCenter([p0, p1, p2]))),
+          );
           chunkCenter.add(p0).add(p1).add(p2);
           triCenters.push(
             new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0),

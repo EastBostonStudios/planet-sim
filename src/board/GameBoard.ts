@@ -285,6 +285,10 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
+  private readonly asdf = (i: number, j: number, ci: number, cj: number) => {
+    return ci === i && cj === j;
+  };
+
   private readonly populateFace = (face: Icosahedron.Face) => {
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
@@ -302,125 +306,97 @@ export class GameBoard {
       this.chunks[index] = { index, face, tris };
     }
 
-    const index = face.index * (chunksPerFace * chunkSize * chunkSize);
+    let index = face.index * (chunksPerFace * chunkSize * chunkSize);
 
     for (let i = 0; i <= this.maxIJ; i++) {
       const chunkI = Math.trunc(i / chunkSize);
-      const iOnChunk = i % chunkSize;
+      const ci = i % chunkSize;
 
       for (let j = 0; j <= i; j++) {
         const chunkJ = Math.trunc(j / chunkSize);
-        const jOnChunk = j % chunkSize;
+        const cj = j % chunkSize;
         const chunkIndex =
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
-
-        let a = this.getTile(face, i, j);
-        let b = this.getTile(face, i - 1, j - 1);
-        let c = this.getTile(face, i, j - 1);
-
-        /*if (i === 2 && j === 1) {
-          a = this.getTile(face, i + 1, j);
-        }
-        if (i === 6 && j === 1) {
-          a = this.getTile(face, i - 1, j);
-        }
-        if (i === 6 && j === 4) {
-          a = this.getTile(face, i, j + 1);
-        }*/
 
         if (false) {
           a = c;
           b = c;
           c = a;
         }
-        if (j < i) {
-          const d = this.getTile(face, i - 1, j);
-          const tri = this.createTri(index, face, a, d, b);
-          const offset = jOnChunk >= iOnChunk ? 1 : 0;
-          const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
-          this.chunks[chunkIndex + offset].tris[triIndex + (1 - offset)] = tri;
-        }
-
-        const tri = this.createTri(index, face, a, b, c);
-        const offset = jOnChunk > iOnChunk ? 1 : 0;
-        const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
-        this.chunks[chunkIndex + offset].tris[triIndex + offset] = tri;
-
-        // if (jOnChunk >= iOnChunk) {
-        //   //  const triIndex = jOnChunk * jOnChunk + iOnChunk * 2;
-        //   // this.chunks[chunkIndex + 1].tris[triIndex] = tri;
-        // } else {
-        //   const triIndex = iOnChunk * iOnChunk + jOnChunk * 2 + 1;
-        //   this.chunks[chunkIndex].tris[triIndex] = tri;
-        // }
-
-        //if (jOnChunk > iOnChunk) {
-        //  const triIndex = jOnChunk * jOnChunk + iOnChunk * 2 + 1;
-        //  this.chunks[chunkIndex + 1].tris[triIndex] = tri;
-        //} else {
-        //  const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
-        //  this.chunks[chunkIndex].tris[triIndex] = tri;
-        //}
-
-        /*
-        // -1 represents off of the face tiles (connecting to the edge tiles)
 
         if (j < i) {
-          const left = this.getTile(face, i - 1, j);
+          let a = this.getTile(face, i, j);
+          let b = this.getTile(face, i - 1, j);
+          let c = this.getTile(face, i - 1, j - 1);
 
-          let tri: GameBoardTri;
-          // Cluster 0,0
-          if (iOnChunk === 3 && jOnChunk === 1) {
-            const farBottomLeft = this.getTile(face, i - 2, j - 1);
-            tri = this.createTri(index, face, tile, farBottomLeft, bottomLeft);
+          let skip = false;
+          // Bottom-left distortion
+          if (
+            this.asdf(ci, cj, 3, 1) ||
+            this.asdf(ci, cj, chunkSize - 3, chunkSize - 2)
+          ) {
+            c = this.getTile(face, i - 2, j - 1);
           }
-          // Cluster 1,0
-          else if (iOnChunk === 6 && jOnChunk === 1) {
-            const left = this.getTile(face, i, j - 1);
-            const bottomLeft = this.getTile(face, i - 1, j);
-            tri = this.createTri(index, face, tile, bottomLeft, left);
+          // Bottom-right distortion
+          if (this.asdf(ci, cj, 6, 1) || this.asdf(ci, cj, 1, 6)) {
+            c = this.getTile(face, i, j - 1);
           }
-          // Normal case
-          else {
-            tri = this.createTri(index, face, tile, left, bottomLeft);
+          // Top distortion
+          if (this.asdf(ci, cj, 6, 4) || this.asdf(ci, cj, 1, 2)) {
+            b = this.getTile(face, i, j + 1);
+            //skip = true;
           }
-          // Check if this sits on the flipped chunk or not
-          if (jOnChunk >= iOnChunk) {
-            //  const triIndex = jOnChunk * jOnChunk + iOnChunk * 2;
-            // this.chunks[chunkIndex + 1].tris[triIndex] = tri;
-          } else {
-            const triIndex = iOnChunk * iOnChunk + jOnChunk * 2 + 1;
-            this.chunks[chunkIndex].tris[triIndex] = tri;
+
+          if (false) {
+            a = c;
+            b = a;
+            c = a;
+            skip = true;
+          }
+
+          if (!skip) {
+            const tri = this.createTri(index, face, a, b, c);
+            const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
+            chunk.tris[cj < ci ? ci * ci + cj * 2 + 1 : cj * cj + ci * 2] = tri;
           }
           index++;
         }
 
-        let tri: GameBoardTri;
-        // Cluster 0,0
-        if (iOnChunk === 2 && jOnChunk === 1) {
-          const right = this.getTile(face, i + 1, j);
-          tri = this.createTri(index, face, bottomLeft, right, tile);
+        let a = this.getTile(face, i, j);
+        let b = this.getTile(face, i - 1, j - 1);
+        let c = this.getTile(face, i, j - 1);
+
+        // Bottom-left distortion
+        let skip = false;
+        if (
+          this.asdf(ci, cj, 2, 1) ||
+          this.asdf(ci, cj, chunkSize - 4, chunkSize - 2)
+        ) {
+          a = this.getTile(face, i + 1, j);
         }
-        // Cluster 1,0
-        else if (iOnChunk === 6 && jOnChunk === 1) {
-          const left = this.getTile(face, i - 1, j);
-          const asdf = this.getTile(face, i - 1, j - 1);
-          tri = this.createTri(index, face, left, bottom, asdf);
+        // Bottom-right distortion
+        if (this.asdf(ci, cj, 6, 1) || this.asdf(ci, cj, 1, 6)) {
+          a = this.getTile(face, i - 1, j);
         }
-        // Normal case
-        else {
-          tri = this.createTri(index, face, bottomLeft, bottom, tile);
+        // Top distortion
+        if (this.asdf(ci, cj, 6, 5) || this.asdf(ci, cj, 1, 3)) {
+          c = this.getTile(face, i - 1, j - 2);
+          //skip = true;
         }
 
-        // Check if this sits on the flipped chunk or not
-        if (jOnChunk > iOnChunk) {
-          const triIndex = jOnChunk * jOnChunk + iOnChunk * 2 + 1;
-          this.chunks[chunkIndex + 1].tris[triIndex] = tri;
-        } else {
-          const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
-          this.chunks[chunkIndex].tris[triIndex] = tri;
+        if (false) {
+          a = b;
+          b = c;
+          c = a;
+          skip = true;
         }
-        index++;*/
+
+        if (!skip) {
+          const tri = this.createTri(index, face, a, b, c);
+          const chunk = this.chunks[chunkIndex + (cj > ci ? 1 : 0)];
+          chunk.tris[cj > ci ? cj * cj + ci * 2 + 1 : ci * ci + cj * 2] = tri;
+        }
+        index++;
       }
     }
 
