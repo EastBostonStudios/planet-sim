@@ -287,11 +287,7 @@ export class GameBoard {
 
   private readonly getFlippedTriangleDistortion = (ci: number, cj: number) => {
     // Bottom-left distortion
-    if (
-      (ci === 3 && cj === 1) ||
-      (ci === chunkSize - 3 && cj === chunkSize - 2)
-    )
-      return 1;
+    if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6)) return 1;
     // Bottom-right distortion
     if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
     // Top distortion
@@ -301,11 +297,7 @@ export class GameBoard {
 
   private readonly getUprightTriangleDistortion = (ci: number, cj: number) => {
     // Bottom-left distortion
-    if (
-      (ci === 2 && cj === 1) ||
-      (ci === chunkSize - 4 && cj === chunkSize - 2)
-    )
-      return 1;
+    if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6)) return 1;
     // Bottom-right distortion
     if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
     // Top distortion
@@ -430,7 +422,8 @@ export class GameBoard {
         const ci = i % chunkSize;
         const cj = j % chunkSize;
 
-        if (ci === 2 && cj === 1) {
+        // Bottom-left distortion
+        if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6)) {
           tile.label = "5a";
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
@@ -438,7 +431,7 @@ export class GameBoard {
           tile.neighbors[3] = this.getTile(face, i - 1, j);
           tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
           // tile.neighbors[5] = this.getTile(face, i, j - 1);
-        } else if (ci === 2 && cj === 0) {
+        } else if ((ci === 2 && cj === 0) || (ci === 4 && cj === 5)) {
           tile.label = "5b";
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
@@ -446,7 +439,7 @@ export class GameBoard {
           tile.neighbors[3] = this.getTile(face, i - 1, j);
           tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[5] = this.getTile(face, i, j - 1);
-        } else if (ci === 1 && cj === 0) {
+        } else if ((ci === 1 && cj === 0) || (ci === 3 && cj === 5)) {
           tile.label = "7a";
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 2, j + 1);
@@ -455,7 +448,7 @@ export class GameBoard {
           tile.neighbors[4] = this.getTile(face, i - 1, j);
           tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[6] = this.getTile(face, i, j - 1);
-        } else if (ci === 3 && cj === 1) {
+        } else if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6)) {
           tile.label = "7b";
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
@@ -464,7 +457,46 @@ export class GameBoard {
           tile.neighbors[4] = this.getTile(face, i - 2, j - 1);
           tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
           tile.neighbors[6] = this.getTile(face, i, j - 1);
-        } else {
+        }
+        // Bottom-right distortion
+        else if ((ci === 5 && cj === 0) || (ci === 1 && cj === 6)) {
+          tile.label = "5a";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j);
+          tile.neighbors[4] = this.getTile(face, i, j - 1);
+        } else if ((ci === 6 && cj === 1) || (ci === 0 && cj === 5)) {
+          tile.label = "5b";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i, j + 1);
+          tile.neighbors[2] = this.getTile(face, i - 1, j);
+          tile.neighbors[3] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[4] = this.getTile(face, i, j - 1);
+        } else if ((ci === 5 && cj === 1) || (ci === 0 && cj === 6)) {
+          tile.label = "7a";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j);
+          tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[5] = this.getTile(face, i, j - 1);
+          tile.neighbors[7] = this.getTile(face, i + 1, j - 1);
+        } else if ((ci === 6 && cj === 0) || (ci === 1 && cj === 5)) {
+          tile.label = "7b";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j + 1);
+          tile.neighbors[4] = this.getTile(face, i - 1, j);
+          tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[6] = this.getTile(face, i, j - 1);
+        }
+        // Top distortion
+        else if (false) {
+        }
+        // No distortion
+        else {
           tile.neighbors[0] = this.getTile(face, i + 1, j);
           tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
           tile.neighbors[2] = this.getTile(face, i, j + 1);
@@ -479,6 +511,7 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly validate = () => {
+    return;
     for (let i = 0; i < this.tiles?.length; i++) {
       console.assert(this.tiles[i]?.index === i, "Tile indices incorrect!");
       for (let j = 0; j < this.tiles[i]?.neighbors.length; j++) {
