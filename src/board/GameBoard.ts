@@ -63,15 +63,15 @@ export class GameBoard {
   public readonly chunks: GameBoardChunk[];
 
   // The maximum "i" or "j" value on a face is the edge length minus 1
-  private readonly resolution: number;
   private readonly maxIJ: number;
+  private readonly widthInChunks: number;
   private readonly doSwaps: boolean;
 
   //----------------------------------------------------------------------------
 
   public constructor(resolution: number, doSwaps?: boolean) {
-    this.resolution = resolution;
     this.maxIJ = (resolution + 1) * chunkSize - 1;
+    this.widthInChunks = resolution + 1;
     this.doSwaps = doSwaps ?? true;
 
     // Initialize variables and pre-allocate space for the arrays  -------------
@@ -146,7 +146,7 @@ export class GameBoard {
     this.populateEdge(edges[29], faces[19]);
 
     // Add neighbors to the 12 icosahedron point tiles -------------------------
-    const em = (this.resolution + 1) * chunkSize - 2; // "edge max"
+    const em = this.widthInChunks * chunkSize - 2; // "edge max"
 
     this.tiles[0].neighbors[0] = this.getEdgeTile(edges[0], 0);
     this.tiles[0].neighbors[1] = this.getEdgeTile(edges[1], 0);
@@ -188,7 +188,7 @@ export class GameBoard {
 
   private readonly getEdgeTileIndex = (edgeIndex: number, i: number) => {
     if (i < 0 || i > this.maxIJ) throw new Error(`${i} out of bounds!`);
-    return 12 + edgeIndex * ((this.resolution + 1) * chunkSize - 1) + i;
+    return 12 + edgeIndex * (this.widthInChunks * chunkSize - 1) + i;
   };
 
   private readonly getFaceTileIndex = (
@@ -196,9 +196,8 @@ export class GameBoard {
     i: number,
     j: number,
   ) => {
-    if (i < 0 || i >= this.maxIJ)
-      throw new Error(`(${i}, ${j}) out of bounds!`);
-    if (j < 0 || j > i || j >= this.maxIJ)
+    if (i < 0 || i > this.maxIJ) throw new Error(`(${i}, ${j}) out of bounds!`);
+    if (j < 0 || j > i || j > this.maxIJ)
       throw new Error(`(${i}, ${j}) out of bounds!`);
     return (
       12 +
@@ -283,7 +282,7 @@ export class GameBoard {
     const shape = GameBoardTileShape.EdgeHexagon;
     for (let i = 0; i < this.maxIJ; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
-      const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
+      const s = (i + 1.0) / (this.widthInChunks * chunkSize);
       if (edge.index > 24) {
         const tile = this.createTile(index, face, s, s, shape);
         this.stitchEdgeTiles(i, tile, face.a, face.c);
@@ -382,8 +381,8 @@ export class GameBoard {
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
         const index = this.getFaceTileIndex(face.index, i, j);
-        const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
-        const t = (j + 1.0) / ((this.resolution + 1) * chunkSize);
+        const s = (i + 1.0) / (this.widthInChunks * chunkSize);
+        const t = (j + 1.0) / (this.widthInChunks * chunkSize);
         const ci = i % chunkSize;
         const cj = j % chunkSize;
         this.createTile(index, face, s, t, this.getShapeForChunkCoords(ci, cj));
@@ -392,7 +391,7 @@ export class GameBoard {
 
     // Create all chunks for this face -----------------------------------------
 
-    const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
+    const chunksPerFace = this.widthInChunks * this.widthInChunks;
     for (let c = 0; c < chunksPerFace; c++) {
       const index = face.index * chunksPerFace + c;
       const triangles = new Array(chunkSize * chunkSize);
@@ -402,7 +401,7 @@ export class GameBoard {
     // Create all triangles for this face --------------------------------------
 
     let index = face.index * (chunksPerFace * chunkSize * chunkSize);
-    for (let i = 0; i <= this.maxIJ; i++) {
+    for (let i = 0; i < this.maxIJ + 1; i++) {
       const chunkI = Math.trunc(i / chunkSize);
       const ci = i % chunkSize;
 
