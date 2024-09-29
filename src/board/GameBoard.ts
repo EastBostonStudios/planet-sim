@@ -2,7 +2,7 @@ import { getTriangleNumber } from "../utils/mathUtils";
 
 import * as Icosahedron from "./Icosahedron";
 
-const chunkSize = 5;
+const chunkSize = 8;
 
 export type GameBoardCoords = {
   face: Icosahedron.Face;
@@ -14,6 +14,8 @@ export type GameBoardTile = {
   readonly index: number;
   readonly coords: GameBoardCoords;
   readonly neighbors: GameBoardTile[];
+  readonly fiver?: true | undefined;
+  readonly sevener?: true | undefined;
 };
 
 export type GameBoardTri = {
@@ -314,6 +316,20 @@ export class GameBoard {
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
         const tile = this.getTile(face, i, j);
+        if (iOnChunk === 1 && jOnChunk === 0) tile.sevener = true;
+        if (iOnChunk === 3 && jOnChunk === 1) tile.sevener = true;
+        if (iOnChunk === 2 && jOnChunk === 0) tile.fiver = true;
+        if (iOnChunk === 2 && jOnChunk === 1) tile.fiver = true;
+
+        if (iOnChunk === 6 && jOnChunk === 5) tile.sevener = true;
+        if (iOnChunk === 5 && jOnChunk === 3) tile.sevener = true;
+        if (iOnChunk === 5 && jOnChunk === 4) tile.fiver = true;
+        if (iOnChunk === 6 && jOnChunk === 4) tile.fiver = true;
+
+        if (iOnChunk === 5 && jOnChunk === 1) tile.sevener = true;
+        if (iOnChunk === 6 && jOnChunk === 0) tile.sevener = true;
+        if (iOnChunk === 6 && jOnChunk === 1) tile.fiver = true;
+        if (iOnChunk === 5 && jOnChunk === 0) tile.fiver = true;
 
         if (j < i) {
           // -1 represents off of the face tiles (connecting to the edge tiles)
