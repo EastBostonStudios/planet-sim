@@ -101,7 +101,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
               case GameBoardTileShape.Swap3HeptagonB:
                 return "D3_7B";
               default:
-                return `t${tile.index}`;
+                return undefined; //`t${tile.index}`;
             }
           };
 
