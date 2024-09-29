@@ -493,7 +493,38 @@ export class GameBoard {
           tile.neighbors[6] = this.getTile(face, i, j - 1);
         }
         // Top distortion
-        else if (false) {
+        else if ((ci === 6 && cj === 4) || (ci === 6 - 5 && cj === 4 - 2)) {
+          tile.label = "5a";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[4] = this.getTile(face, i, j - 1);
+        } else if ((ci === 5 && cj === 4) || (ci === 5 - 5 && cj === 4 - 2)) {
+          tile.label = "5b";
+          tile.neighbors[0] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[1] = this.getTile(face, i, j + 1);
+          tile.neighbors[2] = this.getTile(face, i - 1, j);
+          tile.neighbors[3] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[4] = this.getTile(face, i, j - 1);
+        } else if ((ci === 6 && cj === 5) || (ci === 6 - 5 && cj === 5 - 2)) {
+          tile.label = "7a";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i, j + 1);
+          tile.neighbors[3] = this.getTile(face, i - 1, j);
+          tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[5] = this.getTile(face, i - 1, j - 2);
+          tile.neighbors[6] = this.getTile(face, i, j - 1);
+        } else if ((ci === 5 && cj === 3) || (ci === 5 - 5 && cj === 3 - 2)) {
+          tile.label = "7a";
+          tile.neighbors[0] = this.getTile(face, i + 1, j);
+          tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
+          tile.neighbors[2] = this.getTile(face, i + 1, j + 2);
+          tile.neighbors[3] = this.getTile(face, i, j + 1);
+          tile.neighbors[4] = this.getTile(face, i - 1, j);
+          tile.neighbors[5] = this.getTile(face, i - 1, j - 1);
+          tile.neighbors[6] = this.getTile(face, i, j - 1);
         }
         // No distortion
         else {
