@@ -75,29 +75,29 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
           const asdf = () => {
             switch (tile.shape) {
-              case GameBoardTileShape.D1_5A:
+              case GameBoardTileShape.FaceD1_PentagonA:
                 return "D1_5A";
-              case GameBoardTileShape.D1_5B:
+              case GameBoardTileShape.FaceD1_PentagonB:
                 return "D1_5B";
-              case GameBoardTileShape.D1_7A:
+              case GameBoardTileShape.FaceD1_HeptagonA:
                 return "D1_7A";
-              case GameBoardTileShape.D1_7B:
+              case GameBoardTileShape.FaceD1_HeptagonB:
                 return "D1_7B";
-              case GameBoardTileShape.D2_5A:
+              case GameBoardTileShape.FaceD2_PentagonA:
                 return "D2_5A";
-              case GameBoardTileShape.D2_5B:
+              case GameBoardTileShape.FaceD2_PentagonB:
                 return "D2_5B";
-              case GameBoardTileShape.D2_7A:
+              case GameBoardTileShape.Face_D2_HeptagonA:
                 return "D2_7A";
-              case GameBoardTileShape.D2_7B:
+              case GameBoardTileShape.Face_D2_HeptagonB:
                 return "D2_7B";
-              case GameBoardTileShape.D3_5A:
+              case GameBoardTileShape.FaceD3_PentagonA:
                 return "D3_5A";
-              case GameBoardTileShape.D3_5B:
+              case GameBoardTileShape.FaceD3_PentagonB:
                 return "D3_5B";
-              case GameBoardTileShape.D3_7A:
+              case GameBoardTileShape.Face_D3_HeptagonA:
                 return "D3_7A";
-              case GameBoardTileShape.D3_7B:
+              case GameBoardTileShape.Face_D3_HeptagonB:
                 return "D3_7B";
               default:
                 return `t${tile.index}`;
