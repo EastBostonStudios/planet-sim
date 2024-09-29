@@ -75,29 +75,29 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
           const asdf = () => {
             switch (tile.shape) {
-              case GameBoardTileShape.FaceD1_PentagonA:
+              case GameBoardTileShape.Swap1PentagonA:
                 return "D1_5A";
-              case GameBoardTileShape.FaceD1_PentagonB:
+              case GameBoardTileShape.Swap1PentagonB:
                 return "D1_5B";
-              case GameBoardTileShape.FaceD1_HeptagonA:
+              case GameBoardTileShape.Swap1HeptagonA:
                 return "D1_7A";
-              case GameBoardTileShape.FaceD1_HeptagonB:
+              case GameBoardTileShape.Swap1HeptagonB:
                 return "D1_7B";
-              case GameBoardTileShape.FaceD2_PentagonA:
+              case GameBoardTileShape.Swap2PentagonA:
                 return "D2_5A";
-              case GameBoardTileShape.FaceD2_PentagonB:
+              case GameBoardTileShape.Swap2PentagonB:
                 return "D2_5B";
-              case GameBoardTileShape.Face_D2_HeptagonA:
+              case GameBoardTileShape.Swap2HeptagonA:
                 return "D2_7A";
-              case GameBoardTileShape.Face_D2_HeptagonB:
+              case GameBoardTileShape.Swap2HeptagonB:
                 return "D2_7B";
-              case GameBoardTileShape.FaceD3_PentagonA:
+              case GameBoardTileShape.Swap3PentagonA:
                 return "D3_5A";
-              case GameBoardTileShape.FaceD3_PentagonB:
+              case GameBoardTileShape.Swap3PentagonB:
                 return "D3_5B";
-              case GameBoardTileShape.Face_D3_HeptagonA:
+              case GameBoardTileShape.Swap3HeptagonA:
                 return "D3_7A";
-              case GameBoardTileShape.Face_D3_HeptagonB:
+              case GameBoardTileShape.Swap3HeptagonB:
                 return "D3_7B";
               default:
                 return `t${tile.index}`;
@@ -145,7 +145,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
           const points = new Array<Vector3>();
           const triCenters = new Array<Vector3>();
           const chunkCenter = new Vector3();
-          for (const tri of chunk.tris) {
+          for (const tri of chunk.triangles) {
             if (!tri) continue;
             const p0 = projectCoords(tri.a.coords);
             const p1 = projectCoords(tri.b.coords);
@@ -177,7 +177,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             <Fragment key={chunk.index}>
               {false && <Line points={triCenters} lineWidth={4} />}
               {false &&
-                chunk.tris.map((tri) => {
+                chunk.triangles.map((tri) => {
                   if (!tri) return null;
                   const p0 = projectCoords(tri.a.coords);
                   const p1 = projectCoords(tri.b.coords);

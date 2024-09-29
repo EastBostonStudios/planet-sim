@@ -10,20 +10,20 @@ export enum GameBoardTileShape {
   EdgeHexagon = 1,
   FaceHexagon = 2,
   //
-  FaceD1_PentagonA = 3,
-  FaceD1_PentagonB = 4,
-  FaceD1_HeptagonA = 5,
-  FaceD1_HeptagonB = 6,
+  Swap1PentagonA = 3,
+  Swap1PentagonB = 4,
+  Swap1HeptagonA = 5,
+  Swap1HeptagonB = 6,
   //,
-  FaceD2_PentagonA = 7,
-  FaceD2_PentagonB = 8,
-  Face_D2_HeptagonA = 9,
-  Face_D2_HeptagonB = 10,
+  Swap2PentagonA = 7,
+  Swap2PentagonB = 8,
+  Swap2HeptagonA = 9,
+  Swap2HeptagonB = 10,
   //,
-  FaceD3_PentagonA = 11,
-  FaceD3_PentagonB = 12,
-  Face_D3_HeptagonA = 13,
-  Face_D3_HeptagonB = 14,
+  Swap3PentagonA = 11,
+  Swap3PentagonB = 12,
+  Swap3HeptagonA = 13,
+  Swap3HeptagonB = 14,
 }
 
 export type GameBoardCoords = {
@@ -39,7 +39,7 @@ export type GameBoardTile = {
   readonly shape?: GameBoardTileShape | undefined;
 };
 
-export type GameBoardTri = {
+export type GameBoardTriangle = {
   readonly index: number;
   readonly face: Icosahedron.Face;
   readonly a: GameBoardTile;
@@ -50,7 +50,7 @@ export type GameBoardTri = {
 export type GameBoardChunk = {
   readonly index: number;
   readonly face: Icosahedron.Face;
-  readonly tris: GameBoardTri[];
+  readonly triangles: GameBoardTriangle[];
 };
 
 //------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ export class GameBoard {
 
   public readonly resolution: number;
   public readonly tiles: GameBoardTile[];
-  public readonly tris: GameBoardTri[];
+  public readonly triangles: GameBoardTriangle[];
   public readonly chunks: GameBoardChunk[];
 
   // The maximum "i" or "j" value on a face is the edge length minus 1
@@ -78,7 +78,7 @@ export class GameBoard {
     this.tiles = new Array<GameBoardTile>(
       this.getFaceTileIndex(faces.length, 0, 0),
     );
-    this.tris = new Array<GameBoardTri>(
+    this.triangles = new Array<GameBoardTriangle>(
       faces.length *
         ((resolution + 1) * (resolution + 1) * chunkSize * chunkSize),
     );
@@ -176,7 +176,7 @@ export class GameBoard {
     this.tiles[11].neighbors[3] = this.getEdgeTile(edges[26], 0);
     this.tiles[11].neighbors[4] = this.getEdgeTile(edges[25], 0);
 
-    // Create tiles, chunks, and tris for each face
+    // Create tiles, chunks, and triangles for each face
     for (let f = 0; f < faces.length; f++) this.populateFace(faces[f]);
 
     this.validate();
@@ -241,23 +241,23 @@ export class GameBoard {
     y: number,
     shape: GameBoardTileShape,
   ) => {
+    const neighborCount =
+      shape === GameBoardTileShape.FaceHexagon ||
+      shape === GameBoardTileShape.EdgeHexagon
+        ? 6
+        : shape === GameBoardTileShape.CornerPentagon ||
+            shape === GameBoardTileShape.Swap1PentagonA ||
+            shape === GameBoardTileShape.Swap1PentagonB ||
+            shape === GameBoardTileShape.Swap2PentagonA ||
+            shape === GameBoardTileShape.Swap2PentagonB ||
+            shape === GameBoardTileShape.Swap3PentagonA ||
+            shape === GameBoardTileShape.Swap3PentagonB
+          ? 5
+          : 7;
     this.tiles[index] = {
       index,
       coords: { face, x, y },
-      neighbors: new Array(
-        shape === GameBoardTileShape.FaceHexagon ||
-          shape === GameBoardTileShape.EdgeHexagon
-          ? 6
-          : shape === GameBoardTileShape.CornerPentagon ||
-              shape === GameBoardTileShape.FaceD1_PentagonA ||
-              shape === GameBoardTileShape.FaceD1_PentagonB ||
-              shape === GameBoardTileShape.FaceD2_PentagonA ||
-              shape === GameBoardTileShape.FaceD2_PentagonB ||
-              shape === GameBoardTileShape.FaceD3_PentagonA ||
-              shape === GameBoardTileShape.FaceD3_PentagonB
-            ? 5
-            : 7,
-      ),
+      neighbors: new Array(neighborCount),
       shape,
     };
     return this.tiles[index];
@@ -270,8 +270,8 @@ export class GameBoard {
     b: GameBoardTile,
     c: GameBoardTile,
   ) => {
-    this.tris[index] = { index, face, a, b, c };
-    return this.tris[index];
+    this.triangles[index] = { index, face, a, b, c };
+    return this.triangles[index];
   };
 
   private readonly populateEdge = (
@@ -319,35 +319,35 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly getShapeForChunkCoords = (ci: number, cj: number) => {
-    // Bottom-left distortion
+    // Swap 1 (bottom-left)
     if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6))
-      return GameBoardTileShape.FaceD1_PentagonA;
+      return GameBoardTileShape.Swap1PentagonA;
     if ((ci === 2 && cj === 0) || (ci === 4 && cj === 5))
-      return GameBoardTileShape.FaceD1_PentagonB;
+      return GameBoardTileShape.Swap1PentagonB;
     if ((ci === 1 && cj === 0) || (ci === 3 && cj === 5))
-      return GameBoardTileShape.FaceD1_HeptagonA;
+      return GameBoardTileShape.Swap1HeptagonA;
     if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6))
-      return GameBoardTileShape.FaceD1_HeptagonB;
+      return GameBoardTileShape.Swap1HeptagonB;
 
-    // Bottom-right distortion
+    // Swap 2 (bottom-left)
     if ((ci === 5 && cj === 0) || (ci === 1 && cj === 6))
-      return GameBoardTileShape.FaceD2_PentagonA;
+      return GameBoardTileShape.Swap2PentagonA;
     if ((ci === 6 && cj === 1) || (ci === 0 && cj === 5))
-      return GameBoardTileShape.FaceD2_PentagonB;
+      return GameBoardTileShape.Swap2PentagonB;
     if ((ci === 5 && cj === 1) || (ci === 0 && cj === 6))
-      return GameBoardTileShape.Face_D2_HeptagonA;
+      return GameBoardTileShape.Swap2HeptagonA;
     if ((ci === 6 && cj === 0) || (ci === 1 && cj === 5))
-      return GameBoardTileShape.Face_D2_HeptagonB;
+      return GameBoardTileShape.Swap2HeptagonB;
 
-    // Top distortion
+    // Swap 3 (bottom-left)
     if ((ci === 6 && cj === 4) || (ci === 6 - 5 && cj === 4 - 2))
-      return GameBoardTileShape.FaceD3_PentagonA;
+      return GameBoardTileShape.Swap3PentagonA;
     if ((ci === 5 && cj === 4) || (ci === 5 - 5 && cj === 4 - 2))
-      return GameBoardTileShape.FaceD3_PentagonB;
+      return GameBoardTileShape.Swap3PentagonB;
     if ((ci === 6 && cj === 5) || (ci === 6 - 5 && cj === 5 - 2))
-      return GameBoardTileShape.Face_D3_HeptagonA;
+      return GameBoardTileShape.Swap3HeptagonA;
     if ((ci === 5 && cj === 3) || (ci === 5 - 5 && cj === 3 - 2))
-      return GameBoardTileShape.Face_D3_HeptagonB;
+      return GameBoardTileShape.Swap3HeptagonB;
 
     return GameBoardTileShape.FaceHexagon;
   };
@@ -391,8 +391,8 @@ export class GameBoard {
     const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
     for (let c = 0; c < chunksPerFace; c++) {
       const index = face.index * chunksPerFace + c;
-      const tris = new Array(chunkSize * chunkSize);
-      this.chunks[index] = { index, face, tris };
+      const triangles = new Array(chunkSize * chunkSize);
+      this.chunks[index] = { index, face, triangles };
     }
 
     // Create all triangles for this face --------------------------------------
@@ -418,9 +418,10 @@ export class GameBoard {
           else if (distortion === 2) c = this.getFaceTile(face, i, j - 1);
           else if (distortion === 3) b = this.getFaceTile(face, i, j + 1);
 
-          const tri = this.createTri(index, face, a, b, c);
+          const t = this.createTri(index, face, a, b, c);
           const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
-          chunk.tris[cj < ci ? ci * ci + cj * 2 + 1 : cj * cj + ci * 2] = tri;
+          chunk.triangles[cj < ci ? ci * ci + cj * 2 + 1 : cj * cj + ci * 2] =
+            t;
           index++;
         }
 
@@ -434,9 +435,9 @@ export class GameBoard {
         else if (distortion === 2) a = this.getFaceTile(face, i - 1, j);
         else if (distortion === 3) c = this.getFaceTile(face, i - 1, j - 2);
 
-        const tri = this.createTri(index, face, a, b, c);
+        const t = this.createTri(index, face, a, b, c);
         const chunk = this.chunks[chunkIndex + (cj > ci ? 1 : 0)];
-        chunk.tris[cj > ci ? cj * cj + ci * 2 + 1 : ci * ci + cj * 2] = tri;
+        chunk.triangles[cj > ci ? cj * cj + ci * 2 + 1 : ci * ci + cj * 2] = t;
         index++;
       }
     }
@@ -497,21 +498,21 @@ export class GameBoard {
       for (let j = 0; j < i; j++) {
         const tile = this.getFaceTile(face, i, j);
         switch (tile.shape) {
-          case GameBoardTileShape.FaceD1_PentagonA:
+          case GameBoardTileShape.Swap1PentagonA:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
             tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
             tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
             break;
-          case GameBoardTileShape.FaceD1_PentagonB:
+          case GameBoardTileShape.Swap1PentagonB:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
             tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
             tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.FaceD1_HeptagonA:
+          case GameBoardTileShape.Swap1HeptagonA:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 2, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i + 1, j + 1);
@@ -520,7 +521,7 @@ export class GameBoard {
             tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
             tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.FaceD1_HeptagonB:
+          case GameBoardTileShape.Swap1HeptagonB:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
@@ -529,21 +530,21 @@ export class GameBoard {
             tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
             tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.FaceD2_PentagonA:
+          case GameBoardTileShape.Swap2PentagonA:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
             tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
             tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.FaceD2_PentagonB:
+          case GameBoardTileShape.Swap2PentagonB:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
             tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
             tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.Face_D2_HeptagonA:
+          case GameBoardTileShape.Swap2HeptagonA:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
@@ -552,7 +553,7 @@ export class GameBoard {
             tile.neighbors[5] = this.getFaceTile(face, i, j - 1);
             tile.neighbors[6] = this.getFaceTile(face, i + 1, j - 1);
             break;
-          case GameBoardTileShape.Face_D2_HeptagonB:
+          case GameBoardTileShape.Swap2HeptagonB:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
@@ -561,21 +562,21 @@ export class GameBoard {
             tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
             tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.FaceD3_PentagonA:
+          case GameBoardTileShape.Swap3PentagonA:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
             tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
             tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.FaceD3_PentagonB:
+          case GameBoardTileShape.Swap3PentagonB:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[1] = this.getFaceTile(face, i, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
             tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
             tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.Face_D3_HeptagonA:
+          case GameBoardTileShape.Swap3HeptagonA:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
@@ -584,7 +585,7 @@ export class GameBoard {
             tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 2);
             tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
             break;
-          case GameBoardTileShape.Face_D3_HeptagonB:
+          case GameBoardTileShape.Swap3HeptagonB:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i + 1, j + 2);
@@ -618,13 +619,16 @@ export class GameBoard {
         );
       }
     }
-    for (let i = 0; i < this.tris.length; i++) {
-      console.assert(this.tris[i]?.index === i, "Tri indices incorrect!");
+    for (let i = 0; i < this.triangles.length; i++) {
+      console.assert(this.triangles[i]?.index === i, "Tri indices incorrect!");
     }
     for (let i = 0; i < this.chunks.length; i++) {
       console.assert(this.chunks[i].index === i, "Chunk indices incorrect!");
-      for (let j = 0; j < this.chunks[i].tris.length; j++) {
-        console.assert(!!this.chunks[i].tris[j], "Chunk missing tris!");
+      for (let j = 0; j < this.chunks[i].triangles.length; j++) {
+        console.assert(
+          !!this.chunks[i].triangles[j],
+          "Chunk missing triangles!",
+        );
       }
     }
   };
