@@ -3,12 +3,12 @@ import { folder, useControls } from "leva";
 import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
-import { GameBoard, GameBoardTileShape } from "../board/GameBoard";
-import { getShapeName } from "../board/boardHelpers";
+import { IcoTileShape, Icosphere } from "../board/Icosphere";
+import { getShapeName, validateBoard } from "../board/boardHelpers";
 import { getCenter, lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
 import { IcoMeshes } from "./IcoMeshes";
-import { StyledLabel } from "./StyledLabel";
+import { Label } from "./Label";
 
 const ArrayAttribute: FC<{
   attribute: string;
@@ -38,10 +38,11 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
     }),
   });
 
-  const { tiles, chunks } = useMemo(
-    () => new GameBoard(icosphereSize, doSwap),
-    [icosphereSize, doSwap],
-  );
+  const { tiles, chunks } = useMemo(() => {
+    const board = new Icosphere(icosphereSize, doSwap);
+    validateBoard(board);
+    return board;
+  }, [icosphereSize, doSwap]);
 
   //----------------------------------------------------------------------------
 
@@ -77,12 +78,11 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
 
           return (
             <group key={tile.index}>
-              {showTileIndices &&
-                tile.shape > GameBoardTileShape.EdgeHexagon && (
-                  <StyledLabel position={tilePosition}>
-                    {getShapeName(tile.shape)}
-                  </StyledLabel>
-                )}
+              {showTileIndices && tile.shape > IcoTileShape.EdgeHexagon && (
+                <Label position={tilePosition}>
+                  {getShapeName(tile.shape)}
+                </Label>
+              )}
               {!vec ? null : (
                 <Line
                   points={[
@@ -166,14 +166,12 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
                     .add(p2)
                     .divideScalar(3.0);
                   return (
-                    <StyledLabel key={tri.index} position={center}>
+                    <Label key={tri.index} position={center}>
                       t{tri.index}
-                    </StyledLabel>
+                    </Label>
                   );
                 })}
-              {false && (
-                <StyledLabel position={chunkCenter}>c{chunk.index}</StyledLabel>
-              )}
+              {false && <Label position={chunkCenter}>c{chunk.index}</Label>}
               <mesh>
                 <bufferGeometry>
                   <ArrayAttribute

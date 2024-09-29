@@ -4,7 +4,7 @@ import React, { Fragment, useContext, type FC } from "react";
 import { AppContext } from "../App";
 import * as Icosahedron from "../board/Icosahedron";
 import { closeLoop, getCenter, lerpToward } from "../utils/mathUtils";
-import { StyledLabel } from "./StyledLabel";
+import { Label } from "./Label";
 
 //------------------------------------------------------------------------------
 
@@ -24,9 +24,9 @@ export const IcoMeshes: FC = () => {
     <>
       {showPoints &&
         Icosahedron.points.map((point) => (
-          <StyledLabel key={point.index} position={pointProjector(point)}>
+          <Label key={point.index} position={pointProjector(point)}>
             p{point.index}
-          </StyledLabel>
+          </Label>
         ))}
       {showEdges &&
         Icosahedron.edges.map((edge) => {
@@ -37,9 +37,9 @@ export const IcoMeshes: FC = () => {
           const edgeCenter = getCenter(edgePoints);
           return (
             <Fragment key={edge.index}>
-              <StyledLabel position={edgeCenter}>
+              <Label position={edgeCenter}>
                 <h2>e{edge.index}</h2>
-              </StyledLabel>
+              </Label>
               <Line
                 points={edgePoints}
                 vertexColors={[
@@ -62,15 +62,15 @@ export const IcoMeshes: FC = () => {
           const center = getCenter(points);
           return (
             <Fragment key={face.index}>
-              <StyledLabel position={center}>
+              <Label position={center}>
                 <h2>f{face.index}</h2>
-              </StyledLabel>
+              </Label>
               {points.map((point, i) => {
                 const key = i === 0 ? "a" : i === 1 ? "b" : "c";
                 return (
-                  <StyledLabel key={key} position={lerpToward(point, center)}>
+                  <Label key={key} position={lerpToward(point, center)}>
                     <h3>{key}</h3>
-                  </StyledLabel>
+                  </Label>
                 );
               })}
               <Line

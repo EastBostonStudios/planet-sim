@@ -12,7 +12,7 @@ const StyledHtml = styled.strong<{ $color: string }>`
   text-shadow: 1px 1px black;
 `;
 
-export const StyledLabel: FC<
+export const Label: FC<
   {
     color?: string;
     position: Vector3;

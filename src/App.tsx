@@ -11,9 +11,9 @@ import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { DoubleSide, Vector3 } from "three";
-import type { GameBoardCoords } from "./board/GameBoard";
 import * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
+import type { IcoCoords } from "./board/Icosphere";
 import { Scene } from "./scene/Scene";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 import { interpolateOnFace } from "./utils/mathUtils";
@@ -61,8 +61,8 @@ const dbp = Icosahedron.distBetweenPoints;
 export const AppContext = createContext<{
   is3D: boolean;
   pointProjector: (point: Icosahedron.Point) => Vector3;
-  projectCoords: (coords: GameBoardCoords) => Vector3;
-  projectCoordsArray: (coords: GameBoardCoords[]) => Vector3[];
+  projectCoords: (coords: IcoCoords) => Vector3;
+  projectCoordsArray: (coords: IcoCoords[]) => Vector3[];
 }>({
   is3D: false,
   pointProjector: () => new Vector3(),
@@ -113,7 +113,7 @@ const App = () => {
           0,
         );
 
-      const projectCoords: (coords: GameBoardCoords) => Vector3 = is3D
+      const projectCoords: (coords: IcoCoords) => Vector3 = is3D
         ? (coords) => {
             const a = projector3D(coords.face.a);
             const b = projector3D(coords.face.b);
@@ -134,7 +134,7 @@ const App = () => {
             return interpolateOnFace(a, b, c, coords.x, coords.y);
           };
 
-      const projectCoordsArray: (coords: GameBoardCoords[]) => Vector3[] = is3D
+      const projectCoordsArray: (coords: IcoCoords[]) => Vector3[] = is3D
         ? (coordsArray) =>
             coordsArray.map((coords) => {
               const a = projector3D(coords.face.a);

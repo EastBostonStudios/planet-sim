@@ -4,7 +4,7 @@ import * as Icosahedron from "./Icosahedron";
 
 const chunkSize = 8;
 
-export enum GameBoardTileShape {
+export enum IcoTileShape {
   //
   CornerPentagon = 0,
   EdgeHexagon = 1,
@@ -26,41 +26,41 @@ export enum GameBoardTileShape {
   Swap3HeptagonB = 14,
 }
 
-export type GameBoardCoords = {
+export type IcoCoords = {
   face: Icosahedron.Face;
   x: number;
   y: number;
 };
 
-export type GameBoardTile = {
+export type IcoTile = {
   readonly index: number;
-  readonly coords: GameBoardCoords;
-  readonly neighbors: GameBoardTile[];
-  readonly shape: GameBoardTileShape;
+  readonly coords: IcoCoords;
+  readonly neighbors: IcoTile[];
+  readonly shape: IcoTileShape;
 };
 
-export type GameBoardTriangle = {
+export type IcoTriangle = {
   readonly index: number;
   readonly face: Icosahedron.Face;
-  readonly a: GameBoardTile;
-  readonly b: GameBoardTile;
-  readonly c: GameBoardTile;
+  readonly a: IcoTile;
+  readonly b: IcoTile;
+  readonly c: IcoTile;
 };
 
-export type GameBoardChunk = {
+export type IcoChunk = {
   readonly index: number;
   readonly face: Icosahedron.Face;
-  readonly triangles: GameBoardTriangle[];
+  readonly triangles: IcoTriangle[];
 };
 
 //------------------------------------------------------------------------------
 
-export class GameBoard {
+export class Icosphere {
   //----------------------------------------------------------------------------
 
-  public readonly tiles: GameBoardTile[];
-  public readonly triangles: GameBoardTriangle[];
-  public readonly chunks: GameBoardChunk[];
+  public readonly tiles: IcoTile[];
+  public readonly triangles: IcoTriangle[];
+  public readonly chunks: IcoChunk[];
 
   private readonly widthInTiles: number;
   private readonly widthInChunks: number;
@@ -76,30 +76,28 @@ export class GameBoard {
     // Initialize variables and pre-allocate space for the arrays  -------------
 
     const { faces, edges } = Icosahedron;
-    this.tiles = new Array<GameBoardTile>(
-      this.getFaceTileIndex(faces.length, 0, 0),
-    );
-    this.triangles = new Array<GameBoardTriangle>(
+    this.tiles = new Array<IcoTile>(this.getFaceTileIndex(faces.length, 0, 0));
+    this.triangles = new Array<IcoTriangle>(
       faces.length * this.widthInTiles * this.widthInTiles,
     );
-    this.chunks = new Array<GameBoardChunk>(
+    this.chunks = new Array<IcoChunk>(
       faces.length * this.widthInChunks * this.widthInChunks,
     );
 
     // Create all icosahedron corner tiles -------------------------------------
 
-    this.createTile(0, faces[0], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(1, faces[0], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(2, faces[1], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(3, faces[2], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(4, faces[3], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(5, faces[4], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(6, faces[6], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(7, faces[8], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(8, faces[10], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(9, faces[12], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(10, faces[14], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
-    this.createTile(11, faces[19], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(0, faces[0], 0.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(1, faces[0], 1.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(2, faces[1], 1.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(3, faces[2], 1.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(4, faces[3], 1.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(5, faces[4], 1.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(6, faces[6], 0.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(7, faces[8], 0.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(8, faces[10], 0.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(9, faces[12], 0.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(10, faces[14], 0.0, 0.0, IcoTileShape.CornerPentagon);
+    this.createTile(11, faces[19], 0.0, 0.0, IcoTileShape.CornerPentagon);
 
     // Create all icosahedron edge tiles and stitch them together --------------
 
@@ -178,8 +176,6 @@ export class GameBoard {
 
     // Create tiles, chunks, and triangles for each face
     for (let f = 0; f < faces.length; f++) this.populateFace(faces[f]);
-
-    this.validate();
   }
 
   //----------------------------------------------------------------------------
@@ -216,7 +212,7 @@ export class GameBoard {
     face: Icosahedron.Face,
     i: number,
     j: number,
-  ): GameBoardTile => {
+  ): IcoTile => {
     // Corners
     if (i === -1 && j === -1) return this.tiles[face.a.index];
     if (i === this.widthInTiles - 1 && j === -1)
@@ -244,19 +240,18 @@ export class GameBoard {
     face: Icosahedron.Face,
     x: number,
     y: number,
-    shape: GameBoardTileShape,
+    shape: IcoTileShape,
   ) => {
     const neighborCount =
-      shape === GameBoardTileShape.FaceHexagon ||
-      shape === GameBoardTileShape.EdgeHexagon
+      shape === IcoTileShape.FaceHexagon || shape === IcoTileShape.EdgeHexagon
         ? 6
-        : shape === GameBoardTileShape.CornerPentagon ||
-            shape === GameBoardTileShape.Swap1PentagonA ||
-            shape === GameBoardTileShape.Swap1PentagonB ||
-            shape === GameBoardTileShape.Swap2PentagonA ||
-            shape === GameBoardTileShape.Swap2PentagonB ||
-            shape === GameBoardTileShape.Swap3PentagonA ||
-            shape === GameBoardTileShape.Swap3PentagonB
+        : shape === IcoTileShape.CornerPentagon ||
+            shape === IcoTileShape.Swap1PentagonA ||
+            shape === IcoTileShape.Swap1PentagonB ||
+            shape === IcoTileShape.Swap2PentagonA ||
+            shape === IcoTileShape.Swap2PentagonB ||
+            shape === IcoTileShape.Swap3PentagonA ||
+            shape === IcoTileShape.Swap3PentagonB
           ? 5
           : 7;
     this.tiles[index] = {
@@ -271,9 +266,9 @@ export class GameBoard {
   private readonly createTri = (
     index: number,
     face: Icosahedron.Face,
-    a: GameBoardTile,
-    b: GameBoardTile,
-    c: GameBoardTile,
+    a: IcoTile,
+    b: IcoTile,
+    c: IcoTile,
   ) => {
     this.triangles[index] = { index, face, a, b, c };
     return this.triangles[index];
@@ -283,7 +278,7 @@ export class GameBoard {
     edge: Icosahedron.Edge,
     face: Icosahedron.Face,
   ) => {
-    const shape = GameBoardTileShape.EdgeHexagon;
+    const shape = IcoTileShape.EdgeHexagon;
     for (let i = 0; i < this.widthInTiles - 1; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
       const s = (i + 1.0) / this.widthInTiles;
@@ -306,7 +301,7 @@ export class GameBoard {
 
   private readonly stitchEdgeTiles = (
     i: number,
-    tile: GameBoardTile,
+    tile: IcoTile,
     start: Icosahedron.Point,
     end: Icosahedron.Point,
   ) => {
@@ -324,40 +319,40 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly getShapeForChunkCoords = (ci: number, cj: number) => {
-    if (!this.doSwaps) return GameBoardTileShape.FaceHexagon;
+    if (!this.doSwaps) return IcoTileShape.FaceHexagon;
 
     // Swap 1 (bottom-left)
     if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6))
-      return GameBoardTileShape.Swap1PentagonA;
+      return IcoTileShape.Swap1PentagonA;
     if ((ci === 2 && cj === 0) || (ci === 4 && cj === 5))
-      return GameBoardTileShape.Swap1PentagonB;
+      return IcoTileShape.Swap1PentagonB;
     if ((ci === 1 && cj === 0) || (ci === 3 && cj === 5))
-      return GameBoardTileShape.Swap1HeptagonA;
+      return IcoTileShape.Swap1HeptagonA;
     if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6))
-      return GameBoardTileShape.Swap1HeptagonB;
+      return IcoTileShape.Swap1HeptagonB;
 
     // Swap 2 (bottom-left)
     if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6))
-      return GameBoardTileShape.Swap2PentagonA;
+      return IcoTileShape.Swap2PentagonA;
     if ((ci === 5 && cj === 0) || (ci === 0 && cj === 5))
       //|| (ci === 1 && cj === 6))
-      return GameBoardTileShape.Swap2PentagonB;
+      return IcoTileShape.Swap2PentagonB;
     if ((ci === 5 && cj === 1) || (ci === 0 && cj === 6))
-      return GameBoardTileShape.Swap2HeptagonA;
+      return IcoTileShape.Swap2HeptagonA;
     if ((ci === 6 && cj === 0) || (ci === 1 && cj === 5))
-      return GameBoardTileShape.Swap2HeptagonB;
+      return IcoTileShape.Swap2HeptagonB;
 
     // Swap 3 (bottom-left)
     if ((ci === 6 && cj === 4) || (ci === 1 && cj === 2))
-      return GameBoardTileShape.Swap3PentagonA;
+      return IcoTileShape.Swap3PentagonA;
     if ((ci === 5 && cj === 4) || (ci === 0 && cj === 2))
-      return GameBoardTileShape.Swap3PentagonB;
+      return IcoTileShape.Swap3PentagonB;
     if ((ci === 6 && cj === 5) || (ci === 1 && cj === 3))
-      return GameBoardTileShape.Swap3HeptagonA;
+      return IcoTileShape.Swap3HeptagonA;
     if ((ci === 5 && cj === 3) || (ci === 0 && cj === 1))
-      return GameBoardTileShape.Swap3HeptagonB;
+      return IcoTileShape.Swap3HeptagonB;
 
-    return GameBoardTileShape.FaceHexagon;
+    return IcoTileShape.FaceHexagon;
   };
 
   private readonly populateFace = (face: Icosahedron.Face) => {
@@ -404,11 +399,11 @@ export class GameBoard {
         if (j < i) {
           const d = this.find(face, i - 1, j);
           const t =
-            a.shape === GameBoardTileShape.Swap1HeptagonB
+            a.shape === IcoTileShape.Swap1HeptagonB
               ? this.createTri(index, face, a, d, this.find(face, i - 2, j - 1))
-              : a.shape === GameBoardTileShape.Swap2PentagonA
+              : a.shape === IcoTileShape.Swap2PentagonA
                 ? this.createTri(index, face, a, d, this.find(face, i, j - 1))
-                : a.shape === GameBoardTileShape.Swap3PentagonA
+                : a.shape === IcoTileShape.Swap3PentagonA
                   ? this.createTri(index, face, a, this.find(face, i, j + 1), b)
                   : this.createTri(index, face, a, d, b);
           const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
@@ -419,11 +414,11 @@ export class GameBoard {
 
         // Check if this tile touches swap 3, 2, or 1
         const t =
-          a.shape === GameBoardTileShape.Swap3HeptagonA
+          a.shape === IcoTileShape.Swap3HeptagonA
             ? this.createTri(index, face, a, b, this.find(face, i - 1, j - 2))
-            : a.shape === GameBoardTileShape.Swap2PentagonA
+            : a.shape === IcoTileShape.Swap2PentagonA
               ? this.createTri(index, face, this.find(face, i - 1, j), b, c)
-              : a.shape === GameBoardTileShape.Swap1PentagonA
+              : a.shape === IcoTileShape.Swap1PentagonA
                 ? this.createTri(index, face, this.find(face, i + 1, j), b, c)
                 : this.createTri(index, face, a, b, c);
 
@@ -489,21 +484,21 @@ export class GameBoard {
       for (let j = 0; j < i; j++) {
         const tile = this.find(face, i, j);
         switch (tile.shape) {
-          case GameBoardTileShape.Swap1PentagonA:
+          case IcoTileShape.Swap1PentagonA:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i, j + 1);
             tile.neighbors[3] = this.find(face, i - 1, j);
             tile.neighbors[4] = this.find(face, i - 1, j - 1);
             break;
-          case GameBoardTileShape.Swap1PentagonB:
+          case IcoTileShape.Swap1PentagonB:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i - 1, j);
             tile.neighbors[3] = this.find(face, i - 1, j - 1);
             tile.neighbors[4] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap1HeptagonA:
+          case IcoTileShape.Swap1HeptagonA:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 2, j + 1);
             tile.neighbors[2] = this.find(face, i + 1, j + 1);
@@ -512,7 +507,7 @@ export class GameBoard {
             tile.neighbors[5] = this.find(face, i - 1, j - 1);
             tile.neighbors[6] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap1HeptagonB:
+          case IcoTileShape.Swap1HeptagonB:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i, j + 1);
@@ -521,21 +516,21 @@ export class GameBoard {
             tile.neighbors[5] = this.find(face, i - 1, j - 1);
             tile.neighbors[6] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap2PentagonA:
+          case IcoTileShape.Swap2PentagonA:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i, j + 1);
             tile.neighbors[3] = this.find(face, i - 1, j);
             tile.neighbors[4] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap2PentagonB:
+          case IcoTileShape.Swap2PentagonB:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i, j + 1);
             tile.neighbors[2] = this.find(face, i - 1, j);
             tile.neighbors[3] = this.find(face, i - 1, j - 1);
             tile.neighbors[4] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap2HeptagonA:
+          case IcoTileShape.Swap2HeptagonA:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i, j + 1);
@@ -544,7 +539,7 @@ export class GameBoard {
             tile.neighbors[5] = this.find(face, i, j - 1);
             tile.neighbors[6] = this.find(face, i + 1, j - 1);
             break;
-          case GameBoardTileShape.Swap2HeptagonB:
+          case IcoTileShape.Swap2HeptagonB:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i, j + 1);
@@ -553,21 +548,21 @@ export class GameBoard {
             tile.neighbors[5] = this.find(face, i - 1, j - 1);
             tile.neighbors[6] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap3PentagonA:
+          case IcoTileShape.Swap3PentagonA:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i, j + 1);
             tile.neighbors[3] = this.find(face, i - 1, j - 1);
             tile.neighbors[4] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap3PentagonB:
+          case IcoTileShape.Swap3PentagonB:
             tile.neighbors[0] = this.find(face, i + 1, j + 1);
             tile.neighbors[1] = this.find(face, i, j + 1);
             tile.neighbors[2] = this.find(face, i - 1, j);
             tile.neighbors[3] = this.find(face, i - 1, j - 1);
             tile.neighbors[4] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap3HeptagonA:
+          case IcoTileShape.Swap3HeptagonA:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i, j + 1);
@@ -576,7 +571,7 @@ export class GameBoard {
             tile.neighbors[5] = this.find(face, i - 1, j - 2);
             tile.neighbors[6] = this.find(face, i, j - 1);
             break;
-          case GameBoardTileShape.Swap3HeptagonB:
+          case IcoTileShape.Swap3HeptagonB:
             tile.neighbors[0] = this.find(face, i + 1, j);
             tile.neighbors[1] = this.find(face, i + 1, j + 1);
             tile.neighbors[2] = this.find(face, i + 1, j + 2);
@@ -594,32 +589,6 @@ export class GameBoard {
             tile.neighbors[5] = this.find(face, i, j - 1);
             break;
         }
-      }
-    }
-  };
-
-  //----------------------------------------------------------------------------
-
-  private readonly validate = () => {
-    for (let i = 0; i < this.tiles?.length; i++) {
-      console.assert(this.tiles[i]?.index === i, "Tile indices incorrect!");
-      for (let j = 0; j < this.tiles[i]?.neighbors.length; j++) {
-        console.assert(
-          !!this.tiles[i]?.neighbors[j],
-          "Tiles missing neighbors!",
-        );
-      }
-    }
-    for (let i = 0; i < this.triangles.length; i++) {
-      console.assert(this.triangles[i]?.index === i, "Tri indices incorrect!");
-    }
-    for (let i = 0; i < this.chunks.length; i++) {
-      console.assert(this.chunks[i].index === i, "Chunk indices incorrect!");
-      for (let j = 0; j < this.chunks[i].triangles.length; j++) {
-        console.assert(
-          !!this.chunks[i].triangles[j],
-          "Chunk missing triangles!",
-        );
       }
     }
   };
