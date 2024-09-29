@@ -14,8 +14,7 @@ export type GameBoardTile = {
   readonly index: number;
   readonly coords: GameBoardCoords;
   readonly neighbors: GameBoardTile[];
-  readonly fiver?: true | undefined;
-  readonly sevener?: true | undefined;
+  readonly label?: true | undefined;
 };
 
 export type GameBoardTri = {
@@ -303,7 +302,7 @@ export class GameBoard {
       this.chunks[index] = { index, face, tris };
     }
 
-    let index = face.index * (chunksPerFace * chunkSize * chunkSize);
+    const index = face.index * (chunksPerFace * chunkSize * chunkSize);
 
     for (let i = 0; i <= this.maxIJ; i++) {
       const chunkI = Math.trunc(i / chunkSize);
@@ -315,36 +314,80 @@ export class GameBoard {
         const chunkIndex =
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
-        const tile = this.getTile(face, i, j);
-        if (iOnChunk === 1 && jOnChunk === 0) tile.sevener = true;
-        if (iOnChunk === 3 && jOnChunk === 1) tile.sevener = true;
-        if (iOnChunk === 2 && jOnChunk === 0) tile.fiver = true;
-        if (iOnChunk === 2 && jOnChunk === 1) tile.fiver = true;
+        let a = this.getTile(face, i, j);
+        let b = this.getTile(face, i - 1, j - 1);
+        let c = this.getTile(face, i, j - 1);
 
-        if (iOnChunk === 6 && jOnChunk === 5) tile.sevener = true;
-        if (iOnChunk === 5 && jOnChunk === 3) tile.sevener = true;
-        if (iOnChunk === 5 && jOnChunk === 4) tile.fiver = true;
-        if (iOnChunk === 6 && jOnChunk === 4) tile.fiver = true;
+        /*if (i === 2 && j === 1) {
+          a = this.getTile(face, i + 1, j);
+        }
+        if (i === 6 && j === 1) {
+          a = this.getTile(face, i - 1, j);
+        }
+        if (i === 6 && j === 4) {
+          a = this.getTile(face, i, j + 1);
+        }*/
 
-        if (iOnChunk === 5 && jOnChunk === 1) tile.sevener = true;
-        if (iOnChunk === 6 && jOnChunk === 0) tile.sevener = true;
-        if (iOnChunk === 6 && jOnChunk === 1) tile.fiver = true;
-        if (iOnChunk === 5 && jOnChunk === 0) tile.fiver = true;
+        if (false) {
+          a = c;
+          b = c;
+          c = a;
+        }
+        if (j < i) {
+          const d = this.getTile(face, i - 1, j);
+          const tri = this.createTri(index, face, a, d, b);
+          const offset = jOnChunk >= iOnChunk ? 1 : 0;
+          const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
+          this.chunks[chunkIndex + offset].tris[triIndex + (1 - offset)] = tri;
+        }
+
+        const tri = this.createTri(index, face, a, b, c);
+        const offset = jOnChunk > iOnChunk ? 1 : 0;
+        const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
+        this.chunks[chunkIndex + offset].tris[triIndex + offset] = tri;
+
+        // if (jOnChunk >= iOnChunk) {
+        //   //  const triIndex = jOnChunk * jOnChunk + iOnChunk * 2;
+        //   // this.chunks[chunkIndex + 1].tris[triIndex] = tri;
+        // } else {
+        //   const triIndex = iOnChunk * iOnChunk + jOnChunk * 2 + 1;
+        //   this.chunks[chunkIndex].tris[triIndex] = tri;
+        // }
+
+        //if (jOnChunk > iOnChunk) {
+        //  const triIndex = jOnChunk * jOnChunk + iOnChunk * 2 + 1;
+        //  this.chunks[chunkIndex + 1].tris[triIndex] = tri;
+        //} else {
+        //  const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
+        //  this.chunks[chunkIndex].tris[triIndex] = tri;
+        //}
+
+        /*
+        // -1 represents off of the face tiles (connecting to the edge tiles)
 
         if (j < i) {
-          // -1 represents off of the face tiles (connecting to the edge tiles)
-          const tri = this.createTri(
-            index,
-            face,
-            tile,
-            this.getTile(face, i - 1, j),
-            this.getTile(face, i - 1, j - 1),
-          );
+          const left = this.getTile(face, i - 1, j);
 
+          let tri: GameBoardTri;
+          // Cluster 0,0
+          if (iOnChunk === 3 && jOnChunk === 1) {
+            const farBottomLeft = this.getTile(face, i - 2, j - 1);
+            tri = this.createTri(index, face, tile, farBottomLeft, bottomLeft);
+          }
+          // Cluster 1,0
+          else if (iOnChunk === 6 && jOnChunk === 1) {
+            const left = this.getTile(face, i, j - 1);
+            const bottomLeft = this.getTile(face, i - 1, j);
+            tri = this.createTri(index, face, tile, bottomLeft, left);
+          }
+          // Normal case
+          else {
+            tri = this.createTri(index, face, tile, left, bottomLeft);
+          }
           // Check if this sits on the flipped chunk or not
           if (jOnChunk >= iOnChunk) {
-            const triIndex = jOnChunk * jOnChunk + iOnChunk * 2;
-            this.chunks[chunkIndex + 1].tris[triIndex] = tri;
+            //  const triIndex = jOnChunk * jOnChunk + iOnChunk * 2;
+            // this.chunks[chunkIndex + 1].tris[triIndex] = tri;
           } else {
             const triIndex = iOnChunk * iOnChunk + jOnChunk * 2 + 1;
             this.chunks[chunkIndex].tris[triIndex] = tri;
@@ -352,13 +395,22 @@ export class GameBoard {
           index++;
         }
 
-        const tri = this.createTri(
-          index,
-          face,
-          this.getTile(face, i - 1, j - 1),
-          this.getTile(face, i, j - 1),
-          tile,
-        );
+        let tri: GameBoardTri;
+        // Cluster 0,0
+        if (iOnChunk === 2 && jOnChunk === 1) {
+          const right = this.getTile(face, i + 1, j);
+          tri = this.createTri(index, face, bottomLeft, right, tile);
+        }
+        // Cluster 1,0
+        else if (iOnChunk === 6 && jOnChunk === 1) {
+          const left = this.getTile(face, i - 1, j);
+          const asdf = this.getTile(face, i - 1, j - 1);
+          tri = this.createTri(index, face, left, bottom, asdf);
+        }
+        // Normal case
+        else {
+          tri = this.createTri(index, face, bottomLeft, bottom, tile);
+        }
 
         // Check if this sits on the flipped chunk or not
         if (jOnChunk > iOnChunk) {
@@ -368,7 +420,7 @@ export class GameBoard {
           const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
           this.chunks[chunkIndex].tris[triIndex] = tri;
         }
-        index++;
+        index++;*/
       }
     }
 
@@ -437,17 +489,17 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly validate = () => {
-    for (let i = 0; i < this.tiles.length; i++) {
-      console.assert(this.tiles[i].index === i, "Tile indices incorrect!");
-      for (let j = 0; j < this.tiles[i].neighbors.length; j++) {
+    for (let i = 0; i < this.tiles?.length; i++) {
+      console.assert(this.tiles[i]?.index === i, "Tile indices incorrect!");
+      for (let j = 0; j < this.tiles[i]?.neighbors.length; j++) {
         console.assert(
-          !!this.tiles[i].neighbors[j],
+          !!this.tiles[i]?.neighbors[j],
           "Tiles missing neighbors!",
         );
       }
     }
     for (let i = 0; i < this.tris.length; i++) {
-      console.assert(this.tris[i].index === i, "Tri indices incorrect!");
+      console.assert(this.tris[i]?.index === i, "Tri indices incorrect!");
     }
     for (let i = 0; i < this.chunks.length; i++) {
       console.assert(this.chunks[i].index === i, "Chunk indices incorrect!");

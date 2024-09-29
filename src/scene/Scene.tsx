@@ -74,10 +74,9 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
           return (
             <group key={tile.index}>
-              {showTileIndices && (tile.fiver || tile.sevener) && (
+              {showTileIndices && !!tile.label && (
                 <StyledLabel position={tilePosition}>
-                  t{tile.index}
-                  {tile.fiver ? "*" : "**"}
+                  t{tile.label ?? tile.index}
                 </StyledLabel>
               )}
               {!vec ? null : (
@@ -110,7 +109,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             </group>
           );
         })}
-            const p2 = projectCoords(tri.c.coords);
+      const p2 = projectCoords(tri.c.coords);
       {chunks.flatMap((chunk) => {
         const points = new Array<Vector3>();
         const triCenters = new Array<Vector3>();
