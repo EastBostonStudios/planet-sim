@@ -285,8 +285,32 @@ export class GameBoard {
 
   //----------------------------------------------------------------------------
 
-  private readonly asdf = (i: number, j: number, ci: number, cj: number) => {
-    return ci === i && cj === j;
+  private readonly getFlippedTriangleDistortion = (ci: number, cj: number) => {
+    // Bottom-left distortion
+    if (
+      (ci === 3 && cj === 1) ||
+      (ci === chunkSize - 3 && cj === chunkSize - 2)
+    )
+      return 1;
+    // Bottom-right distortion
+    if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
+    // Top distortion
+    if ((ci === 6 && cj === 4) || (ci === 1 && cj === 2)) return 3;
+    return 0;
+  };
+
+  private readonly getUprightTriangleDistortion = (ci: number, cj: number) => {
+    // Bottom-left distortion
+    if (
+      (ci === 2 && cj === 1) ||
+      (ci === chunkSize - 4 && cj === chunkSize - 2)
+    )
+      return 1;
+    // Bottom-right distortion
+    if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
+    // Top distortion
+    if ((ci === 6 && cj === 5) || (ci === 1 && cj === 3)) return 3;
+    return 0;
   };
 
   private readonly populateFace = (face: Icosahedron.Face) => {
@@ -318,84 +342,35 @@ export class GameBoard {
         const chunkIndex =
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
-        if (false) {
-          a = c;
-          b = c;
-          c = a;
-        }
-
         if (j < i) {
-          let a = this.getTile(face, i, j);
+          const a = this.getTile(face, i, j);
           let b = this.getTile(face, i - 1, j);
           let c = this.getTile(face, i - 1, j - 1);
 
-          let skip = false;
-          // Bottom-left distortion
-          if (
-            this.asdf(ci, cj, 3, 1) ||
-            this.asdf(ci, cj, chunkSize - 3, chunkSize - 2)
-          ) {
-            c = this.getTile(face, i - 2, j - 1);
-          }
-          // Bottom-right distortion
-          if (this.asdf(ci, cj, 6, 1) || this.asdf(ci, cj, 1, 6)) {
-            c = this.getTile(face, i, j - 1);
-          }
-          // Top distortion
-          if (this.asdf(ci, cj, 6, 4) || this.asdf(ci, cj, 1, 2)) {
-            b = this.getTile(face, i, j + 1);
-            //skip = true;
-          }
+          const distortion = this.getFlippedTriangleDistortion(ci, cj);
+          if (distortion === 1) c = this.getTile(face, i - 2, j - 1);
+          else if (distortion === 2) c = this.getTile(face, i, j - 1);
+          else if (distortion === 3) b = this.getTile(face, i, j + 1);
 
-          if (false) {
-            a = c;
-            b = a;
-            c = a;
-            skip = true;
-          }
-
-          if (!skip) {
-            const tri = this.createTri(index, face, a, b, c);
-            const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
-            chunk.tris[cj < ci ? ci * ci + cj * 2 + 1 : cj * cj + ci * 2] = tri;
-          }
+          const tri = this.createTri(index, face, a, b, c);
+          const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
+          chunk.tris[cj < ci ? ci * ci + cj * 2 + 1 : cj * cj + ci * 2] = tri;
           index++;
         }
 
         let a = this.getTile(face, i, j);
-        let b = this.getTile(face, i - 1, j - 1);
+        const b = this.getTile(face, i - 1, j - 1);
         let c = this.getTile(face, i, j - 1);
 
         // Bottom-left distortion
-        let skip = false;
-        if (
-          this.asdf(ci, cj, 2, 1) ||
-          this.asdf(ci, cj, chunkSize - 4, chunkSize - 2)
-        ) {
-          a = this.getTile(face, i + 1, j);
-        }
-        // Bottom-right distortion
-        if (this.asdf(ci, cj, 6, 1) || this.asdf(ci, cj, 1, 6)) {
-          a = this.getTile(face, i - 1, j);
-        }
-        // Top distortion
-        if (this.asdf(ci, cj, 6, 5) || this.asdf(ci, cj, 1, 3)) {
-          c = this.getTile(face, i - 1, j - 2);
-          //skip = true;
-        }
+        const distortion = this.getUprightTriangleDistortion(ci, cj);
+        if (distortion === 1) a = this.getTile(face, i + 1, j);
+        else if (distortion === 2) a = this.getTile(face, i - 1, j);
+        else if (distortion === 3) c = this.getTile(face, i - 1, j - 2);
 
-        if (false) {
-          a = b;
-          b = c;
-          c = a;
-          skip = true;
-        }
-
-        if (!skip) {
-          const tri = this.createTri(index, face, a, b, c);
-          const chunk = this.chunks[chunkIndex + (cj > ci ? 1 : 0)];
-          chunk.tris[cj > ci ? cj * cj + ci * 2 + 1 : ci * ci + cj * 2] = tri;
-        }
+        const tri = this.createTri(index, face, a, b, c);
+        const chunk = this.chunks[chunkIndex + (cj > ci ? 1 : 0)];
+        chunk.tris[cj > ci ? cj * cj + ci * 2 + 1 : ci * ci + cj * 2] = tri;
         index++;
       }
     }
