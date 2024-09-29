@@ -337,9 +337,10 @@ export class GameBoard {
       return GameBoardTileShape.Swap1HeptagonB;
 
     // Swap 2 (bottom-left)
-    if ((ci === 5 && cj === 0) || (ci === 1 && cj === 6))
-      return GameBoardTileShape.Swap2PentagonA;
     if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6))
+      return GameBoardTileShape.Swap2PentagonA;
+    if ((ci === 5 && cj === 0) || (ci === 0 && cj === 5))
+      //|| (ci === 1 && cj === 6))
       return GameBoardTileShape.Swap2PentagonB;
     if ((ci === 5 && cj === 1) || (ci === 0 && cj === 6))
       return GameBoardTileShape.Swap2HeptagonA;
@@ -542,7 +543,7 @@ export class GameBoard {
             tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
             tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
             tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
-            tile.neighbors[5] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
             break;
           case GameBoardTileShape.Swap2PentagonB:
             tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
