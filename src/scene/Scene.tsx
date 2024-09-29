@@ -4,6 +4,7 @@ import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
 import { GameBoard, GameBoardTileShape } from "../board/GameBoard";
+import { getShapeName } from "../board/boardHelpers";
 import { getCenter, lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
 import { IcoMeshes } from "./IcoMeshes";
@@ -74,42 +75,14 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
                   .normalize()
               : undefined;
 
-          const asdf = () => {
-            switch (tile.shape) {
-              case GameBoardTileShape.Swap1PentagonA:
-                return "S1-5A";
-              case GameBoardTileShape.Swap1PentagonB:
-                return "S1-5B";
-              case GameBoardTileShape.Swap1HeptagonA:
-                return "S1-7A";
-              case GameBoardTileShape.Swap1HeptagonB:
-                return "S1-7B";
-              case GameBoardTileShape.Swap2PentagonA:
-                return "S2-5A";
-              case GameBoardTileShape.Swap2PentagonB:
-                return "S2-5B";
-              case GameBoardTileShape.Swap2HeptagonA:
-                return "S2-7A";
-              case GameBoardTileShape.Swap2HeptagonB:
-                return "S2-7B";
-              case GameBoardTileShape.Swap3PentagonA:
-                return "S3-5A";
-              case GameBoardTileShape.Swap3PentagonB:
-                return "S3-5B";
-              case GameBoardTileShape.Swap3HeptagonA:
-                return "S3-7A";
-              case GameBoardTileShape.Swap3HeptagonB:
-                return "S3-7B";
-              default:
-                return undefined; //`t${tile.index}`;
-            }
-          };
-
           return (
             <group key={tile.index}>
-              {showTileIndices && tile.shape !== undefined && (
-                <StyledLabel position={tilePosition}>{asdf()}</StyledLabel>
-              )}
+              {showTileIndices &&
+                tile.shape > GameBoardTileShape.EdgeHexagon && (
+                  <StyledLabel position={tilePosition}>
+                    {getShapeName(tile.shape)}
+                  </StyledLabel>
+                )}
               {!vec ? null : (
                 <Line
                   points={[

@@ -36,7 +36,7 @@ export type GameBoardTile = {
   readonly index: number;
   readonly coords: GameBoardCoords;
   readonly neighbors: GameBoardTile[];
-  readonly shape?: GameBoardTileShape | undefined;
+  readonly shape: GameBoardTileShape;
 };
 
 export type GameBoardTriangle = {
