@@ -101,9 +101,14 @@ const App = () => {
           point.coords3D.z,
         );
 
-      const projector2D: (point: Icosahedron.Point) => Vector3 = (point) =>
+      const projector2D: (
+        point: Icosahedron.Point,
+        offset?: number,
+      ) => Vector3 = (point, offset) =>
         new Vector3(
-          point.coords2D.x * dbp - point.coords2D.y * dbp * 0.5,
+          point.coords2D.x * dbp -
+            point.coords2D.y * dbp * 0.5 +
+            (offset ?? 0) * distBetweenPoints,
           (point.coords2D.y * dbp * Math.sqrt(3.0)) / 2.0,
           0,
         );
@@ -139,65 +144,43 @@ const App = () => {
             })
         : (coordsArray) => {
             const doesWrap =
-              /*
-              coordsArray.some(
-                (coords) =>
-                  coords.face.index === 4 ||
-                  coords.face.index === 13 ||
-                  coords.face.index === 14 ||
-                  coords.face.index === 19,
-              ) &&*/
-              coordsArray.some(
-                (coords) =>
-                  coords.face.index === 0 ||
-                  coords.face.index === 5 ||
-                  coords.face.index === 6 ||
-                  coords.face.index === 15,
-              );
-            const result = coordsArray.map((coords) => {
-              const faceIndex = coords.face.index;
+              coordsArray.some((coords) => {
+                const fi = coords.face.index;
+                return fi === 4 || fi === 13 || fi === 14 || fi === 19;
+              }) &&
+              coordsArray.some((coords) => {
+                const fi = coords.face.index;
+                return fi === 0 || fi === 5 || fi === 6 || fi === 15;
+              });
+            return coordsArray.map((coords) => {
               const a = projector2D(coords.face.a);
               const b = projector2D(coords.face.b);
               const c = projector2D(coords.face.c);
 
-              if (faceIndex === 14 || faceIndex === 19)
-                b.add(new Vector3(5 * distBetweenPoints, 0, 0));
-              if (faceIndex === 4 || faceIndex === 13 || faceIndex === 14)
-                c.add(new Vector3(5 * distBetweenPoints, 0, 0));
-
-              if (doesWrap) {
-                if (faceIndex === 0) {
-                  //a.add(new Vector3(5 * distBetweenPoints, 0, 0));
+              const faceIndex = coords.face.index;
+              if (faceIndex === 14 && doesWrap) console.log(coordsArray);
+              if (!doesWrap) {
+                if (faceIndex === 14 || faceIndex === 19)
                   b.add(new Vector3(5 * distBetweenPoints, 0, 0));
-                  // c.add(new Vector3(5 * distBetweenPoints, 0, 0));
-                } /*else if (faceIndex === 5) {
-                  a.add(new Vector3(5 * distBetweenPoints, 0, 0));
-                  b.add(new Vector3(5 * distBetweenPoints, 0, 0));
+                if (faceIndex === 4 || faceIndex === 13 || faceIndex === 14)
                   c.add(new Vector3(5 * distBetweenPoints, 0, 0));
-                } else if (faceIndex === 15) {
-                  // a.add(new Vector3(5 * distBetweenPoints, 0, 0));
-                  b.add(new Vector3(0.75 * distBetweenPoints, 0, 0));
-                  c.add(new Vector3(5 * distBetweenPoints, 0, 0));
-                }*/
+              } else {
+                if (faceIndex === 4) {
+                  b.add(new Vector3(-5 * distBetweenPoints, 0, 0));
+                }
+                if (faceIndex === 13) {
+                  a.add(new Vector3(-5 * distBetweenPoints, 0, 0));
+                  b.add(new Vector3(-5 * distBetweenPoints, 0, 0));
+                }
+                if (faceIndex === 14) {
+                  a.add(new Vector3(-5 * distBetweenPoints, 0, 0));
+                }
+                if (faceIndex === 19) {
+                  c.add(new Vector3(-5 * distBetweenPoints, 0, 0));
+                }
               }
-              /*
-              if (faceIndex === 14 || faceIndex === 19) {
-              } else if (
-                faceIndex === 4 ||
-                faceIndex === 13 ||
-                faceIndex === 14
-              ) {
-              } else if (!doesWrap) {
-              } else if (coords.face.b.index === 1 || coords.face.b.index === 6)
-                b.add(new Vector3(5 * distBetweenPoints, 0, 0));
-              else if (coords.face.c.index === 2 || coords.face.c.index === 6)
-                c.add(new Vector3(5 * distBetweenPoints, 0, 0));
-              else if (coords.face.a.index === 2)
-                a.add(new Vector3(5 * distBetweenPoints, 0, 0));
-*/
               return interpolateOnFace(a, b, c, coords.x, coords.y);
             });
-            return result;
           };
 
       return {

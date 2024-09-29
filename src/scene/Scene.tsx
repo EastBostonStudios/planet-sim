@@ -45,12 +45,16 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
     <Fragment key={resolution}>
       {showTiles &&
         tiles.map((tile) => {
-          const tilePosition = projectCoords(tile.coords);
-          const points = projectCoordsArray(
-            tile.neighbors
-              .map((neighbor) => neighbor?.coords)
-              .filter((coords) => !!coords),
-          ).map((point) => lerpToward(tilePosition, point, 0.45));
+          const [tilePosition, ...coords] = projectCoordsArray(
+            [tile.coords].concat(
+              tile.neighbors
+                .map((neighbor) => neighbor?.coords)
+                .filter((coords) => !!coords),
+            ),
+          );
+          const points = coords.map((point) =>
+            lerpToward(tilePosition, point, 0.45),
+          );
           const vec =
             points.length >= 2
               ? new Vector3()
@@ -83,8 +87,10 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
               {points.length > 0 && (
                 <Line
                   points={points.flatMap((p, i) => [
+                    tilePosition,
                     p,
-                    points[(i + 1) % points.length],
+                    // p,
+                    //points[(i + 1) % points.length],
                   ])}
                   vertexColors={points.flatMap((_, i) => [
                     getColorForIndex(tile.index + i + 5),
