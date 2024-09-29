@@ -14,9 +14,9 @@ export const IcoMeshes: FC = () => {
   const { pointProjector, projectCoords } = useContext(AppContext);
   const { showPoints, showEdges, showFaces } = useControls({
     icosahedron: folder({
-      showPoints: true,
+      showPoints: false,
       showEdges: false,
-      showFaces: true,
+      showFaces: false,
     }),
   });
 

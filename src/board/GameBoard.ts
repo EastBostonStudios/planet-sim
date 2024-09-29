@@ -2,7 +2,29 @@ import { getTriangleNumber } from "../utils/mathUtils";
 
 import * as Icosahedron from "./Icosahedron";
 
-const chunkSize = 5;
+const chunkSize = 8;
+
+export enum GameBoardTileShape {
+  //
+  CornerPentagon = 0,
+  EdgeHexagon = 1,
+  FaceHexagon = 2,
+  //
+  Swap1PentagonA = 3,
+  Swap1PentagonB = 4,
+  Swap1HeptagonA = 5,
+  Swap1HeptagonB = 6,
+  //,
+  Swap2PentagonA = 7,
+  Swap2PentagonB = 8,
+  Swap2HeptagonA = 9,
+  Swap2HeptagonB = 10,
+  //,
+  Swap3PentagonA = 11,
+  Swap3PentagonB = 12,
+  Swap3HeptagonA = 13,
+  Swap3HeptagonB = 14,
+}
 
 export type GameBoardCoords = {
   face: Icosahedron.Face;
@@ -14,9 +36,10 @@ export type GameBoardTile = {
   readonly index: number;
   readonly coords: GameBoardCoords;
   readonly neighbors: GameBoardTile[];
+  readonly shape?: GameBoardTileShape | undefined;
 };
 
-export type GameBoardTri = {
+export type GameBoardTriangle = {
   readonly index: number;
   readonly face: Icosahedron.Face;
   readonly a: GameBoardTile;
@@ -27,7 +50,7 @@ export type GameBoardTri = {
 export type GameBoardChunk = {
   readonly index: number;
   readonly face: Icosahedron.Face;
-  readonly tris: GameBoardTri[];
+  readonly triangles: GameBoardTriangle[];
 };
 
 //------------------------------------------------------------------------------
@@ -35,27 +58,29 @@ export type GameBoardChunk = {
 export class GameBoard {
   //----------------------------------------------------------------------------
 
-  public readonly resolution: number;
   public readonly tiles: GameBoardTile[];
-  public readonly tris: GameBoardTri[];
+  public readonly triangles: GameBoardTriangle[];
   public readonly chunks: GameBoardChunk[];
 
   // The maximum "i" or "j" value on a face is the edge length minus 1
   private readonly maxIJ: number;
+  private readonly widthInChunks: number;
+  private readonly doSwaps: boolean;
 
   //----------------------------------------------------------------------------
 
-  public constructor(resolution: number) {
-    const { faces, edges } = Icosahedron;
-
+  public constructor(resolution: number, doSwaps?: boolean) {
     this.maxIJ = (resolution + 1) * chunkSize - 1;
+    this.widthInChunks = resolution + 1;
+    this.doSwaps = doSwaps ?? true;
 
-    // Initialize variables and pre-allocate space for the arrays
-    this.resolution = resolution;
+    // Initialize variables and pre-allocate space for the arrays  -------------
+
+    const { faces, edges } = Icosahedron;
     this.tiles = new Array<GameBoardTile>(
       this.getFaceTileIndex(faces.length, 0, 0),
     );
-    this.tris = new Array<GameBoardTri>(
+    this.triangles = new Array<GameBoardTriangle>(
       faces.length *
         ((resolution + 1) * (resolution + 1) * chunkSize * chunkSize),
     );
@@ -63,62 +88,65 @@ export class GameBoard {
       faces.length * (resolution + 1) * (resolution + 1),
     );
 
-    // Pentagonal tiles at the twelve icosahedron points
-    this.createTile(0, faces[0], 0.0, 0.0);
-    this.createTile(1, faces[0], 1.0, 0.0);
-    this.createTile(2, faces[1], 1.0, 0.0);
-    this.createTile(3, faces[2], 1.0, 0.0);
-    this.createTile(4, faces[3], 1.0, 0.0);
-    this.createTile(5, faces[4], 1.0, 0.0);
-    this.createTile(6, faces[6], 0.0, 0.0);
-    this.createTile(7, faces[8], 0.0, 0.0);
-    this.createTile(8, faces[10], 0.0, 0.0);
-    this.createTile(9, faces[12], 0.0, 0.0);
-    this.createTile(10, faces[14], 0.0, 0.0);
-    this.createTile(11, faces[19], 0.0, 0.0);
+    // Create all icosahedron corner tiles -------------------------------------
+
+    this.createTile(0, faces[0], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(1, faces[0], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(2, faces[1], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(3, faces[2], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(4, faces[3], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(5, faces[4], 1.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(6, faces[6], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(7, faces[8], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(8, faces[10], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(9, faces[12], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(10, faces[14], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+    this.createTile(11, faces[19], 0.0, 0.0, GameBoardTileShape.CornerPentagon);
+
+    // Create all icosahedron edge tiles and stitch them together --------------
 
     // Diagonal edges starting at p0
-    this.createEdgeTiles(edges[0], faces[0]);
-    this.createEdgeTiles(edges[1], faces[1]);
-    this.createEdgeTiles(edges[2], faces[2]);
-    this.createEdgeTiles(edges[3], faces[3]);
-    this.createEdgeTiles(edges[4], faces[4]);
+    this.populateEdge(edges[0], faces[0]);
+    this.populateEdge(edges[1], faces[1]);
+    this.populateEdge(edges[2], faces[2]);
+    this.populateEdge(edges[3], faces[3]);
+    this.populateEdge(edges[4], faces[4]);
 
     // First horizontal edge row
-    this.createEdgeTiles(edges[5], faces[5]);
-    this.createEdgeTiles(edges[6], faces[7]);
-    this.createEdgeTiles(edges[7], faces[9]);
-    this.createEdgeTiles(edges[8], faces[11]);
-    this.createEdgeTiles(edges[9], faces[13]);
+    this.populateEdge(edges[5], faces[5]);
+    this.populateEdge(edges[6], faces[7]);
+    this.populateEdge(edges[7], faces[9]);
+    this.populateEdge(edges[8], faces[11]);
+    this.populateEdge(edges[9], faces[13]);
 
     // Diagonal edges
-    this.createEdgeTiles(edges[10], faces[5]);
-    this.createEdgeTiles(edges[11], faces[6]);
-    this.createEdgeTiles(edges[12], faces[7]);
-    this.createEdgeTiles(edges[13], faces[8]);
-    this.createEdgeTiles(edges[14], faces[9]);
-    this.createEdgeTiles(edges[15], faces[10]);
-    this.createEdgeTiles(edges[16], faces[11]);
-    this.createEdgeTiles(edges[17], faces[12]);
-    this.createEdgeTiles(edges[18], faces[13]);
-    this.createEdgeTiles(edges[19], faces[14]);
+    this.populateEdge(edges[10], faces[5]);
+    this.populateEdge(edges[11], faces[6]);
+    this.populateEdge(edges[12], faces[7]);
+    this.populateEdge(edges[13], faces[8]);
+    this.populateEdge(edges[14], faces[9]);
+    this.populateEdge(edges[15], faces[10]);
+    this.populateEdge(edges[16], faces[11]);
+    this.populateEdge(edges[17], faces[12]);
+    this.populateEdge(edges[18], faces[13]);
+    this.populateEdge(edges[19], faces[14]);
 
     // Second horizontal edge row
-    this.createEdgeTiles(edges[20], faces[6]);
-    this.createEdgeTiles(edges[21], faces[8]);
-    this.createEdgeTiles(edges[22], faces[10]);
-    this.createEdgeTiles(edges[23], faces[12]);
-    this.createEdgeTiles(edges[24], faces[14]);
+    this.populateEdge(edges[20], faces[6]);
+    this.populateEdge(edges[21], faces[8]);
+    this.populateEdge(edges[22], faces[10]);
+    this.populateEdge(edges[23], faces[12]);
+    this.populateEdge(edges[24], faces[14]);
 
     // Diagonal edges ending at p11
-    this.createEdgeTiles(edges[25], faces[15]);
-    this.createEdgeTiles(edges[26], faces[16]);
-    this.createEdgeTiles(edges[27], faces[17]);
-    this.createEdgeTiles(edges[28], faces[18]);
-    this.createEdgeTiles(edges[29], faces[19]);
+    this.populateEdge(edges[25], faces[15]);
+    this.populateEdge(edges[26], faces[16]);
+    this.populateEdge(edges[27], faces[17]);
+    this.populateEdge(edges[28], faces[18]);
+    this.populateEdge(edges[29], faces[19]);
 
     // Add neighbors to the 12 icosahedron point tiles -------------------------
-    const em = (this.resolution + 1) * chunkSize - 2; // "edge max"
+    const em = this.widthInChunks * chunkSize - 2; // "edge max"
 
     this.tiles[0].neighbors[0] = this.getEdgeTile(edges[0], 0);
     this.tiles[0].neighbors[1] = this.getEdgeTile(edges[1], 0);
@@ -150,10 +178,8 @@ export class GameBoard {
     this.tiles[11].neighbors[3] = this.getEdgeTile(edges[26], 0);
     this.tiles[11].neighbors[4] = this.getEdgeTile(edges[25], 0);
 
-    // Create face tiles, chunks, and tris
-    for (let f = 0; f < faces.length; f++) {
-      this.populateFace(faces[f]);
-    }
+    // Create tiles, chunks, and triangles for each face
+    for (let f = 0; f < faces.length; f++) this.populateFace(faces[f]);
 
     this.validate();
   }
@@ -162,7 +188,7 @@ export class GameBoard {
 
   private readonly getEdgeTileIndex = (edgeIndex: number, i: number) => {
     if (i < 0 || i > this.maxIJ) throw new Error(`${i} out of bounds!`);
-    return 12 + edgeIndex * ((this.resolution + 1) * chunkSize - 1) + i;
+    return 12 + edgeIndex * (this.widthInChunks * chunkSize - 1) + i;
   };
 
   private readonly getFaceTileIndex = (
@@ -170,9 +196,8 @@ export class GameBoard {
     i: number,
     j: number,
   ) => {
-    if (i < 0 || i >= this.maxIJ)
-      throw new Error(`(${i}, ${j}) out of bounds!`);
-    if (j < 0 || j > i || j >= this.maxIJ)
+    if (i < 0 || i > this.maxIJ) throw new Error(`(${i}, ${j}) out of bounds!`);
+    if (j < 0 || j > i || j > this.maxIJ)
       throw new Error(`(${i}, ${j}) out of bounds!`);
     return (
       12 +
@@ -187,12 +212,6 @@ export class GameBoard {
     this.tiles[this.getEdgeTileIndex(edge.index, i)];
 
   private readonly getFaceTile = (
-    face: Icosahedron.Face,
-    i: number,
-    j: number,
-  ) => this.tiles[this.getFaceTileIndex(face.index, i, j)];
-
-  private readonly getTile = (
     face: Icosahedron.Face,
     i: number,
     j: number,
@@ -211,7 +230,7 @@ export class GameBoard {
       );
 
     // Default case
-    return this.getFaceTile(face, i, j);
+    return this.tiles[this.getFaceTileIndex(face.index, i, j)];
   };
 
   //----------------------------------------------------------------------------
@@ -221,11 +240,26 @@ export class GameBoard {
     face: Icosahedron.Face,
     x: number,
     y: number,
+    shape: GameBoardTileShape,
   ) => {
+    const neighborCount =
+      shape === GameBoardTileShape.FaceHexagon ||
+      shape === GameBoardTileShape.EdgeHexagon
+        ? 6
+        : shape === GameBoardTileShape.CornerPentagon ||
+            shape === GameBoardTileShape.Swap1PentagonA ||
+            shape === GameBoardTileShape.Swap1PentagonB ||
+            shape === GameBoardTileShape.Swap2PentagonA ||
+            shape === GameBoardTileShape.Swap2PentagonB ||
+            shape === GameBoardTileShape.Swap3PentagonA ||
+            shape === GameBoardTileShape.Swap3PentagonB
+          ? 5
+          : 7;
     this.tiles[index] = {
       index,
-      neighbors: new Array(index < Icosahedron.points.length ? 5 : 6),
       coords: { face, x, y },
+      neighbors: new Array(neighborCount),
+      shape,
     };
     return this.tiles[index];
   };
@@ -237,130 +271,187 @@ export class GameBoard {
     b: GameBoardTile,
     c: GameBoardTile,
   ) => {
-    this.tris[index] = { index, face, a, b, c };
-    return this.tris[index];
+    this.triangles[index] = { index, face, a, b, c };
+    return this.triangles[index];
   };
 
-  private readonly stitchEdgeTiles = (
-    i: number,
-    tile: GameBoardTile,
-    startPoint: Icosahedron.Point,
-    endPoint: Icosahedron.Point,
-  ) => {
-    if (i === 0) {
-      tile.neighbors[3] = this.tiles[startPoint.index];
-    } else {
-      tile.neighbors[3] = this.tiles[tile.index - 1];
-      this.tiles[tile.index - 1].neighbors[0] = tile;
-      if (i === this.maxIJ - 1) {
-        tile.neighbors[0] = this.tiles[endPoint.index];
-      }
-    }
-  };
-
-  private readonly createEdgeTiles = (
+  private readonly populateEdge = (
     edge: Icosahedron.Edge,
     face: Icosahedron.Face,
   ) => {
+    const shape = GameBoardTileShape.EdgeHexagon;
     for (let i = 0; i < this.maxIJ; i++) {
       const index = this.getEdgeTileIndex(edge.index, i);
-      const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
+      const s = (i + 1.0) / (this.widthInChunks * chunkSize);
       if (edge.index > 24) {
-        const tile = this.createTile(index, face, s, s);
+        const tile = this.createTile(index, face, s, s, shape);
         this.stitchEdgeTiles(i, tile, face.a, face.c);
       } else if (
         edge.index > 4 &&
         edge.index < 20 &&
         (edge.index < 10 || edge.index % 2 === 1)
       ) {
-        const tile = this.createTile(index, face, 1.0 - s, 1.0 - s);
+        const tile = this.createTile(index, face, 1.0 - s, 1.0 - s, shape);
         this.stitchEdgeTiles(i, tile, face.c, face.a);
       } else {
-        const tile = this.createTile(index, face, s, 0.0);
+        const tile = this.createTile(index, face, s, 0.0, shape);
         this.stitchEdgeTiles(i, tile, face.a, face.b);
+      }
+    }
+  };
+
+  private readonly stitchEdgeTiles = (
+    i: number,
+    tile: GameBoardTile,
+    start: Icosahedron.Point,
+    end: Icosahedron.Point,
+  ) => {
+    if (i === 0) {
+      tile.neighbors[3] = this.tiles[start.index];
+    } else {
+      tile.neighbors[3] = this.tiles[tile.index - 1];
+      this.tiles[tile.index - 1].neighbors[0] = tile;
+      if (i === this.maxIJ - 1) {
+        tile.neighbors[0] = this.tiles[end.index];
       }
     }
   };
 
   //----------------------------------------------------------------------------
 
+  private readonly getShapeForChunkCoords = (ci: number, cj: number) => {
+    if (!this.doSwaps) return GameBoardTileShape.FaceHexagon;
+
+    // Swap 1 (bottom-left)
+    if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6))
+      return GameBoardTileShape.Swap1PentagonA;
+    if ((ci === 2 && cj === 0) || (ci === 4 && cj === 5))
+      return GameBoardTileShape.Swap1PentagonB;
+    if ((ci === 1 && cj === 0) || (ci === 3 && cj === 5))
+      return GameBoardTileShape.Swap1HeptagonA;
+    if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6))
+      return GameBoardTileShape.Swap1HeptagonB;
+
+    // Swap 2 (bottom-left)
+    if ((ci === 5 && cj === 0) || (ci === 1 && cj === 6))
+      return GameBoardTileShape.Swap2PentagonA;
+    if ((ci === 6 && cj === 1) || (ci === 0 && cj === 5))
+      return GameBoardTileShape.Swap2PentagonB;
+    if ((ci === 5 && cj === 1) || (ci === 0 && cj === 6))
+      return GameBoardTileShape.Swap2HeptagonA;
+    if ((ci === 6 && cj === 0) || (ci === 1 && cj === 5))
+      return GameBoardTileShape.Swap2HeptagonB;
+
+    // Swap 3 (bottom-left)
+    if ((ci === 6 && cj === 4) || (ci === 6 - 5 && cj === 4 - 2))
+      return GameBoardTileShape.Swap3PentagonA;
+    if ((ci === 5 && cj === 4) || (ci === 5 - 5 && cj === 4 - 2))
+      return GameBoardTileShape.Swap3PentagonB;
+    if ((ci === 6 && cj === 5) || (ci === 6 - 5 && cj === 5 - 2))
+      return GameBoardTileShape.Swap3HeptagonA;
+    if ((ci === 5 && cj === 3) || (ci === 5 - 5 && cj === 3 - 2))
+      return GameBoardTileShape.Swap3HeptagonB;
+
+    return GameBoardTileShape.FaceHexagon;
+  };
+
+  private readonly getFlippedTriangleDistortion = (ci: number, cj: number) => {
+    // Bottom-left distortion
+    if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6)) return 1;
+    // Bottom-right distortion
+    if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
+    // Top distortion
+    if ((ci === 6 && cj === 4) || (ci === 1 && cj === 2)) return 3;
+    return 0;
+  };
+
+  private readonly getUprightTriangleDistortion = (ci: number, cj: number) => {
+    // Bottom-left distortion
+    if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6)) return 1;
+    // Bottom-right distortion
+    if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
+    // Top distortion
+    if ((ci === 6 && cj === 5) || (ci === 1 && cj === 3)) return 3;
+    return 0;
+  };
+
   private readonly populateFace = (face: Icosahedron.Face) => {
+    // Create all tiles for this face ------------------------------------------
+
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
         const index = this.getFaceTileIndex(face.index, i, j);
-        const s = (i + 1.0) / ((this.resolution + 1) * chunkSize);
-        const t = (j + 1.0) / ((this.resolution + 1) * chunkSize);
-        this.createTile(index, face, s, t);
+        const s = (i + 1.0) / (this.widthInChunks * chunkSize);
+        const t = (j + 1.0) / (this.widthInChunks * chunkSize);
+        const ci = i % chunkSize;
+        const cj = j % chunkSize;
+        this.createTile(index, face, s, t, this.getShapeForChunkCoords(ci, cj));
       }
     }
 
-    const chunksPerFace = (this.resolution + 1) * (this.resolution + 1);
+    // Create all chunks for this face -----------------------------------------
+
+    const chunksPerFace = this.widthInChunks * this.widthInChunks;
     for (let c = 0; c < chunksPerFace; c++) {
       const index = face.index * chunksPerFace + c;
-      const tris = new Array(chunkSize * chunkSize);
-      this.chunks[index] = { index, face, tris };
+      const triangles = new Array(chunkSize * chunkSize);
+      this.chunks[index] = { index, face, triangles };
     }
 
-    let index = face.index * (chunksPerFace * chunkSize * chunkSize);
+    // Create all triangles for this face --------------------------------------
 
-    for (let i = 0; i <= this.maxIJ; i++) {
+    let index = face.index * (chunksPerFace * chunkSize * chunkSize);
+    for (let i = 0; i < this.maxIJ + 1; i++) {
       const chunkI = Math.trunc(i / chunkSize);
-      const iOnChunk = i % chunkSize;
+      const ci = i % chunkSize;
 
       for (let j = 0; j <= i; j++) {
         const chunkJ = Math.trunc(j / chunkSize);
-        const jOnChunk = j % chunkSize;
+        const cj = j % chunkSize;
         const chunkIndex =
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
-        const tile = this.getTile(face, i, j);
-
         if (j < i) {
-          // -1 represents off of the face tiles (connecting to the edge tiles)
-          const tri = this.createTri(
-            index,
-            face,
-            tile,
-            this.getTile(face, i - 1, j),
-            this.getTile(face, i - 1, j - 1),
-          );
+          const a = this.getFaceTile(face, i, j);
+          let b = this.getFaceTile(face, i - 1, j);
+          let c = this.getFaceTile(face, i - 1, j - 1);
 
-          // Check if this sits on the flipped chunk or not
-          if (jOnChunk >= iOnChunk) {
-            const triIndex = jOnChunk * jOnChunk + iOnChunk * 2;
-            this.chunks[chunkIndex + 1].tris[triIndex] = tri;
-          } else {
-            const triIndex = iOnChunk * iOnChunk + jOnChunk * 2 + 1;
-            this.chunks[chunkIndex].tris[triIndex] = tri;
-          }
+          const distortion = this.getFlippedTriangleDistortion(ci, cj);
+          if (distortion === 1) c = this.getFaceTile(face, i - 2, j - 1);
+          else if (distortion === 2) c = this.getFaceTile(face, i, j - 1);
+          else if (distortion === 3) b = this.getFaceTile(face, i, j + 1);
+
+          const t = this.createTri(index, face, a, b, c);
+          const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
+          chunk.triangles[cj < ci ? ci * ci + cj * 2 + 1 : cj * cj + ci * 2] =
+            t;
           index++;
         }
 
-        const tri = this.createTri(
-          index,
-          face,
-          this.getTile(face, i - 1, j - 1),
-          this.getTile(face, i, j - 1),
-          tile,
-        );
+        let a = this.getFaceTile(face, i, j);
+        const b = this.getFaceTile(face, i - 1, j - 1);
+        let c = this.getFaceTile(face, i, j - 1);
 
-        // Check if this sits on the flipped chunk or not
-        if (jOnChunk > iOnChunk) {
-          const triIndex = jOnChunk * jOnChunk + iOnChunk * 2 + 1;
-          this.chunks[chunkIndex + 1].tris[triIndex] = tri;
-        } else {
-          const triIndex = iOnChunk * iOnChunk + jOnChunk * 2;
-          this.chunks[chunkIndex].tris[triIndex] = tri;
-        }
+        // Bottom-left distortion
+        const distortion = this.getUprightTriangleDistortion(ci, cj);
+        if (distortion === 1) a = this.getFaceTile(face, i + 1, j);
+        else if (distortion === 2) a = this.getFaceTile(face, i - 1, j);
+        else if (distortion === 3) c = this.getFaceTile(face, i - 1, j - 2);
+
+        const t = this.createTri(index, face, a, b, c);
+        const chunk = this.chunks[chunkIndex + (cj > ci ? 1 : 0)];
+        chunk.triangles[cj > ci ? cj * cj + ci * 2 + 1 : ci * ci + cj * 2] = t;
         index++;
       }
     }
 
-    // Stitch together the A->B edge and this face's points
+    // Stitch edges to this face's points --------------------------------------
+
+    // A -> B Edge
     for (let i = 0; i < this.maxIJ; i++) {
-      const edgeTile = this.getTile(face, i, -1);
-      const n0 = this.getTile(face, i + 1, 0);
-      const n1 = this.getTile(face, i, 0);
+      const edgeTile = this.getFaceTile(face, i, -1);
+      const n0 = this.getFaceTile(face, i + 1, 0);
+      const n1 = this.getFaceTile(face, i, 0);
       if (face.index < 5 || face.index >= 15 || face.index % 2 === 1) {
         edgeTile.neighbors[1] = n0;
         edgeTile.neighbors[2] = n1;
@@ -370,11 +461,11 @@ export class GameBoard {
       }
     }
 
-    // Stitch together the B->C edge and this face's points
+    // B -> C Edge
     for (let i = 0; i < this.maxIJ; i++) {
-      const edgeTile = this.getTile(face, this.maxIJ, i);
-      const n0 = this.getTile(face, this.maxIJ - 1, i);
-      const n1 = this.getTile(face, this.maxIJ - 1, i - 1);
+      const edgeTile = this.getFaceTile(face, this.maxIJ, i);
+      const n0 = this.getFaceTile(face, this.maxIJ - 1, i);
+      const n1 = this.getFaceTile(face, this.maxIJ - 1, i - 1);
       if (face.index < 5) {
         edgeTile.neighbors[4] = n0;
         edgeTile.neighbors[5] = n1;
@@ -387,11 +478,11 @@ export class GameBoard {
       }
     }
 
-    // Stitch together the C->A edge and this face's points
+    // C -> A Edge
     for (let i = 0; i < this.maxIJ; i++) {
-      const edgeTile = this.getTile(face, i, i);
-      const n0 = this.getTile(face, i + 1, i);
-      const n1 = this.getTile(face, i, i - 1);
+      const edgeTile = this.getFaceTile(face, i, i);
+      const n0 = this.getFaceTile(face, i + 1, i);
+      const n1 = this.getFaceTile(face, i, i - 1);
       if (face.index < 5 || face.index >= 15) {
         edgeTile.neighbors[5] = n0;
         edgeTile.neighbors[4] = n1;
@@ -404,16 +495,117 @@ export class GameBoard {
       }
     }
 
-    // Stitch together the rest of this face's points
+    // Stitch together the rest of this face's points --------------------------
+
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
-        const tile = this.getTile(face, i, j);
-        tile.neighbors[0] = this.getTile(face, i + 1, j);
-        tile.neighbors[1] = this.getTile(face, i + 1, j + 1);
-        tile.neighbors[2] = this.getTile(face, i, j + 1);
-        tile.neighbors[3] = this.getTile(face, i - 1, j);
-        tile.neighbors[4] = this.getTile(face, i - 1, j - 1);
-        tile.neighbors[5] = this.getTile(face, i, j - 1);
+        const tile = this.getFaceTile(face, i, j);
+        switch (tile.shape) {
+          case GameBoardTileShape.Swap1PentagonA:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
+            break;
+          case GameBoardTileShape.Swap1PentagonB:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap1HeptagonA:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 2, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[4] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap1HeptagonB:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[4] = this.getFaceTile(face, i - 2, j - 1);
+            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap2PentagonA:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap2PentagonB:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap2HeptagonA:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[5] = this.getFaceTile(face, i, j - 1);
+            tile.neighbors[6] = this.getFaceTile(face, i + 1, j - 1);
+            break;
+          case GameBoardTileShape.Swap2HeptagonB:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j + 1);
+            tile.neighbors[4] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap3PentagonA:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap3PentagonB:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[1] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[4] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap3HeptagonA:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 2);
+            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            break;
+          case GameBoardTileShape.Swap3HeptagonB:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i + 1, j + 2);
+            tile.neighbors[3] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[4] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[5] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[6] = this.getFaceTile(face, i, j - 1);
+            break;
+          default:
+            tile.neighbors[0] = this.getFaceTile(face, i + 1, j);
+            tile.neighbors[1] = this.getFaceTile(face, i + 1, j + 1);
+            tile.neighbors[2] = this.getFaceTile(face, i, j + 1);
+            tile.neighbors[3] = this.getFaceTile(face, i - 1, j);
+            tile.neighbors[4] = this.getFaceTile(face, i - 1, j - 1);
+            tile.neighbors[5] = this.getFaceTile(face, i, j - 1);
+            break;
+        }
       }
     }
   };
@@ -421,22 +613,25 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly validate = () => {
-    for (let i = 0; i < this.tiles.length; i++) {
-      console.assert(this.tiles[i].index === i, "Tile indices incorrect!");
-      for (let j = 0; j < this.tiles[i].neighbors.length; j++) {
+    for (let i = 0; i < this.tiles?.length; i++) {
+      console.assert(this.tiles[i]?.index === i, "Tile indices incorrect!");
+      for (let j = 0; j < this.tiles[i]?.neighbors.length; j++) {
         console.assert(
-          !!this.tiles[i].neighbors[j],
+          !!this.tiles[i]?.neighbors[j],
           "Tiles missing neighbors!",
         );
       }
     }
-    for (let i = 0; i < this.tris.length; i++) {
-      console.assert(this.tris[i].index === i, "Tri indices incorrect!");
+    for (let i = 0; i < this.triangles.length; i++) {
+      console.assert(this.triangles[i]?.index === i, "Tri indices incorrect!");
     }
     for (let i = 0; i < this.chunks.length; i++) {
       console.assert(this.chunks[i].index === i, "Chunk indices incorrect!");
-      for (let j = 0; j < this.chunks[i].tris.length; j++) {
-        console.assert(!!this.chunks[i].tris[j], "Chunk missing tris!");
+      for (let j = 0; j < this.chunks[i].triangles.length; j++) {
+        console.assert(
+          !!this.chunks[i].triangles[j],
+          "Chunk missing triangles!",
+        );
       }
     }
   };

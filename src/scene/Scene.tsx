@@ -3,8 +3,8 @@ import { folder, useControls } from "leva";
 import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
-import { GameBoard } from "../board/GameBoard";
-import { lerpToward } from "../utils/mathUtils";
+import { GameBoard, GameBoardTileShape } from "../board/GameBoard";
+import { getCenter, lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
 import { IcoMeshes } from "./IcoMeshes";
 import { StyledLabel } from "./StyledLabel";
@@ -28,16 +28,18 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   //----------------------------------------------------------------------------
 
   const { projectCoords, projectCoordsArray } = useContext(AppContext);
-  const { showTiles, showTileIndices } = useControls({
+  const { doSwap, showTiles, showTileIndices, showChunks } = useControls({
     tiles: folder({
+      doSwap: true,
       showTiles: true,
       showTileIndices: true,
+      showChunks: true,
     }),
   });
 
   const { tiles, chunks } = useMemo(
-    () => new GameBoard(resolution),
-    [resolution],
+    () => new GameBoard(resolution, doSwap),
+    [resolution, doSwap],
   );
 
   //----------------------------------------------------------------------------
@@ -72,10 +74,41 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
                   .normalize()
               : undefined;
 
+          const asdf = () => {
+            switch (tile.shape) {
+              case GameBoardTileShape.Swap1PentagonA:
+                return "D1_5A";
+              case GameBoardTileShape.Swap1PentagonB:
+                return "D1_5B";
+              case GameBoardTileShape.Swap1HeptagonA:
+                return "D1_7A";
+              case GameBoardTileShape.Swap1HeptagonB:
+                return "D1_7B";
+              case GameBoardTileShape.Swap2PentagonA:
+                return "D2_5A";
+              case GameBoardTileShape.Swap2PentagonB:
+                return "D2_5B";
+              case GameBoardTileShape.Swap2HeptagonA:
+                return "D2_7A";
+              case GameBoardTileShape.Swap2HeptagonB:
+                return "D2_7B";
+              case GameBoardTileShape.Swap3PentagonA:
+                return "D3_5A";
+              case GameBoardTileShape.Swap3PentagonB:
+                return "D3_5B";
+              case GameBoardTileShape.Swap3HeptagonA:
+                return "D3_7A";
+              case GameBoardTileShape.Swap3HeptagonB:
+                return "D3_7B";
+              default:
+                return `t${tile.index}`;
+            }
+          };
+
           return (
             <group key={tile.index}>
-              {showTileIndices && (
-                <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
+              {showTileIndices && tile.shape !== undefined && (
+                <StyledLabel position={tilePosition}>{asdf()}</StyledLabel>
               )}
               {!vec ? null : (
                 <Line
@@ -107,19 +140,24 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             </group>
           );
         })}
-      {false &&
+      const p2 = projectCoords(tri.c.coords);
+      {showChunks &&
         chunks.flatMap((chunk) => {
           const points = new Array<Vector3>();
           const triCenters = new Array<Vector3>();
           const chunkCenter = new Vector3();
-          for (const tri of chunk.tris) {
+          for (const tri of chunk.triangles) {
             if (!tri) continue;
             const p0 = projectCoords(tri.a.coords);
             const p1 = projectCoords(tri.b.coords);
             const p2 = projectCoords(tri.c.coords);
             if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
               continue; // TODO: figure out wrapping
-            points.push(p0, p1, p2);
+            points.push(
+              ...[p0, p1, p2].map((p) =>
+                lerpToward(p, getCenter([p0, p1, p2])),
+              ),
+            );
             chunkCenter.add(p0).add(p1).add(p2);
             triCenters.push(
               new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0),
@@ -140,7 +178,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             <Fragment key={chunk.index}>
               {false && <Line points={triCenters} lineWidth={4} />}
               {false &&
-                chunk.tris.map((tri) => {
+                chunk.triangles.map((tri) => {
                   if (!tri) return null;
                   const p0 = projectCoords(tri.a.coords);
                   const p1 = projectCoords(tri.b.coords);
