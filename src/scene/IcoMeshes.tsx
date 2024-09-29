@@ -7,12 +7,6 @@ import { StyledLabel } from "./StyledLabel";
 
 //------------------------------------------------------------------------------
 
-const rgb: [number, number, number][] = [
-  [1, 0, 0],
-  [0, 1, 0],
-  [0, 0, 1],
-];
-
 export const IcoMeshes: FC<{
   showPoints: boolean;
   showEdges: boolean;
@@ -76,7 +70,12 @@ export const IcoMeshes: FC<{
               })}
               <Line
                 points={closeLoop(points).map((p) => lerpToward(p, center))}
-                vertexColors={[...rgb, rgb[0]]}
+                vertexColors={[
+                  [1, 0, 0],
+                  [0, 1, 0],
+                  [0, 0, 1],
+                  [1, 0, 0],
+                ]}
                 lineWidth={4}
                 dashed={face.wrapsMeridian}
                 dashSize={0.01}
