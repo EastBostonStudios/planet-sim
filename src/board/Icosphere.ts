@@ -24,7 +24,6 @@ export enum IcoTileShape {
   Swap3PentagonB = 12,
   Swap3HeptagonA = 13,
   Swap3HeptagonB = 14,
-  SpecialEdgeHexagon = 15,
 }
 
 export type IcoCoords = {
@@ -244,9 +243,7 @@ export class Icosphere {
     shape: IcoTileShape,
   ) => {
     const neighborCount =
-      shape === IcoTileShape.FaceHexagon ||
-      shape === IcoTileShape.EdgeHexagon ||
-      shape === IcoTileShape.SpecialEdgeHexagon
+      shape === IcoTileShape.FaceHexagon || shape === IcoTileShape.EdgeHexagon
         ? 6
         : shape === IcoTileShape.CornerPentagon ||
             shape === IcoTileShape.Swap1PentagonA ||
@@ -288,16 +285,7 @@ export class Icosphere {
       if (edge.index > 24) {
         const tile = this.createTile(index, face, s, s, shape);
         this.stitchEdgeTiles(i, tile, face.a, face.c);
-      } /*else if (edge.index > 9 && edge.index < 25 && edge.index % 2 === 1) {
-        const tile = this.createTile(
-          index,
-          face,
-          1.0 - s,
-          1.0 - s,
-          IcoTileShape.SpecialEdgeHexagon,
-        );
-        this.stitchEdgeTiles(i, tile, face.c, face.a);
-      } */ else if (
+      } else if (
         edge.index > 4 &&
         edge.index < 20 &&
         (edge.index < 10 || edge.index % 2 === 1)
@@ -316,15 +304,14 @@ export class Icosphere {
     tile: IcoTile,
     start: Icosahedron.Point,
     end: Icosahedron.Point,
-    asdf?: boolean,
   ) => {
     if (i === 0) {
-      tile.neighbors[!asdf ? 3 : 0] = this.tiles[start.index];
+      tile.neighbors[3] = this.tiles[start.index];
     } else {
-      tile.neighbors[!asdf ? 3 : 5] = this.tiles[tile.index - 1];
+      tile.neighbors[3] = this.tiles[tile.index - 1];
       this.tiles[tile.index - 1].neighbors[0] = tile;
       if (i === this.widthInTiles - 2) {
-        tile.neighbors[!asdf ? 0 : 3] = this.tiles[end.index];
+        tile.neighbors[0] = this.tiles[end.index];
       }
     }
   };

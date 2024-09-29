@@ -3,7 +3,7 @@ import { folder, useControls } from "leva";
 import React, { type FC, Fragment, useContext, useMemo } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../App";
-import { IcoTileShape, Icosphere } from "../board/Icosphere";
+import { Icosphere } from "../board/Icosphere";
 import { getShapeName, validateBoard } from "../board/boardHelpers";
 import { getCenter, lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
@@ -33,14 +33,14 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
     tiles: folder({
       doSwap: true,
       showTiles: true,
-      showTileIndices: true,
+      showTileIndices: false,
       showChunks: false,
     }),
   });
 
   const { tiles, chunks } = useMemo(() => {
     const board = new Icosphere(icosphereSize, doSwap);
-    false && validateBoard(board);
+    validateBoard(board);
     return board;
   }, [icosphereSize, doSwap]);
 
@@ -85,7 +85,7 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
               points[(i + 1) % points.length],
             ])
             .flatMap(({ x, y, z }) => [x, y, z]);
-          const colors = points.flatMap((_, i) =>
+          const colors = points.flatMap((_) =>
             [
               [1, 0, 0],
               [0, 1, 0],
@@ -93,7 +93,6 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
             ].flat(),
           );
 
-          if (tile.shape === IcoTileShape.SpecialEdgeHexagon) console.log(tile);
           return (
             <group key={tile.index}>
               <mesh>
@@ -117,11 +116,11 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
                   polygonOffsetUnits={10}
                 />
               </mesh>
-              {showTileIndices &&
-                tile.shape ===
-                  IcoTileShape.SpecialEdgeHexagon /*> IcoTileShape.EdgeHexagon*/ && (
-                  <Label position={tilePosition}>{tile.index}</Label>
-                )}
+              {showTileIndices && (
+                <Label position={tilePosition}>
+                  {getShapeName(tile.shape)}
+                </Label>
+              )}
               {!vec ? null : (
                 <Line
                   points={[

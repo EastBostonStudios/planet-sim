@@ -26,8 +26,6 @@ export const getShapeName = (shape: IcoTileShape) => {
       return "S3-7A";
     case IcoTileShape.Swap3HeptagonB:
       return "S3-7B";
-    case IcoTileShape.SpecialEdgeHexagon:
-      return "ASDF";
     default:
       return undefined; //`t${tile.index}`;
   }
