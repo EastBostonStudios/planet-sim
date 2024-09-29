@@ -256,7 +256,7 @@ const App = () => {
                   rotation={[Math.PI / 2.0, 0, 0]}
                 />
                 <group
-                  position={[-dbp * 1.75, 0, dbp * 1.25]}
+                  position={[-dbp * 1.75, 4.5, dbp * 1.25]}
                   rotation={[-Math.PI / 2.0, 0, 0]}
                 >
                   <Scene icosphereSize={icosphereSize} />

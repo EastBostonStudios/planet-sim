@@ -32,15 +32,15 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
   const { doSwap, showTiles, showTileIndices, showChunks } = useControls({
     tiles: folder({
       doSwap: true,
-      showTiles: false,
+      showTiles: true,
       showTileIndices: true,
-      showChunks: true,
+      showChunks: false,
     }),
   });
 
   const { tiles, chunks } = useMemo(() => {
     const board = new Icosphere(icosphereSize, doSwap);
-    validateBoard(board);
+    false && validateBoard(board);
     return board;
   }, [icosphereSize, doSwap]);
 
@@ -76,13 +76,52 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
                   .normalize()
               : undefined;
 
+          const positions = points
+            .flatMap((p, i) => [
+              //tilePosition,
+              ///p,
+              tilePosition,
+              p,
+              points[(i + 1) % points.length],
+            ])
+            .flatMap(({ x, y, z }) => [x, y, z]);
+          const colors = points.flatMap((_, i) =>
+            [
+              [1, 0, 0],
+              [0, 1, 0],
+              [0, 0, 1],
+            ].flat(),
+          );
+
+          if (tile.shape === IcoTileShape.SpecialEdgeHexagon) console.log(tile);
           return (
             <group key={tile.index}>
-              {showTileIndices && tile.shape > IcoTileShape.EdgeHexagon && (
-                <Label position={tilePosition}>
-                  {getShapeName(tile.shape)}
-                </Label>
-              )}
+              <mesh>
+                <bufferGeometry>
+                  <ArrayAttribute
+                    attribute="position"
+                    array={new Float32Array(positions)}
+                    itemSize={3}
+                  />
+                  <ArrayAttribute
+                    attribute="color"
+                    array={new Float32Array(colors)}
+                    itemSize={3}
+                  />
+                </bufferGeometry>
+                <meshBasicMaterial
+                  vertexColors={true}
+                  transparent={true}
+                  polygonOffset={true}
+                  polygonOffsetFactor={10}
+                  polygonOffsetUnits={10}
+                />
+              </mesh>
+              {showTileIndices &&
+                tile.shape ===
+                  IcoTileShape.SpecialEdgeHexagon /*> IcoTileShape.EdgeHexagon*/ && (
+                  <Label position={tilePosition}>{tile.index}</Label>
+                )}
               {!vec ? null : (
                 <Line
                   points={[
@@ -93,11 +132,11 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
               )}
               {points.length > 0 && (
                 <Line
-                  points={points.flatMap((p) => [
-                    tilePosition,
+                  points={points.flatMap((p, i) => [
+                    //tilePosition,
+                    ///p,
                     p,
-                    // p,
-                    //points[(i + 1) % points.length],
+                    points[(i + 1) % points.length],
                   ])}
                   vertexColors={points.flatMap((_, i) => [
                     getColorForIndex(tile.index + i + 5),
