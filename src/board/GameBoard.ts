@@ -356,56 +356,43 @@ export class GameBoard {
       }
     }
 
-    // A->B
+    // Stitch together the A->B edge and this face's points
     for (let i = 0; i < this.maxIJ; i++) {
       const edgeTile = this.getTile(face, i, -1);
       const n0 = this.getTile(face, i + 1, 0);
       const n1 = this.getTile(face, i, 0);
-      if (face.index < 5) {
+      if (face.index < 5 || face.index >= 15 || face.index % 2 === 1) {
         edgeTile.neighbors[1] = n0;
         edgeTile.neighbors[2] = n1;
-      } else if (face.index >= 15) {
-        edgeTile.neighbors[1] = n0;
-        edgeTile.neighbors[2] = n1;
-      } else if (face.index % 2 === 0) {
+      } else {
         edgeTile.neighbors[5] = n0;
         edgeTile.neighbors[4] = n1;
-      } else {
-        edgeTile.neighbors[1] = n0;
-        edgeTile.neighbors[2] = n1;
       }
     }
 
-    //B->C
+    // Stitch together the B->C edge and this face's points
     for (let i = 0; i < this.maxIJ; i++) {
       const edgeTile = this.getTile(face, this.maxIJ, i);
       const n0 = this.getTile(face, this.maxIJ - 1, i);
       const n1 = this.getTile(face, this.maxIJ - 1, i - 1);
-
       if (face.index < 5) {
         edgeTile.neighbors[4] = n0;
         edgeTile.neighbors[5] = n1;
-      } else if (face.index >= 15) {
+      } else if (face.index >= 15 || face.index % 2 === 1) {
         edgeTile.neighbors[2] = n0;
         edgeTile.neighbors[1] = n1;
-      } else if (face.index % 2 === 0) {
+      } else {
         edgeTile.neighbors[4] = n0;
         edgeTile.neighbors[5] = n1;
-      } else {
-        edgeTile.neighbors[2] = n0;
-        edgeTile.neighbors[1] = n1;
       }
     }
 
-    // C->A
+    // Stitch together the C->A edge and this face's points
     for (let i = 0; i < this.maxIJ; i++) {
       const edgeTile = this.getTile(face, i, i);
       const n0 = this.getTile(face, i + 1, i);
       const n1 = this.getTile(face, i, i - 1);
-      if (face.index < 5) {
-        edgeTile.neighbors[5] = n0;
-        edgeTile.neighbors[4] = n1;
-      } else if (face.index >= 15) {
+      if (face.index < 5 || face.index >= 15) {
         edgeTile.neighbors[5] = n0;
         edgeTile.neighbors[4] = n1;
       } else if (face.index % 2 === 0) {
@@ -417,6 +404,7 @@ export class GameBoard {
       }
     }
 
+    // Stitch together the rest of this face's points
     for (let i = 0; i < this.maxIJ; i++) {
       for (let j = 0; j < i; j++) {
         const tile = this.getTile(face, i, j);

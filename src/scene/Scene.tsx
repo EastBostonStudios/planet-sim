@@ -28,9 +28,10 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   //----------------------------------------------------------------------------
 
   const { projectCoords, projectCoordsArray } = useContext(AppContext);
-  const { showTiles } = useControls({
+  const { showTiles, showTileIndices } = useControls({
     tiles: folder({
       showTiles: true,
+      showTileIndices: true,
     }),
   });
 
@@ -73,7 +74,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
 
           return (
             <group key={tile.index}>
-              {false && (
+              {showTileIndices && (
                 <StyledLabel position={tilePosition}>t{tile.index}</StyledLabel>
               )}
               {!vec ? null : (
@@ -86,7 +87,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
               )}
               {points.length > 0 && (
                 <Line
-                  points={points.flatMap((p, i) => [
+                  points={points.flatMap((p) => [
                     tilePosition,
                     p,
                     // p,

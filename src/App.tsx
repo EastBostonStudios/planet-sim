@@ -158,7 +158,6 @@ const App = () => {
               const c = projector2D(coords.face.c);
 
               const faceIndex = coords.face.index;
-              if (faceIndex === 14 && doesWrap) console.log(coordsArray);
               if (!doesWrap) {
                 if (faceIndex === 14 || faceIndex === 19)
                   b.add(new Vector3(5 * distBetweenPoints, 0, 0));
