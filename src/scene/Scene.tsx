@@ -28,8 +28,9 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   //----------------------------------------------------------------------------
 
   const { projectCoords, projectCoordsArray } = useContext(AppContext);
-  const { showTiles, showTileIndices, showChunks } = useControls({
+  const { doSwap, showTiles, showTileIndices, showChunks } = useControls({
     tiles: folder({
+      doSwap: true,
       showTiles: true,
       showTileIndices: true,
       showChunks: true,
@@ -37,8 +38,8 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   });
 
   const { tiles, chunks } = useMemo(
-    () => new GameBoard(resolution),
-    [resolution],
+    () => new GameBoard(resolution, doSwap),
+    [resolution, doSwap],
   );
 
   //----------------------------------------------------------------------------

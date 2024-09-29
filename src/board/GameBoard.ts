@@ -58,19 +58,21 @@ export type GameBoardChunk = {
 export class GameBoard {
   //----------------------------------------------------------------------------
 
-  public readonly resolution: number;
   public readonly tiles: GameBoardTile[];
   public readonly triangles: GameBoardTriangle[];
   public readonly chunks: GameBoardChunk[];
 
   // The maximum "i" or "j" value on a face is the edge length minus 1
+  private readonly resolution: number;
   private readonly maxIJ: number;
+  private readonly doSwaps: boolean;
 
   //----------------------------------------------------------------------------
 
-  public constructor(resolution: number) {
+  public constructor(resolution: number, doSwaps?: boolean) {
     this.resolution = resolution;
     this.maxIJ = (resolution + 1) * chunkSize - 1;
+    this.doSwaps = doSwaps ?? true;
 
     // Initialize variables and pre-allocate space for the arrays  -------------
 
@@ -319,6 +321,8 @@ export class GameBoard {
   //----------------------------------------------------------------------------
 
   private readonly getShapeForChunkCoords = (ci: number, cj: number) => {
+    if (!this.doSwaps) return GameBoardTileShape.FaceHexagon;
+
     // Swap 1 (bottom-left)
     if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6))
       return GameBoardTileShape.Swap1PentagonA;
