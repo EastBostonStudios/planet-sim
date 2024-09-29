@@ -45,7 +45,7 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
   //----------------------------------------------------------------------------
 
   return (
-    <Fragment key={resolution}>
+    <Fragment key={`${resolution} ${doSwap}`}>
       {showTiles &&
         tiles.map((tile) => {
           const [tilePosition, ...coords] = projectCoordsArray(
@@ -140,7 +140,6 @@ export const Scene: FC<{ resolution: number }> = ({ resolution }) => {
             </group>
           );
         })}
-      const p2 = projectCoords(tri.c.coords);
       {showChunks &&
         chunks.flatMap((chunk) => {
           const points = new Array<Vector3>();

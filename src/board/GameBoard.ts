@@ -348,36 +348,16 @@ export class GameBoard {
       return GameBoardTileShape.Swap2HeptagonB;
 
     // Swap 3 (bottom-left)
-    if ((ci === 6 && cj === 4) || (ci === 6 - 5 && cj === 4 - 2))
+    if ((ci === 6 && cj === 4) || (ci === 1 && cj === 2))
       return GameBoardTileShape.Swap3PentagonA;
-    if ((ci === 5 && cj === 4) || (ci === 5 - 5 && cj === 4 - 2))
+    if ((ci === 5 && cj === 4) || (ci === 0 && cj === 2))
       return GameBoardTileShape.Swap3PentagonB;
-    if ((ci === 6 && cj === 5) || (ci === 6 - 5 && cj === 5 - 2))
+    if ((ci === 6 && cj === 5) || (ci === 1 && cj === 3))
       return GameBoardTileShape.Swap3HeptagonA;
-    if ((ci === 5 && cj === 3) || (ci === 5 - 5 && cj === 3 - 2))
+    if ((ci === 5 && cj === 3) || (ci === 0 && cj === 1))
       return GameBoardTileShape.Swap3HeptagonB;
 
     return GameBoardTileShape.FaceHexagon;
-  };
-
-  private readonly getFlippedTriangleDistortion = (ci: number, cj: number) => {
-    // Bottom-left distortion
-    if ((ci === 3 && cj === 1) || (ci === 5 && cj === 6)) return 1;
-    // Bottom-right distortion
-    if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
-    // Top distortion
-    if ((ci === 6 && cj === 4) || (ci === 1 && cj === 2)) return 3;
-    return 0;
-  };
-
-  private readonly getUprightTriangleDistortion = (ci: number, cj: number) => {
-    // Bottom-left distortion
-    if ((ci === 2 && cj === 1) || (ci === 4 && cj === 6)) return 1;
-    // Bottom-right distortion
-    if ((ci === 6 && cj === 1) || (ci === 1 && cj === 6)) return 2;
-    // Top distortion
-    if ((ci === 6 && cj === 5) || (ci === 1 && cj === 3)) return 3;
-    return 0;
   };
 
   private readonly populateFace = (face: Icosahedron.Face) => {
@@ -416,15 +396,17 @@ export class GameBoard {
         const chunkIndex =
           face.index * chunksPerFace + chunkI * chunkI + chunkJ * 2;
 
+        let a = this.getFaceTile(face, i, j);
+
         if (j < i) {
-          const a = this.getFaceTile(face, i, j);
           let b = this.getFaceTile(face, i - 1, j);
           let c = this.getFaceTile(face, i - 1, j - 1);
-
-          const distortion = this.getFlippedTriangleDistortion(ci, cj);
-          if (distortion === 1) c = this.getFaceTile(face, i - 2, j - 1);
-          else if (distortion === 2) c = this.getFaceTile(face, i, j - 1);
-          else if (distortion === 3) b = this.getFaceTile(face, i, j + 1);
+          if (a.shape === GameBoardTileShape.Swap1HeptagonB)
+            c = this.getFaceTile(face, i - 2, j - 1);
+          else if (a.shape === GameBoardTileShape.Swap2PentagonA)
+            c = this.getFaceTile(face, i, j - 1);
+          else if (a.shape === GameBoardTileShape.Swap3PentagonA)
+            b = this.getFaceTile(face, i, j + 1);
 
           const t = this.createTri(index, face, a, b, c);
           const chunk = this.chunks[chunkIndex + (cj < ci ? 0 : 1)];
@@ -433,15 +415,16 @@ export class GameBoard {
           index++;
         }
 
-        let a = this.getFaceTile(face, i, j);
         const b = this.getFaceTile(face, i - 1, j - 1);
         let c = this.getFaceTile(face, i, j - 1);
 
         // Bottom-left distortion
-        const distortion = this.getUprightTriangleDistortion(ci, cj);
-        if (distortion === 1) a = this.getFaceTile(face, i + 1, j);
-        else if (distortion === 2) a = this.getFaceTile(face, i - 1, j);
-        else if (distortion === 3) c = this.getFaceTile(face, i - 1, j - 2);
+        if (a.shape === GameBoardTileShape.Swap1PentagonA)
+          a = this.getFaceTile(face, i + 1, j);
+        else if (a.shape === GameBoardTileShape.Swap2PentagonA)
+          a = this.getFaceTile(face, i - 1, j);
+        else if (a.shape === GameBoardTileShape.Swap3HeptagonA)
+          c = this.getFaceTile(face, i - 1, j - 2);
 
         const t = this.createTri(index, face, a, b, c);
         const chunk = this.chunks[chunkIndex + (cj > ci ? 1 : 0)];
