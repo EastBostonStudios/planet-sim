@@ -13,7 +13,7 @@ export type GameBoardCoords = {
 export type GameBoardTile = {
   readonly index: number;
   readonly coords: GameBoardCoords;
-  readonly neighbors: (GameBoardTile | null)[]; // TODO: Drop nulls
+  readonly neighbors: GameBoardTile[];
 };
 
 export type GameBoardTri = {
