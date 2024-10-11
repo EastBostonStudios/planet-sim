@@ -13,17 +13,18 @@
     "preview": "vite preview --port 8080"
   },
   "dependencies": {
-    "@radix-ui/react-popover": "^1.1.1",
     "@react-three/drei": "^9.111.3",
     "@react-three/fiber": "^8.17.5",
     "@types/three": "^0.167.0",
+    "@webgpu/types": "^0.1.48",
     "leva": "^0.9.35",
     "react": "^18.3.1",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.26.2",
     "styled-components": "^5.3.11",
     "three": "^0.160.0",
-    "vite-plugin-biome": "^1.0.12"
+    "vite-plugin-biome": "^1.0.12",
+    "vite-plugin-glsl": "^1.3.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",

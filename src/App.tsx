@@ -15,6 +15,7 @@ import * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
 import type { IcoCoords } from "./board/Icosphere";
 import { Scene } from "./scene/Scene";
+import { foo } from "./shaderTest/webComputeTest";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 import { interpolateOnFace } from "./utils/mathUtils";
 
@@ -192,6 +193,7 @@ const App = () => {
   //----------------------------------------------------------------------------
 
   React.useEffect(() => {
+    foo();
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "scroll";
