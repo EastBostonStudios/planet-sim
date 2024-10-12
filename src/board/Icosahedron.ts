@@ -1,4 +1,5 @@
 import { Vector2, Vector3 } from "three";
+import { degToRad } from "three/src/math/MathUtils";
 
 //------------------------------------------------------------------------------
 
@@ -14,6 +15,7 @@ export const distBetweenPoints = 1.1071487177940906; // Derived experimentally, 
 export type Point = {
   index: number;
   coords2D: Vector2;
+  lngLat: Vector2;
   coords3D: Vector3;
 };
 
@@ -40,30 +42,108 @@ export type Edge = {
 const createPoint = (
   index: number,
   coords2D: Vector2,
+  lngLat: Vector2,
   coords3D: Vector3,
-): Point => ({
-  index,
-  coords2D,
+): Point => {
+  const lng = degToRad(lngLat.x);
+  const lat = degToRad(lngLat.y);
+  const convertedLngLats = new Vector3(
+    Math.cos(lat) * Math.cos(lng),
+    Math.sin(lat),
+    Math.cos(lat) * Math.sin(lng),
+  );
   // Rotate the icosahedron such that p0 is at y = 1
-  coords3D: new Vector3(
+  const rotatedXYZs = new Vector3(
     coords3D.x * Math.cos(theta) - coords3D.y * Math.sin(theta),
     coords3D.x * Math.sin(theta) + coords3D.y * Math.cos(theta),
     coords3D.z,
-  ),
-});
+  );
+  console.log(
+    "index:",
+    index,
+    "error:",
+    convertedLngLats.distanceTo(rotatedXYZs).toFixed(1),
+  );
+  return {
+    index,
+    coords2D,
+    lngLat,
+    coords3D: convertedLngLats,
+  };
+};
 
-const p00 = createPoint(0, new Vector2(3.25, 3), new Vector3(-b, -a, z));
-const p01 = createPoint(1, new Vector2(0, 2), new Vector3(-b, a, z));
-const p02 = createPoint(2, new Vector2(1, 2), new Vector3(-a, z, -b));
-const p03 = createPoint(3, new Vector2(2, 2), new Vector3(z, -b, -a));
-const p04 = createPoint(4, new Vector2(3, 2), new Vector3(z, -b, a));
-const p05 = createPoint(5, new Vector2(4, 2), new Vector3(-a, z, b));
-const p06 = createPoint(6, new Vector2(0, 1), new Vector3(z, b, -a));
-const p07 = createPoint(7, new Vector2(1, 1), new Vector3(a, z, -b));
-const p08 = createPoint(8, new Vector2(2, 1), new Vector3(b, -a, z));
-const p09 = createPoint(9, new Vector2(3, 1), new Vector3(a, z, b));
-const p10 = createPoint(10, new Vector2(4, 1), new Vector3(z, b, a));
-const p11 = createPoint(11, new Vector2(1.75, 0), new Vector3(b, a, z));
+const p00 = createPoint(
+  0,
+  new Vector2(3.25, 3),
+  new Vector2(0, 90),
+  new Vector3(-b, -a, z),
+);
+const p01 = createPoint(
+  1,
+  new Vector2(0, 2),
+  new Vector2(-180, 30),
+  new Vector3(-b, a, z),
+);
+const p02 = createPoint(
+  2,
+  new Vector2(1, 2),
+  new Vector2(-108, 30),
+  new Vector3(-a, z, -b),
+);
+const p03 = createPoint(
+  3,
+  new Vector2(2, 2),
+  new Vector2(-36, 30),
+  new Vector3(z, -b, -a),
+);
+const p04 = createPoint(
+  4,
+  new Vector2(3, 2),
+  new Vector2(36, 30),
+  new Vector3(z, -b, a),
+);
+const p05 = createPoint(
+  5,
+  new Vector2(4, 2),
+  new Vector2(108, 30),
+  new Vector3(-a, z, b),
+);
+const p06 = createPoint(
+  6,
+  new Vector2(0, 1),
+  new Vector2(-144, -30),
+  new Vector3(z, b, -a),
+);
+const p07 = createPoint(
+  7,
+  new Vector2(1, 1),
+  new Vector2(-72, -30),
+  new Vector3(a, z, -b),
+);
+const p08 = createPoint(
+  8,
+  new Vector2(2, 1),
+  new Vector2(0, -30),
+  new Vector3(b, -a, z),
+);
+const p09 = createPoint(
+  9,
+  new Vector2(3, 1),
+  new Vector2(72, -30),
+  new Vector3(a, z, b),
+);
+const p10 = createPoint(
+  10,
+  new Vector2(4, 1),
+  new Vector2(144, -30),
+  new Vector3(z, b, a),
+);
+const p11 = createPoint(
+  11,
+  new Vector2(1.75, 0),
+  new Vector2(0, -90),
+  new Vector3(b, a, z),
+);
 
 export const points: ReadonlyArray<Point> = [
   p00,

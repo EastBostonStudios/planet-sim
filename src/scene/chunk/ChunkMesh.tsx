@@ -1,7 +1,7 @@
 import { Line } from "@react-three/drei";
 import { folder, useControls } from "leva";
 import React, { type FC, useMemo, useContext } from "react";
-import { Vector3 } from "three";
+import { Vector2, Vector3 } from "three";
 import { AppContext } from "../../App";
 import type { IcoChunk } from "../../board/Icosphere";
 import { getColorForIndex } from "../../utils/renderingUtils";
@@ -28,6 +28,9 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
       v_face_a: { value: new Vector3() },
       v_face_b: { value: new Vector3() },
       v_face_c: { value: new Vector3() },
+      v_face_a_2d: { value: new Vector2() },
+      v_face_b_2d: { value: new Vector2() },
+      v_face_c_2d: { value: new Vector2() },
     }),
     [],
   );
@@ -36,6 +39,9 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
     uniforms.v_face_a.value = chunk.face.a.coords3D;
     uniforms.v_face_b.value = chunk.face.b.coords3D;
     uniforms.v_face_c.value = chunk.face.c.coords3D;
+    uniforms.v_face_a_2d.value = chunk.face.a.lngLat;
+    uniforms.v_face_b_2d.value = chunk.face.b.lngLat;
+    uniforms.v_face_c_2d.value = chunk.face.c.lngLat;
   }, [chunk, uniforms]);
 
   const { positions, colors, triCenters, chunkCenter, regionIDs } =
