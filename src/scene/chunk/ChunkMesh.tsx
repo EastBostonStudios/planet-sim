@@ -4,9 +4,7 @@ import React, { type FC, useMemo, useContext } from "react";
 import { Vector2, Vector3 } from "three";
 import { degToRad } from "three/src/math/MathUtils";
 import { AppContext } from "../../App";
-import { xyzToLatLng } from "../../board/Icosahedron";
-import type { IcoChunk, IcoCoords } from "../../board/Icosphere";
-import { interpolateOnFace } from "../../utils/mathUtils";
+import type { IcoChunk } from "../../board/Icosphere";
 import { getColorForIndex } from "../../utils/renderingUtils";
 import { ArrayAttribute } from "../ArrayAttribute";
 import { Label } from "../Label";
@@ -15,15 +13,6 @@ import vert from "./chunk.vert";
 
 const wrapRightToLeft = (x: number, doWrap: boolean) =>
   doWrap && x > 0 ? x - 360.0 : x;
-
-const projectCoords = (coords: IcoCoords) =>
-  interpolateOnFace(
-    coords.face.a.coords3D,
-    coords.face.b.coords3D,
-    coords.face.c.coords3D,
-    coords.x,
-    coords.y,
-  );
 
 export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
   const { is3D } = useContext(AppContext);
@@ -50,9 +39,9 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
   );
 
   React.useEffect(() => {
-    uniforms.v_face_a.value = chunk.face.a.coords3D;
-    uniforms.v_face_b.value = chunk.face.b.coords3D;
-    uniforms.v_face_c.value = chunk.face.c.coords3D;
+    uniforms.v_face_a.value = chunk.face.a.xyz;
+    uniforms.v_face_b.value = chunk.face.b.xyz;
+    uniforms.v_face_c.value = chunk.face.c.xyz;
     uniforms.v_face_a_2d.value = chunk.face.a.lngLat;
     uniforms.v_face_b_2d.value = chunk.face.b.lngLat;
     uniforms.v_face_c_2d.value = chunk.face.c.lngLat;
@@ -60,74 +49,89 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
 
   const { positions, lngLats, colors, triCenters, chunkCenter, regionIDs } =
     useMemo(() => {
-      const points = new Array<Vector3>();
+      const xyz2DArr = new Array<Vector3>();
+      const xyz3DArr = new Array<Vector3>();
       const lngLatArr = new Array<Vector2>();
-      const triCenters = new Array<Vector3>();
-      const chunkCenter = new Vector3();
       for (const tri of chunk.triangles) {
         if (!tri) continue;
 
-        const p0 = projectCoords(tri.a.coords).normalize();
-        const p1 = projectCoords(tri.b.coords).normalize();
-        const p2 = projectCoords(tri.c.coords).normalize();
-        const a = xyzToLatLng(p0);
-        const b = xyzToLatLng(p1);
-        const c = xyzToLatLng(p2);
-
         const doesWrap =
-          Math.max(a.x, b.x, c.x) - Math.min(a.x, b.x, c.x) > 180.0;
+          Math.max(tri.a.lngLat.x, tri.b.lngLat.x, tri.c.lngLat.x) -
+            Math.min(tri.a.lngLat.x, tri.b.lngLat.x, tri.c.lngLat.x) >
+          180.0;
 
-        const thetaA = degToRad(wrapRightToLeft(a.x, doesWrap));
-        const thetaB = degToRad(wrapRightToLeft(b.x, doesWrap));
-        const thetaC = degToRad(wrapRightToLeft(c.x, doesWrap));
+        const thetaA = degToRad(wrapRightToLeft(tri.a.lngLat.x, doesWrap));
+        const thetaB = degToRad(wrapRightToLeft(tri.b.lngLat.x, doesWrap));
+        const thetaC = degToRad(wrapRightToLeft(tri.c.lngLat.x, doesWrap));
 
-        const phiA = degToRad(a.y);
-        const phiB = degToRad(b.y);
-        const phiC = degToRad(c.y);
+        const phiA = degToRad(tri.a.lngLat.y);
+        const phiB = degToRad(tri.b.lngLat.y);
+        const phiC = degToRad(tri.c.lngLat.y);
 
         if (is3D) {
-          points.push(p0, p1, p2);
+          xyz3DArr.push(tri.a.xyz, tri.b.xyz, tri.c.xyz);
         } else {
-          points.push(
+          xyz3DArr.push(
             new Vector3(thetaA * Math.cos(phiA), phiA, 0.0),
             new Vector3(thetaB * Math.cos(phiB), phiB, 0.0),
             new Vector3(thetaC * Math.cos(phiC), phiC, 0.0),
           );
         }
         lngLatArr.push(
-          new Vector2(wrapRightToLeft(a.x, doesWrap), a.y),
-          new Vector2(wrapRightToLeft(b.x, doesWrap), b.y),
-          new Vector2(wrapRightToLeft(c.x, doesWrap), c.y),
+          new Vector2(
+            wrapRightToLeft(tri.a.lngLat.x, doesWrap),
+            tri.a.lngLat.y,
+          ),
+          new Vector2(
+            wrapRightToLeft(tri.b.lngLat.x, doesWrap),
+            tri.b.lngLat.y,
+          ),
+          new Vector2(
+            wrapRightToLeft(tri.c.lngLat.x, doesWrap),
+            tri.c.lngLat.y,
+          ),
         );
 
         if (doesWrap && !is3D) {
-          points.push(
+          xyz3DArr.push(
             new Vector3((thetaA + 2.0 * Math.PI) * Math.cos(phiA), phiA, 0.0),
             new Vector3((thetaB + 2.0 * Math.PI) * Math.cos(phiB), phiB, 0.0),
             new Vector3((thetaC + 2.0 * Math.PI) * Math.cos(phiC), phiC, 0.0),
           );
           lngLatArr.push(
-            new Vector2(wrapRightToLeft(a.x, doesWrap) + 360.0, a.y),
-            new Vector2(wrapRightToLeft(b.x, doesWrap) + 360.0, b.y),
-            new Vector2(wrapRightToLeft(c.x, doesWrap) + 360.0, c.y),
+            new Vector2(
+              wrapRightToLeft(tri.a.lngLat.x, doesWrap) + 360.0,
+              tri.a.lngLat.y,
+            ),
+            new Vector2(
+              wrapRightToLeft(tri.b.lngLat.x, doesWrap) + 360.0,
+              tri.b.lngLat.y,
+            ),
+            new Vector2(
+              wrapRightToLeft(tri.c.lngLat.x, doesWrap) + 360.0,
+              tri.c.lngLat.y,
+            ),
           );
         }
       }
       // chunkCenter.divideScalar(points.length);
 
       const positions = new Float32Array(
-        points.flatMap(({ x, y, z }) => [x, y, z]),
+        xyz3DArr.flatMap(({ x, y, z }) => [x, y, z]),
       );
       const lngLats = new Float32Array(lngLatArr.flatMap(({ x, y }) => [x, y]));
       const colors = new Float32Array(
-        points.flatMap(() => getColorForIndex(chunk.index)),
+        xyz3DArr.flatMap(() => getColorForIndex(chunk.index)),
       );
-      const regionIDs = new Float32Array(points.flatMap(() => 0));
+
+      const regionIDs = new Float32Array(xyz3DArr.flatMap(() => 0));
+      const triCenters = new Array<Vector3>();
+      const chunkCenter = new Vector3();
       return {
         positions,
         lngLats,
         colors,
-        points,
+        points: xyz3DArr,
         triCenters,
         chunkCenter,
         regionIDs,

@@ -1,22 +1,17 @@
-import { Vector2, Vector3 } from "three";
-import { degToRad, radToDeg } from "three/src/math/MathUtils";
+import { Vector2, type Vector3 } from "three";
+import { latLngToXYZ } from "./sphereMath";
 
 //------------------------------------------------------------------------------
 
-const a = 0.5257311121191336; //06 (these two decimal places were dropped due to a
-const b = 0.8506508083520399; //32  linter error about precision being lost at runtime)
-const z = 0.0;
-
-const theta = Math.PI + 1.0172219678840608; // atan(phi, 1) Rotates 0 down to y = -1
-export const distBetweenPoints = 1.1071487177940906; // Derived experimentally, due to 63.434949-degree angle between points
+// Derived experimentally, due to 63.434949-degree angle between points
+export const distBetweenPoints = 1.1071487177940906;
 
 //------------------------------------------------------------------------------
 
 export type Point = {
   index: number;
-  coords2D: Vector2;
   lngLat: Vector2;
-  coords3D: Vector3;
+  xyz: Vector3;
 };
 
 export type Face = {
@@ -39,105 +34,24 @@ export type Edge = {
 
 //------------------------------------------------------------------------------
 
-/*// Rotate the icosahedron such that p0 is at y = 1
-const rotatedXYZs = new Vector3(
-  coords3D.x * Math.cos(theta) - coords3D.y * Math.sin(theta),
-  coords3D.x * Math.sin(theta) + coords3D.y * Math.cos(theta),
-  coords3D.z,
-);
-console.log(
-  "index:",
+const createPoint = (index: number, lngLat: Vector2): Point => ({
   index,
-  "error:",
-  convertedLngLats.distanceTo(rotatedXYZs).toFixed(3),
-);*/
+  lngLat,
+  xyz: latLngToXYZ(lngLat),
+});
 
-const createPoint = (
-  index: number,
-  coords2D: Vector2,
-  lngLat: Vector2,
-  coords3D: Vector3,
-): Point => {
-  return {
-    index,
-    coords2D,
-    lngLat,
-    coords3D: latLngToXYZ(lngLat),
-  };
-};
-
-const p00 = createPoint(
-  0,
-  new Vector2(3.25, 3),
-  new Vector2(0, 90),
-  new Vector3(-b, -a, z),
-);
-const p01 = createPoint(
-  1,
-  new Vector2(0, 2),
-  new Vector2(-180, 30),
-  new Vector3(-b, a, z),
-);
-const p02 = createPoint(
-  2,
-  new Vector2(1, 2),
-  new Vector2(-108, 30),
-  new Vector3(-a, z, -b),
-);
-const p03 = createPoint(
-  3,
-  new Vector2(2, 2),
-  new Vector2(-36, 30),
-  new Vector3(z, -b, -a),
-);
-const p04 = createPoint(
-  4,
-  new Vector2(3, 2),
-  new Vector2(36, 30),
-  new Vector3(z, -b, a),
-);
-const p05 = createPoint(
-  5,
-  new Vector2(4, 2),
-  new Vector2(108, 30),
-  new Vector3(-a, z, b),
-);
-const p06 = createPoint(
-  6,
-  new Vector2(0, 1),
-  new Vector2(-144, -30),
-  new Vector3(z, b, -a),
-);
-const p07 = createPoint(
-  7,
-  new Vector2(1, 1),
-  new Vector2(-72, -30),
-  new Vector3(a, z, -b),
-);
-const p08 = createPoint(
-  8,
-  new Vector2(2, 1),
-  new Vector2(0, -30),
-  new Vector3(b, -a, z),
-);
-const p09 = createPoint(
-  9,
-  new Vector2(3, 1),
-  new Vector2(72, -30),
-  new Vector3(a, z, b),
-);
-const p10 = createPoint(
-  10,
-  new Vector2(4, 1),
-  new Vector2(144, -30),
-  new Vector3(z, b, a),
-);
-const p11 = createPoint(
-  11,
-  new Vector2(1.75, 0),
-  new Vector2(0, -90),
-  new Vector3(b, a, z),
-);
+const p00 = createPoint(0, new Vector2(0, 90));
+const p01 = createPoint(1, new Vector2(-180, 30));
+const p02 = createPoint(2, new Vector2(-108, 30));
+const p03 = createPoint(3, new Vector2(-36, 30));
+const p04 = createPoint(4, new Vector2(36, 30));
+const p05 = createPoint(5, new Vector2(108, 30));
+const p06 = createPoint(6, new Vector2(-144, -30));
+const p07 = createPoint(7, new Vector2(-72, -30));
+const p08 = createPoint(8, new Vector2(0, -30));
+const p09 = createPoint(9, new Vector2(72, -30));
+const p10 = createPoint(10, new Vector2(144, -30));
+const p11 = createPoint(11, new Vector2(0, -90));
 
 export const points: ReadonlyArray<Point> = [
   p00,
@@ -313,43 +227,4 @@ console.assert(
 console.assert(
   faces.every((face, i) => face.index === i),
   "Face indices incorrect!",
-);
-
-/*;
-  x = R * cos(lat) * cos(lon)
-  y = R * cos(lat) * sin(lon)
-  z = R * sin(lat)
-
-  lat = asin(z / R)
-  lon = atan2(y, x)
- */
-function latLngToXYZ(lngLat: Vector2) {
-  const lng = degToRad(lngLat.x);
-  const lat = degToRad(lngLat.y);
-  return new Vector3(
-    -Math.cos(lat) * Math.cos(lng),
-    Math.sin(lat),
-    Math.cos(lat) * Math.sin(lng),
-  );
-}
-
-export function xyzToLatLng(xyz: Vector3) {
-  // Vector must be normalized!!
-  const latRads = Math.asin(xyz.y);
-  const lngRads = Math.atan2(xyz.z, -xyz.x);
-  return new Vector2(radToDeg(lngRads), radToDeg(latRads));
-}
-
-const asdf = new Array<Vector3>();
-for (let i = 0; i < 50; i++) {
-  asdf.push(
-    new Vector3(
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
-    ).normalize(),
-  );
-}
-console.log(
-  asdf.map((p) => latLngToXYZ(xyzToLatLng(p)).distanceTo(p).toFixed(2)),
 );

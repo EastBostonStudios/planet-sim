@@ -93,7 +93,7 @@ const App = () => {
   const { pointProjector, projectCoords, projectCoordsArray } =
     React.useMemo(() => {
       const projector3D: (point: Icosahedron.Point) => Vector3 = (point) =>
-        point.coords3D;
+        point.xyz;
 
       const projector2D: (
         point: Icosahedron.Point,
