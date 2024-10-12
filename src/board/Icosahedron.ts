@@ -1,5 +1,5 @@
 import { Vector2, Vector3 } from "three";
-import { degToRad } from "three/src/math/MathUtils";
+import { degToRad, radToDeg } from "three/src/math/MathUtils";
 
 //------------------------------------------------------------------------------
 
@@ -39,36 +39,30 @@ export type Edge = {
 
 //------------------------------------------------------------------------------
 
+/*// Rotate the icosahedron such that p0 is at y = 1
+const rotatedXYZs = new Vector3(
+  coords3D.x * Math.cos(theta) - coords3D.y * Math.sin(theta),
+  coords3D.x * Math.sin(theta) + coords3D.y * Math.cos(theta),
+  coords3D.z,
+);
+console.log(
+  "index:",
+  index,
+  "error:",
+  convertedLngLats.distanceTo(rotatedXYZs).toFixed(3),
+);*/
+
 const createPoint = (
   index: number,
   coords2D: Vector2,
   lngLat: Vector2,
   coords3D: Vector3,
 ): Point => {
-  const lng = degToRad(lngLat.x);
-  const lat = degToRad(lngLat.y);
-  const convertedLngLats = new Vector3(
-    Math.cos(lat) * Math.cos(lng),
-    Math.sin(lat),
-    Math.cos(lat) * Math.sin(lng),
-  );
-  // Rotate the icosahedron such that p0 is at y = 1
-  const rotatedXYZs = new Vector3(
-    coords3D.x * Math.cos(theta) - coords3D.y * Math.sin(theta),
-    coords3D.x * Math.sin(theta) + coords3D.y * Math.cos(theta),
-    coords3D.z,
-  );
-  console.log(
-    "index:",
-    index,
-    "error:",
-    convertedLngLats.distanceTo(rotatedXYZs).toFixed(1),
-  );
   return {
     index,
     coords2D,
     lngLat,
-    coords3D: convertedLngLats,
+    coords3D: latLngToXYZ(lngLat),
   };
 };
 
@@ -245,7 +239,7 @@ export const edges: ReadonlyArray<Edge> = [
 //------------------------------------------------------------------------------
 
 const createFace = (index: number, ab: Edge, cb: Edge, ca: Edge): Face => {
-  // Flip "a" and "c' around for the 10 polar faces
+  // Flip "a" and "c" around for the 10 polar faces
   const a = ab.start;
   const b = ab.end;
   const c = cb.start;
@@ -319,4 +313,43 @@ console.assert(
 console.assert(
   faces.every((face, i) => face.index === i),
   "Face indices incorrect!",
+);
+
+/*;
+  x = R * cos(lat) * cos(lon)
+  y = R * cos(lat) * sin(lon)
+  z = R * sin(lat)
+
+  lat = asin(z / R)
+  lon = atan2(y, x)
+ */
+function latLngToXYZ(lngLat: Vector2) {
+  const lng = degToRad(lngLat.x);
+  const lat = degToRad(lngLat.y);
+  return new Vector3(
+    -Math.cos(lat) * Math.cos(lng),
+    Math.sin(lat),
+    Math.cos(lat) * Math.sin(lng),
+  );
+}
+
+export function xyzToLatLng(xyz: Vector3) {
+  // Vector must be normalized!!
+  const latRads = Math.asin(xyz.y);
+  const lngRads = Math.atan2(xyz.z, -xyz.x);
+  return new Vector2(radToDeg(lngRads), radToDeg(latRads));
+}
+
+const asdf = new Array<Vector3>();
+for (let i = 0; i < 50; i++) {
+  asdf.push(
+    new Vector3(
+      Math.random() * 2 - 1,
+      Math.random() * 2 - 1,
+      Math.random() * 2 - 1,
+    ).normalize(),
+  );
+}
+console.log(
+  asdf.map((p) => latLngToXYZ(xyzToLatLng(p)).distanceTo(p).toFixed(2)),
 );

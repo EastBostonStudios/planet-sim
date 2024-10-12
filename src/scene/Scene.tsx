@@ -138,11 +138,9 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
             </group>
           );
         })}
-      {chunks
-        .filter((chunk) => ![4, 13, 14, 19].includes(chunk.face.index))
-        .map((chunk) => (
-          <ChunkMesh key={chunk.index} chunk={chunk} />
-        ))}
+      {chunks.map((chunk) => (
+        <ChunkMesh key={chunk.index} chunk={chunk} />
+      ))}
       <IcoMeshes />
     </Fragment>
   );

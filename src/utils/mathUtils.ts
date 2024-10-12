@@ -1,6 +1,30 @@
-import { Vector3 } from "three";
+import { Vector2, Vector3 } from "three";
+import type { Face } from "../board/Icosahedron";
+
+/*
+ */
+/*.add(
+    new Vector2(f.wrapsMeridian && f.a.lngLat.x < 0 ? 360 : 0, 0),
+  );
+ */
+//  .clone()
+// .add(new Vector2(f.wrapsMeridian && f.b.lngLat.x < 0 ? 360 : 0, 0));
+//  .clone()
+//  .add(new Vector2(f.wrapsMeridian && f.c.lngLat.x < 0 ? 360 : 0, 0));
 
 export const getTriangleNumber = (n: number) => (n * (n + 1)) / 2;
+
+export const interpolateOnFace2D = (f: Face, x: number, y: number): Vector2 => {
+  if (x < 0 || x > 1 || y < 0 || y > 1 || y > x)
+    throw new Error(`(${x}, ${y}) out of bounds!`);
+  if (x === 0) return f.a.lngLat;
+  const lngLatA = f.a.lngLat;
+  const lngLatB = f.b.lngLat;
+  const lngLatC = f.c.lngLat;
+  const ab = new Vector2().lerpVectors(lngLatA, lngLatB, x);
+  const ca = new Vector2().lerpVectors(lngLatA, lngLatC, x);
+  return new Vector2().lerpVectors(ab, ca, y / x);
+};
 
 export const interpolateOnFace = (
   a: Vector3,
