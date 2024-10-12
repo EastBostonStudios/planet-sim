@@ -1,7 +1,5 @@
-import test2 from "./test.glsl";
 import test from "./test.wgsl?raw";
 
-console.log(test2);
 export const foo = async () => {
   if (!navigator.gpu)
     throw new Error(
@@ -60,5 +58,5 @@ export const foo = async () => {
   gpuDevice.queue.submit([f]);
   await i.mapAsync(GPUMapMode.READ, 0, o);
   const g = i.getMappedRange(0, o);
-  console.log(new Float32Array(g));
+  // console.log(new Float32Array(g));
 };

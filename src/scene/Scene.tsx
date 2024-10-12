@@ -8,18 +8,18 @@ import { getShapeName, validateBoard } from "../board/boardHelpers";
 import { lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
 import { ArrayAttribute } from "./ArrayAttribute";
-import { ChunkMesh } from "./ChunkMesh";
 import { IcoMeshes } from "./IcoMeshes";
 import { Label } from "./Label";
+import { ChunkMesh } from "./chunk/ChunkMesh";
 
 export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
   //----------------------------------------------------------------------------
 
   const { projectCoords, projectCoordsArray } = useContext(AppContext);
-  const { doSwap, showTiles, showTileIndices, showChunks } = useControls({
+  const { doSwap, show, showTileIndices } = useControls({
     tiles: folder({
       doSwap: true,
-      showTiles: true,
+      show: false,
       showTileIndices: false,
       showChunks: false,
     }),
@@ -35,7 +35,7 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
 
   return (
     <Fragment key={`${icosphereSize} ${doSwap}`}>
-      {showTiles &&
+      {show &&
         tiles.map((tile) => {
           const [tilePosition, ...coords] = projectCoordsArray(
             [tile.coords].concat(
@@ -138,8 +138,9 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
             </group>
           );
         })}
-      {showChunks &&
-        chunks.map((chunk) => <ChunkMesh key={chunk.index} chunk={chunk} />)}
+      {chunks.map((chunk) => (
+        <ChunkMesh key={chunk.index} chunk={chunk} />
+      ))}
       <IcoMeshes />
     </Fragment>
   );
