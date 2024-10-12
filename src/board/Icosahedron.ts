@@ -6,6 +6,7 @@ const a = 0.5257311121191336; //06 (these two decimal places were dropped due to
 const b = 0.8506508083520399; //32  linter error about precision being lost at runtime)
 const z = 0.0;
 
+const theta = Math.PI + 1.0172219678840608; // atan(phi, 1) Rotates 0 down to y = -1
 export const distBetweenPoints = 1.1071487177940906; // Derived experimentally, due to 63.434949-degree angle between points
 
 //------------------------------------------------------------------------------
@@ -40,7 +41,16 @@ const createPoint = (
   index: number,
   coords2D: Vector2,
   coords3D: Vector3,
-): Point => ({ index, coords2D, coords3D });
+): Point => ({
+  index,
+  coords2D,
+  // Rotate the icosahedron such that p0 is at y = 1
+  coords3D: new Vector3(
+    coords3D.x * Math.cos(theta) - coords3D.y * Math.sin(theta),
+    coords3D.x * Math.sin(theta) + coords3D.y * Math.cos(theta),
+    coords3D.z,
+  ),
+});
 
 const p00 = createPoint(0, new Vector2(3.25, 3), new Vector3(-b, -a, z));
 const p01 = createPoint(1, new Vector2(0, 2), new Vector3(-b, a, z));

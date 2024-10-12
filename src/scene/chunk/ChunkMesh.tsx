@@ -4,7 +4,6 @@ import React, { type FC, useMemo, useContext } from "react";
 import { Vector3 } from "three";
 import { AppContext } from "../../App";
 import type { IcoChunk } from "../../board/Icosphere";
-import { getCenter, lerpToward } from "../../utils/mathUtils";
 import { getColorForIndex } from "../../utils/renderingUtils";
 import { ArrayAttribute } from "../ArrayAttribute";
 import { Label } from "../Label";
@@ -24,6 +23,21 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
 
   // onPointerMove={(e) => console.log(e.face, e.faceIndex, e)}
 
+  const uniforms = React.useMemo(
+    () => ({
+      v_face_a: { value: new Vector3() },
+      v_face_b: { value: new Vector3() },
+      v_face_c: { value: new Vector3() },
+    }),
+    [],
+  );
+
+  React.useEffect(() => {
+    uniforms.v_face_a.value = chunk.face.a.coords3D;
+    uniforms.v_face_b.value = chunk.face.b.coords3D;
+    uniforms.v_face_c.value = chunk.face.c.coords3D;
+  }, [chunk, uniforms]);
+
   const { positions, colors, triCenters, chunkCenter, regionIDs } =
     useMemo(() => {
       const points = new Array<Vector3>();
@@ -31,11 +45,9 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
       const chunkCenter = new Vector3();
       for (const tri of chunk.triangles) {
         if (!tri) continue;
-        const p0 = projectCoords(tri.a.coords);
-        const p1 = projectCoords(tri.b.coords);
-        const p2 = projectCoords(tri.c.coords);
-        if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
-          continue; // TODO: figure out wrapping
+        const p0 = new Vector3(tri.a.coords.x, tri.a.coords.y, 0.0);
+        const p1 = new Vector3(tri.b.coords.x, tri.b.coords.y, 0.0);
+        const p2 = new Vector3(tri.c.coords.x, tri.c.coords.y, 0.0);
         points.push(p0, p1, p2);
         chunkCenter.add(p0).add(p1).add(p2);
         triCenters.push(
@@ -52,7 +64,7 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
       );
       const regionIDs = new Float32Array(points.flatMap(() => 0));
       return { positions, colors, points, triCenters, chunkCenter, regionIDs };
-    }, [chunk, projectCoords]);
+    }, [chunk]);
 
   //if (chunk.face.index === 0) console.log(chunk.index, chunk.tris);
 
@@ -89,7 +101,11 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
             itemSize={1}
           />
         </bufferGeometry>
-        <shaderMaterial vertexShader={vert} fragmentShader={frag} />
+        <shaderMaterial
+          uniforms={uniforms}
+          vertexShader={vert}
+          fragmentShader={frag}
+        />
       </mesh>
       {false && (
         <mesh>

@@ -54,7 +54,6 @@ const minResolution = 0;
 const maxResolution = 8;
 const defaultResolution = 1;
 
-const theta = Math.PI + 1.0172219678840608; // atan(phi, 1) Rotates 0 down to y = -1
 const dbp = Icosahedron.distBetweenPoints;
 
 //------------------------------------------------------------------------------
@@ -94,13 +93,7 @@ const App = () => {
   const { pointProjector, projectCoords, projectCoordsArray } =
     React.useMemo(() => {
       const projector3D: (point: Icosahedron.Point) => Vector3 = (point) =>
-        new Vector3(
-          point.coords3D.x * Math.cos(theta) -
-            point.coords3D.y * Math.sin(theta),
-          point.coords3D.x * Math.sin(theta) +
-            point.coords3D.y * Math.cos(theta),
-          point.coords3D.z,
-        );
+        point.coords3D;
 
       const projector2D: (
         point: Icosahedron.Point,

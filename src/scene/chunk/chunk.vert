@@ -1,8 +1,13 @@
 //------------------------------------------------------------------------------
 
+uniform vec3 v_face_a;
+uniform vec3 v_face_b;
+uniform vec3 v_face_c;
+
 attribute uint region_id;
 
 varying vec3 v_abc;
+
 //flat varying uint v_region_id;
 
 #define M_PI 3.1415926535897932384626433832795
@@ -18,7 +23,9 @@ void main() {
     );
 
    // v_region_id = region_id;
-
+    vec3 ab = mix(v_face_a, v_face_b, position.x);
+    vec3 ca = mix(v_face_a, v_face_c, position.x);
+    vec3 position3D = mix(ab, ca, position.y / position.x);
     /*
 
     vec3 position2 = vec3(
@@ -29,5 +36,5 @@ void main() {
         position.z
     );
     */
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position3D, 1.0);
 }
