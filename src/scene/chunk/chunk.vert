@@ -8,10 +8,11 @@ uniform vec2 v_face_a_2d;
 uniform vec2 v_face_b_2d;
 uniform vec2 v_face_c_2d;
 
+attribute vec2 lng_lat;
 attribute uint region_id;
 
 varying vec3 v_abc;
-varying vec2 v_uv;
+varying vec2 v_lng_lat;
 
 //flat varying uint v_region_id;
 
@@ -28,7 +29,7 @@ void main() {
         step(float((gl_VertexID + 1 ) % 3), 0.5),
         step(float((gl_VertexID + 2 ) % 3), 0.5)
     );
-    v_uv = uv;
+    v_lng_lat = lng_lat;
 
     /*
    // v_region_id = region_id;

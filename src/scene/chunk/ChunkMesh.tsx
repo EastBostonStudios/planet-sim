@@ -16,6 +16,15 @@ import vert from "./chunk.vert";
 const wrapRightToLeft = (x: number, doWrap: boolean) =>
   doWrap && x > 0 ? x - 360.0 : x;
 
+const projectCoords = (coords: IcoCoords) =>
+  interpolateOnFace(
+    coords.face.a.coords3D,
+    coords.face.b.coords3D,
+    coords.face.c.coords3D,
+    coords.x,
+    coords.y,
+  );
+
 export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
   const { is3D } = useContext(AppContext);
   const { show, showOrder, showIndices } = useControls({
@@ -49,20 +58,12 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
     uniforms.v_face_c_2d.value = chunk.face.c.lngLat;
   }, [chunk, uniforms]);
 
-  const { positions, uvs, colors, triCenters, chunkCenter, regionIDs } =
+  const { positions, lngLats, colors, triCenters, chunkCenter, regionIDs } =
     useMemo(() => {
       const points = new Array<Vector3>();
-      const uvArr = new Array<Vector2>();
+      const lngLatArr = new Array<Vector2>();
       const triCenters = new Array<Vector3>();
       const chunkCenter = new Vector3();
-      const projectCoords = (coords: IcoCoords) =>
-        interpolateOnFace(
-          coords.face.a.coords3D,
-          coords.face.b.coords3D,
-          coords.face.c.coords3D,
-          coords.x,
-          coords.y,
-        );
       for (const tri of chunk.triangles) {
         if (!tri) continue;
 
@@ -73,43 +74,43 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
         const b = xyzToLatLng(p1);
         const c = xyzToLatLng(p2);
 
+        const doesWrap =
+          Math.max(a.x, b.x, c.x) - Math.min(a.x, b.x, c.x) > 180.0;
+
+        const thetaA = degToRad(wrapRightToLeft(a.x, doesWrap));
+        const thetaB = degToRad(wrapRightToLeft(b.x, doesWrap));
+        const thetaC = degToRad(wrapRightToLeft(c.x, doesWrap));
+
+        const phiA = degToRad(a.y);
+        const phiB = degToRad(b.y);
+        const phiC = degToRad(c.y);
+
         if (is3D) {
           points.push(p0, p1, p2);
-          uvArr.push(a, b, c);
         } else {
-          const doesWrap =
-            Math.max(a.x, b.x, c.x) - Math.min(a.x, b.x, c.x) > 180.0;
-
-          const thetaA = degToRad(wrapRightToLeft(a.x, doesWrap));
-          const thetaB = degToRad(wrapRightToLeft(b.x, doesWrap));
-          const thetaC = degToRad(wrapRightToLeft(c.x, doesWrap));
-
-          const phiA = degToRad(a.y);
-          const phiB = degToRad(b.y);
-          const phiC = degToRad(c.y);
-
-          uvArr.push(
-            new Vector2(wrapRightToLeft(a.x, doesWrap), a.y),
-            new Vector2(wrapRightToLeft(b.x, doesWrap), b.y),
-            new Vector2(wrapRightToLeft(c.x, doesWrap), c.y),
-          );
           points.push(
             new Vector3(thetaA * Math.cos(phiA), phiA, 0.0),
             new Vector3(thetaB * Math.cos(phiB), phiB, 0.0),
             new Vector3(thetaC * Math.cos(phiC), phiC, 0.0),
           );
-          if (doesWrap) {
-            uvArr.push(
-              new Vector2(wrapRightToLeft(a.x, doesWrap) + 360.0, a.y),
-              new Vector2(wrapRightToLeft(b.x, doesWrap) + 360.0, b.y),
-              new Vector2(wrapRightToLeft(c.x, doesWrap) + 360.0, c.y),
-            );
-            points.push(
-              new Vector3((thetaA + 2.0 * Math.PI) * Math.cos(phiA), phiA, 0.0),
-              new Vector3((thetaB + 2.0 * Math.PI) * Math.cos(phiB), phiB, 0.0),
-              new Vector3((thetaC + 2.0 * Math.PI) * Math.cos(phiC), phiC, 0.0),
-            );
-          }
+        }
+        lngLatArr.push(
+          new Vector2(wrapRightToLeft(a.x, doesWrap), a.y),
+          new Vector2(wrapRightToLeft(b.x, doesWrap), b.y),
+          new Vector2(wrapRightToLeft(c.x, doesWrap), c.y),
+        );
+
+        if (doesWrap && !is3D) {
+          points.push(
+            new Vector3((thetaA + 2.0 * Math.PI) * Math.cos(phiA), phiA, 0.0),
+            new Vector3((thetaB + 2.0 * Math.PI) * Math.cos(phiB), phiB, 0.0),
+            new Vector3((thetaC + 2.0 * Math.PI) * Math.cos(phiC), phiC, 0.0),
+          );
+          lngLatArr.push(
+            new Vector2(wrapRightToLeft(a.x, doesWrap) + 360.0, a.y),
+            new Vector2(wrapRightToLeft(b.x, doesWrap) + 360.0, b.y),
+            new Vector2(wrapRightToLeft(c.x, doesWrap) + 360.0, c.y),
+          );
         }
       }
       // chunkCenter.divideScalar(points.length);
@@ -117,14 +118,14 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
       const positions = new Float32Array(
         points.flatMap(({ x, y, z }) => [x, y, z]),
       );
-      const uvs = new Float32Array(uvArr.flatMap(({ x, y }) => [x, y]));
+      const lngLats = new Float32Array(lngLatArr.flatMap(({ x, y }) => [x, y]));
       const colors = new Float32Array(
         points.flatMap(() => getColorForIndex(chunk.index)),
       );
       const regionIDs = new Float32Array(points.flatMap(() => 0));
       return {
         positions,
-        uvs,
+        lngLats,
         colors,
         points,
         triCenters,
@@ -161,7 +162,7 @@ export const ChunkMesh: FC<{ chunk: IcoChunk }> = ({ chunk }) => {
       <mesh>
         <bufferGeometry>
           <ArrayAttribute attribute="position" array={positions} itemSize={3} />
-          <ArrayAttribute attribute="uv" array={uvs} itemSize={2} />
+          <ArrayAttribute attribute="lng_lat" array={lngLats} itemSize={2} />
           {false && (
             <ArrayAttribute attribute="color" array={colors} itemSize={3} />
           )}
