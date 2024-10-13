@@ -8,6 +8,9 @@ uniform vec2 v_face_a_2d;
 uniform vec2 v_face_b_2d;
 uniform vec2 v_face_c_2d;
 
+uniform bool v_is_3d;
+uniform float v_time;
+
 attribute vec2 lng_lat;
 attribute uint region_id;
 
@@ -20,6 +23,7 @@ varying vec2 v_lng_lat;
 #define M_THETA (M_PI + 1.0172219678840608)
 
 #define M_SQRT_2 (1.41421356237)
+#define IS_3D 0
 
 //------------------------------------------------------------------------------
 
@@ -31,41 +35,55 @@ void main() {
     );
     v_lng_lat = lng_lat;
 
-    /*
-   // v_region_id = region_id;
-    vec3 ab = mix(v_face_a, v_face_b, position.x);
-    vec3 ca = mix(v_face_a, v_face_c, position.x);
-    vec3 p3d = mix(ab, ca, position.y / position.x);
+    #if (IS_3D == 1)
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    #else
+        // Vector must be normalized!!
+        float lat = asin(position.y);
+        float lng = fract(1.0 + (atan(position.z, -position.x) / (2.0 * M_PI)) + v_time * 0.1) * 2.0 * M_PI - M_PI;
 
-    vec2 ab2 = mix(v_face_a_2d, v_face_b_2d, position.x);
-    vec2 ca2 = mix(v_face_a_2d, v_face_c_2d, position.x);
-    vec2 p = mix(ab2, ca2, position.y / position.x);
+        /*
+        vec3 position2 = vec3(
+            -cos(lat) * cos(lng),
+            sin(lat),
+            cos(lat) * sin(lng)
+        );
+        */
 
-    float theta = p.x * M_PI / 180.0;
-    float phi = p.y * M_PI / 180.0;
+        vec3 position2 = vec3(
+        lng * cos(lat),
+        lat,
+        -0.0001 * abs(lng) // Hides wrapping
+        );
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position2, 1.0);
+    #endif
 
-    float lng = theta;
-    float lat = phi;
-    vec3 position3D = vec3(
-        cos(lat) * cos(lng),
-        sin(lat),
-        cos(lat) * sin(lng)
-    );
-
-    vec3 position2D = vec3(
-         theta * cos(phi),
-        phi,
-        0.0);
-    */
-
-    /*
-    vec3 position2 = vec3(
-        position.x * cos(M_THETA) -
-        position.y * sin(M_THETA),
-        position.x * sin(M_THETA) +
-        position.y * cos(M_THETA),
-        position.z
-    );
-    */
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
+
+
+/*
+// v_region_id = region_id;
+vec3 ab = mix(v_face_a, v_face_b, position.x);
+vec3 ca = mix(v_face_a, v_face_c, position.x);
+vec3 p3d = mix(ab, ca, position.y / position.x);
+
+vec2 ab2 = mix(v_face_a_2d, v_face_b_2d, position.x);
+vec2 ca2 = mix(v_face_a_2d, v_face_c_2d, position.x);
+vec2 p = mix(ab2, ca2, position.y / position.x);
+
+float theta = p.x * M_PI / 180.0;
+float phi = p.y * M_PI / 180.0;
+
+float lng = theta;
+float lat = phi;
+vec3 position3D = vec3(
+    cos(lat) * cos(lng),
+    sin(lat),
+    cos(lat) * sin(lng)
+);
+
+vec3 position2D = vec3(
+     theta * cos(phi),
+    phi,
+    0.0);
+*/

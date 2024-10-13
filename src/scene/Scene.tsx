@@ -1,7 +1,8 @@
 import { Line } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import { folder, useControls } from "leva";
 import React, { type FC, Fragment, useContext, useMemo } from "react";
-import { Vector3 } from "three";
+import { BufferAttribute, BufferGeometry, Vector3 } from "three";
 import { AppContext } from "../App";
 import { Icosphere } from "../board/Icosphere";
 import { getShapeName, validateBoard } from "../board/boardHelpers";
@@ -12,10 +13,15 @@ import { IcoMeshes } from "./IcoMeshes";
 import { Label } from "./Label";
 import { ChunkMesh } from "./chunk/ChunkMesh";
 
+import frag from "./chunk/chunk.frag";
+import vert from "./chunk/chunk.vert";
+
+const vert3D = `${vert}`.replace("#define IS_3D 0", "#define IS_3D 1");
+
 export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
   //----------------------------------------------------------------------------
 
-  const { projectCoords, projectCoordsArray } = useContext(AppContext);
+  const { is3D, projectCoords, projectCoordsArray } = useContext(AppContext);
   const { doSwap, show, showTileIndices } = useControls({
     tiles: folder({
       doSwap: true,
@@ -25,17 +31,81 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
     }),
   });
 
-  const { tiles, chunks } = useMemo(() => {
+  const { tiles, chunks, triangles, tilePositionAttribute } = useMemo(() => {
     const board = new Icosphere(icosphereSize, doSwap);
     validateBoard(board);
-    return board;
+
+    const buffer = new Float32Array(board.tiles.length * 3.0);
+    for (const tile of board.tiles) {
+      buffer[tile.index * 3] = tile.xyz.x;
+      buffer[tile.index * 3 + 1] = tile.xyz.y;
+      buffer[tile.index * 3 + 2] = tile.xyz.z;
+    }
+    const tilePositionAttribute = new BufferAttribute(buffer, 3, false);
+    return { ...board, tilePositionAttribute };
   }, [icosphereSize, doSwap]);
+  console.log(tiles.length);
 
   //----------------------------------------------------------------------------
 
+  const indices = useMemo(() => {
+    const result = new Uint32Array(triangles.length * 3);
+    let i = 0;
+    for (const tri of triangles) {
+      result[i++] = tri.a.index;
+      result[i++] = tri.b.index;
+      result[i++] = tri.c.index;
+    }
+    return result;
+  }, [triangles]);
+
+  const uniforms = React.useMemo(
+    () => ({
+      v_time: { value: 0.0 },
+    }),
+    [],
+  );
+
+  const ref = React.useRef(new BufferGeometry());
+  React.useEffect(() => {
+    ref.current.setAttribute("position", tilePositionAttribute);
+  }, [tilePositionAttribute]);
+
+  useFrame((_, delta) => {
+    uniforms.v_time.value += delta;
+  });
+
   return (
-    <Fragment key={`${icosphereSize} ${doSwap}`}>
-      {show &&
+    <mesh rotation={is3D ? undefined : [-Math.PI / 2.0, 0, 0]}>
+      <bufferGeometry ref={ref}>
+        <bufferAttribute
+          attach="index"
+          array={indices}
+          count={indices.length}
+          itemSize={1}
+        />
+      </bufferGeometry>
+      {is3D ? (
+        <shaderMaterial
+          key={4321}
+          uniforms={uniforms}
+          vertexShader={vert3D}
+          fragmentShader={frag}
+        />
+      ) : (
+        <shaderMaterial
+          key={1234}
+          uniforms={uniforms}
+          vertexShader={vert}
+          fragmentShader={frag}
+        />
+      )}
+    </mesh>
+  );
+};
+
+/*
+{show &&
         tiles.map((tile) => {
           const [tilePosition, ...coords] = projectCoordsArray(
             [tile.coords].concat(
@@ -139,9 +209,11 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
           );
         })}
       {chunks.map((chunk) => (
-        <ChunkMesh key={chunk.index} chunk={chunk} />
+        <ChunkMesh
+          key={chunk.index}
+          chunk={chunk}
+          tilePositionAttribute={tilePositionAttribute}
+        />
       ))}
       <IcoMeshes />
-    </Fragment>
-  );
-};
+ */

@@ -51,7 +51,7 @@ const StyledButtonHolder = styled.div`
 `;
 
 const minResolution = 0;
-const maxResolution = 8;
+const maxResolution = 39;
 const defaultResolution = 1;
 
 const dbp = Icosahedron.distBetweenPoints;
@@ -234,13 +234,13 @@ const App = () => {
         <HtmlOverlaysProvider>
           <Canvas>
             <Stats />
+            <Scene icosphereSize={icosphereSize} />
             <directionalLight rotation={[45, 45, 45]} />
             {is3D ? (
               <group key="3D">
                 {true && <axesHelper args={[5]} />}
                 <OrbitControls />
                 <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
-                <Scene icosphereSize={icosphereSize} />
               </group>
             ) : (
               <group key="2D">
@@ -250,9 +250,6 @@ const App = () => {
                   position={[0, 6, 0]}
                   rotation={[Math.PI / 2.0, 0, 0]}
                 />
-                <group position={[0, 0, 0]} rotation={[-Math.PI / 2.0, 0, 0]}>
-                  <Scene icosphereSize={icosphereSize} />
-                </group>
                 <Grid
                   position={[0, 0.01, 0]}
                   side={DoubleSide}
