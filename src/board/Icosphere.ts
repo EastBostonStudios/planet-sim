@@ -1,6 +1,7 @@
+import { type Vector2, Vector3 } from "three";
 import { getTriangleNumber } from "../utils/mathUtils";
-
 import * as Icosahedron from "./Icosahedron";
+import { xyzToLatLng } from "./sphereMath";
 
 const chunkSize = 8;
 
@@ -37,6 +38,8 @@ export type IcoTile = {
   readonly coords: IcoCoords;
   readonly neighbors: IcoTile[];
   readonly shape: IcoTileShape;
+  readonly xyz: Vector3;
+  readonly lngLat: Vector2;
 };
 
 export type IcoTriangle = {
@@ -235,6 +238,21 @@ export class Icosphere {
 
   //----------------------------------------------------------------------------
 
+  private readonly interpolateOnFace = (
+    a: Vector3,
+    b: Vector3,
+    c: Vector3,
+    x: number,
+    y: number,
+  ): Vector3 => {
+    if (x < 0 || x > 1 || y < 0 || y > 1 || y > x)
+      throw new Error(`(${x}, ${y}) out of bounds!`);
+    if (x === 0) return a;
+    const ab = new Vector3().lerpVectors(a, b, x);
+    const ca = new Vector3().lerpVectors(a, c, x);
+    return new Vector3().lerpVectors(ab, ca, y / x);
+  };
+
   private readonly createTile = (
     index: number,
     face: Icosahedron.Face,
@@ -254,9 +272,19 @@ export class Icosphere {
             shape === IcoTileShape.Swap3PentagonB
           ? 5
           : 7;
+    const xyz = this.interpolateOnFace(
+      face.a.xyz,
+      face.b.xyz,
+      face.c.xyz,
+      x,
+      y,
+    ).normalize();
+    const lngLat = xyzToLatLng(xyz);
     this.tiles[index] = {
       index,
       coords: { face, x, y },
+      xyz,
+      lngLat,
       neighbors: new Array(neighborCount),
       shape,
     };

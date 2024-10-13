@@ -1,54 +1,111 @@
 import { Line } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import { folder, useControls } from "leva";
 import React, { type FC, Fragment, useContext, useMemo } from "react";
-import { Vector3 } from "three";
+import { BufferAttribute, BufferGeometry, Vector3 } from "three";
 import { AppContext } from "../App";
 import { Icosphere } from "../board/Icosphere";
 import { getShapeName, validateBoard } from "../board/boardHelpers";
-import { getCenter, lerpToward } from "../utils/mathUtils";
+import { lerpToward } from "../utils/mathUtils";
 import { getColorForIndex } from "../utils/renderingUtils";
+import { ArrayAttribute } from "./ArrayAttribute";
 import { IcoMeshes } from "./IcoMeshes";
 import { Label } from "./Label";
+import { ChunkMesh } from "./chunk/ChunkMesh";
 
-const ArrayAttribute: FC<{
-  attribute: string;
-  array: Float32Array;
-  itemSize: number;
-}> = ({ attribute, array, itemSize }) => {
-  return (
-    <bufferAttribute
-      attach={`attributes-${attribute}`}
-      array={array}
-      count={array.length / itemSize}
-      itemSize={itemSize}
-    />
-  );
-};
+import frag from "./chunk/chunk.frag";
+import vert from "./chunk/chunk.vert";
+
+const vert3D = `${vert}`.replace("#define IS_3D 0", "#define IS_3D 1");
 
 export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
   //----------------------------------------------------------------------------
 
-  const { projectCoords, projectCoordsArray } = useContext(AppContext);
-  const { doSwap, showTiles, showTileIndices, showChunks } = useControls({
+  const { is3D, projectCoords, projectCoordsArray } = useContext(AppContext);
+  const { doSwap, show, showTileIndices } = useControls({
     tiles: folder({
       doSwap: true,
-      showTiles: true,
+      show: false,
       showTileIndices: false,
       showChunks: false,
     }),
   });
 
-  const { tiles, chunks } = useMemo(() => {
+  const { tiles, chunks, triangles, tilePositionAttribute } = useMemo(() => {
     const board = new Icosphere(icosphereSize, doSwap);
     validateBoard(board);
-    return board;
+
+    const buffer = new Float32Array(board.tiles.length * 3.0);
+    for (const tile of board.tiles) {
+      buffer[tile.index * 3] = tile.xyz.x;
+      buffer[tile.index * 3 + 1] = tile.xyz.y;
+      buffer[tile.index * 3 + 2] = tile.xyz.z;
+    }
+    const tilePositionAttribute = new BufferAttribute(buffer, 3, false);
+    return { ...board, tilePositionAttribute };
   }, [icosphereSize, doSwap]);
+  console.log(tiles.length);
 
   //----------------------------------------------------------------------------
 
+  const indices = useMemo(() => {
+    const result = new Uint32Array(triangles.length * 3);
+    let i = 0;
+    for (const tri of triangles) {
+      result[i++] = tri.a.index;
+      result[i++] = tri.b.index;
+      result[i++] = tri.c.index;
+    }
+    return result;
+  }, [triangles]);
+
+  const uniforms = React.useMemo(
+    () => ({
+      v_time: { value: 0.0 },
+    }),
+    [],
+  );
+
+  const ref = React.useRef(new BufferGeometry());
+  React.useEffect(() => {
+    ref.current.setAttribute("position", tilePositionAttribute);
+  }, [tilePositionAttribute]);
+
+  useFrame((_, delta) => {
+    uniforms.v_time.value += delta;
+  });
+
   return (
-    <Fragment key={`${icosphereSize} ${doSwap}`}>
-      {showTiles &&
+    <mesh rotation={is3D ? undefined : [-Math.PI / 2.0, 0, 0]}>
+      <bufferGeometry ref={ref}>
+        <bufferAttribute
+          attach="index"
+          array={indices}
+          count={indices.length}
+          itemSize={1}
+        />
+      </bufferGeometry>
+      {is3D ? (
+        <shaderMaterial
+          key={4321}
+          uniforms={uniforms}
+          vertexShader={vert3D}
+          fragmentShader={frag}
+        />
+      ) : (
+        <shaderMaterial
+          key={1234}
+          uniforms={uniforms}
+          vertexShader={vert}
+          fragmentShader={frag}
+        />
+      )}
+    </mesh>
+  );
+};
+
+/*
+{show &&
         tiles.map((tile) => {
           const [tilePosition, ...coords] = projectCoordsArray(
             [tile.coords].concat(
@@ -151,100 +208,12 @@ export const Scene: FC<{ icosphereSize: number }> = ({ icosphereSize }) => {
             </group>
           );
         })}
-      {showChunks &&
-        chunks.flatMap((chunk) => {
-          const points = new Array<Vector3>();
-          const triCenters = new Array<Vector3>();
-          const chunkCenter = new Vector3();
-          for (const tri of chunk.triangles) {
-            if (!tri) continue;
-            const p0 = projectCoords(tri.a.coords);
-            const p1 = projectCoords(tri.b.coords);
-            const p2 = projectCoords(tri.c.coords);
-            if (Math.abs(p1.x - p0.x) > 0.8 || Math.abs(p2.x - p0.x) > 0.8)
-              continue; // TODO: figure out wrapping
-            points.push(
-              ...[p0, p1, p2].map((p) =>
-                lerpToward(p, getCenter([p0, p1, p2])),
-              ),
-            );
-            chunkCenter.add(p0).add(p1).add(p2);
-            triCenters.push(
-              new Vector3().add(p0).add(p1).add(p2).divideScalar(3.0),
-            );
-          }
-          chunkCenter.divideScalar(points.length);
-
-          const positions = new Float32Array(
-            points.flatMap(({ x, y, z }) => [x, y, z]),
-          );
-          const colors = new Float32Array(
-            points.flatMap(() => getColorForIndex(chunk.index) /*rgb.flat()*/),
-          );
-
-          //if (chunk.face.index === 0) console.log(chunk.index, chunk.tris);
-
-          return positions.length === 0 ? null : (
-            <Fragment key={chunk.index}>
-              {false && <Line points={triCenters} lineWidth={4} />}
-              {false &&
-                chunk.triangles.map((tri) => {
-                  if (!tri) return null;
-                  const p0 = projectCoords(tri.a.coords);
-                  const p1 = projectCoords(tri.b.coords);
-                  const p2 = projectCoords(tri.c.coords);
-                  if (
-                    Math.abs(p1.x - p0.x) > 0.8 ||
-                    Math.abs(p2.x - p0.x) > 0.8
-                  )
-                    return null;
-                  const center = new Vector3()
-                    .add(p0)
-                    .add(p1)
-                    .add(p2)
-                    .divideScalar(3.0);
-                  return (
-                    <Label key={tri.index} position={center}>
-                      t{tri.index}
-                    </Label>
-                  );
-                })}
-              {false && <Label position={chunkCenter}>c{chunk.index}</Label>}
-              <mesh>
-                <bufferGeometry>
-                  <ArrayAttribute
-                    attribute="position"
-                    array={positions}
-                    itemSize={3}
-                  />
-                  <ArrayAttribute
-                    attribute="color"
-                    array={colors}
-                    itemSize={3}
-                  />
-                </bufferGeometry>
-                <meshBasicMaterial
-                  vertexColors={true}
-                  transparent={true}
-                  polygonOffset={true}
-                  polygonOffsetFactor={10}
-                  polygonOffsetUnits={10}
-                />
-              </mesh>
-              <mesh>
-                <bufferGeometry>
-                  <ArrayAttribute
-                    attribute="position"
-                    array={positions}
-                    itemSize={3}
-                  />
-                </bufferGeometry>
-                <meshBasicMaterial wireframe={true} color={"black"} />
-              </mesh>
-            </Fragment>
-          );
-        })}
+      {chunks.map((chunk) => (
+        <ChunkMesh
+          key={chunk.index}
+          chunk={chunk}
+          tilePositionAttribute={tilePositionAttribute}
+        />
+      ))}
       <IcoMeshes />
-    </Fragment>
-  );
-};
+ */

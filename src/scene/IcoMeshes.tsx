@@ -25,7 +25,7 @@ export const IcoMeshes: FC = () => {
       {showPoints &&
         Icosahedron.points.map((point) => (
           <Label key={point.index} position={pointProjector(point)}>
-            p{point.index}
+            p{point.index} ({point.lngLat.x}, {point.lngLat.y})
           </Label>
         ))}
       {showEdges &&

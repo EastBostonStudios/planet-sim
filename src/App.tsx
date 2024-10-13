@@ -15,6 +15,7 @@ import * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
 import type { IcoCoords } from "./board/Icosphere";
 import { Scene } from "./scene/Scene";
+import { foo } from "./shaderTest/webComputeTest";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 import { interpolateOnFace } from "./utils/mathUtils";
 
@@ -50,10 +51,9 @@ const StyledButtonHolder = styled.div`
 `;
 
 const minResolution = 0;
-const maxResolution = 8;
+const maxResolution = 39;
 const defaultResolution = 1;
 
-const theta = Math.PI + 1.0172219678840608; // atan(phi, 1) Rotates 0 down to y = -1
 const dbp = Icosahedron.distBetweenPoints;
 
 //------------------------------------------------------------------------------
@@ -93,13 +93,7 @@ const App = () => {
   const { pointProjector, projectCoords, projectCoordsArray } =
     React.useMemo(() => {
       const projector3D: (point: Icosahedron.Point) => Vector3 = (point) =>
-        new Vector3(
-          point.coords3D.x * Math.cos(theta) -
-            point.coords3D.y * Math.sin(theta),
-          point.coords3D.x * Math.sin(theta) +
-            point.coords3D.y * Math.cos(theta),
-          point.coords3D.z,
-        );
+        point.xyz;
 
       const projector2D: (
         point: Icosahedron.Point,
@@ -192,6 +186,7 @@ const App = () => {
   //----------------------------------------------------------------------------
 
   React.useEffect(() => {
+    foo();
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "scroll";
@@ -239,13 +234,13 @@ const App = () => {
         <HtmlOverlaysProvider>
           <Canvas>
             <Stats />
+            <Scene icosphereSize={icosphereSize} />
             <directionalLight rotation={[45, 45, 45]} />
             {is3D ? (
               <group key="3D">
-                {false && <axesHelper args={[5]} />}
+                {true && <axesHelper args={[5]} />}
                 <OrbitControls />
                 <PerspectiveCamera makeDefault position={[-3, 0, 1]} />
-                <Scene icosphereSize={icosphereSize} />
               </group>
             ) : (
               <group key="2D">
@@ -255,12 +250,6 @@ const App = () => {
                   position={[0, 6, 0]}
                   rotation={[Math.PI / 2.0, 0, 0]}
                 />
-                <group
-                  position={[-dbp * 1.75, 0, dbp * 1.25]}
-                  rotation={[-Math.PI / 2.0, 0, 0]}
-                >
-                  <Scene icosphereSize={icosphereSize} />
-                </group>
                 <Grid
                   position={[0, 0.01, 0]}
                   side={DoubleSide}
