@@ -6,7 +6,7 @@ import {
   createBrowserRouter,
 } from "react-router-dom";
 import "./index.css";
-import App from "./App";
+import App3 from "./App3";
 
 const root = document.getElementById("root");
 const reactRoot = !root ? undefined : ReactDOM.createRoot(root);
@@ -19,7 +19,7 @@ const router = createBrowserRouter([
   {
     // This must match "homepage" in package.json to work with GitHub pages
     path: "/planet-sim",
-    element: <App />,
+    element: <App3 />,
   },
 ]);
 

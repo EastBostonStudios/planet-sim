@@ -1,3 +1,4 @@
+import { BufferAttribute, StorageBufferAttribute } from "three";
 import test from "./test.wgsl?raw";
 
 export const foo = async () => {
@@ -16,7 +17,7 @@ export const foo = async () => {
     code: test,
   });
 
-  const c = gpuDevice.createBindGroupLayout({
+  const gpuBindGroupLayout = gpuDevice.createBindGroupLayout({
     entries: new Array<GPUBindGroupLayoutEntry>({
       binding: 1,
       visibility: GPUShaderStage.COMPUTE,
@@ -24,39 +25,50 @@ export const foo = async () => {
     }),
   });
 
-  const d = gpuDevice.createComputePipeline({
-    layout: gpuDevice.createPipelineLayout({ bindGroupLayouts: [c] }),
+  const gpuComputePipeline = gpuDevice.createComputePipeline({
+    layout: gpuDevice.createPipelineLayout({
+      bindGroupLayouts: [gpuBindGroupLayout],
+    }),
     compute: { module: gpuShaderModule, entryPoint: "main" },
   });
 
   const o = 1e3;
 
-  const s = gpuDevice.createBuffer({
+  const inputGpuBuffer = gpuDevice.createBuffer({
     size: o,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
   });
 
-  const i = gpuDevice.createBuffer({
+  const outputGpuBuffer = gpuDevice.createBuffer({
     size: o,
     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   });
 
-  const p = gpuDevice.createBindGroup({
-    layout: c,
-    entries: [{ binding: 1, resource: { buffer: s } }],
+  const gpuBindGroup = gpuDevice.createBindGroup({
+    layout: gpuBindGroupLayout,
+    entries: [{ binding: 1, resource: { buffer: inputGpuBuffer } }],
   });
 
-  const n = gpuDevice.createCommandEncoder();
+  const gpuCommandEncoder = gpuDevice.createCommandEncoder();
 
-  const t = n.beginComputePass();
-  t.setPipeline(d);
-  t.setBindGroup(0, p);
-  t.dispatchWorkgroups(Math.ceil(o / 64));
-  t.end();
-  n.copyBufferToBuffer(s, 0, i, 0, o);
-  const f = n.finish();
-  gpuDevice.queue.submit([f]);
-  await i.mapAsync(GPUMapMode.READ, 0, o);
-  const g = i.getMappedRange(0, o);
-  // console.log(new Float32Array(g));
+  const gpuComputePassEncoder = gpuCommandEncoder.beginComputePass();
+  gpuComputePassEncoder.setPipeline(gpuComputePipeline);
+  gpuComputePassEncoder.setBindGroup(0, gpuBindGroup);
+  gpuComputePassEncoder.dispatchWorkgroups(Math.ceil(o / 64));
+  gpuComputePassEncoder.end();
+  gpuCommandEncoder.copyBufferToBuffer(
+    inputGpuBuffer,
+    0,
+    outputGpuBuffer,
+    0,
+    o,
+  );
+  const gpuCommandBuffer = gpuCommandEncoder.finish();
+  gpuDevice.queue.submit([gpuCommandBuffer]);
+  await outputGpuBuffer.mapAsync(GPUMapMode.READ, 0, o);
+  const outputArrayBuffer = outputGpuBuffer.getMappedRange(0, o);
+  const outputTypedArray = new Float32Array(outputArrayBuffer);
+  const outputBufferAttribute = new BufferAttribute(outputTypedArray, 3);
+  const two = new StorageBufferAttribute();
+  return outputBufferAttribute;
 };
