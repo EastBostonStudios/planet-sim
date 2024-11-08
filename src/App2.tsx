@@ -1,3 +1,4 @@
+import { Stats } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as React from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -79,6 +80,7 @@ export const App2 = () => {
           return renderer;
         }}
       >
+        <Stats />
         <RotatingBox />
         {isInitialized && <Scene />}
       </Canvas>
@@ -104,14 +106,29 @@ const RotatingBox = () => {
 };
 
 const Scene = () => {
-  const positionBuffer = useMemo(
-    () =>
-      new THREE_WEBGPU.StorageBufferAttribute(
-        new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0]),
-        3,
-      ),
-    [],
-  );
+  const positionBuffer = useMemo(() => {
+    const numTris = 10000000;
+    const arr = new Float32Array(numTris);
+    for (let i = 0; i < arr.length; i++) {
+      const x = (i % 1000) - 500;
+      const y = i / 1000 - 500;
+      arr[i * 9 + 0] = x;
+      arr[i * 9 + 1] = y;
+      arr[i * 9 + 2] = 0;
+
+      arr[i * 9 + 3] = x + 1;
+      arr[i * 9 + 4] = y;
+      arr[i * 9 + 5] = 0;
+
+      arr[i * 9 + 6] = x + 1;
+      arr[i * 9 + 7] = y + 1;
+      arr[i * 9 + 8] = 0;
+    }
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] /= 10.0;
+    }
+    return new THREE_WEBGPU.StorageBufferAttribute(arr, 3);
+  }, []);
 
   const { computePositions, time } = useMemo(() => {
     // @builtin(global_invocation_id)
@@ -128,7 +145,10 @@ const Scene = () => {
     };
 
     return {
-      computePositions: computeShader(computeShaderParams).compute(4, [64]),
+      computePositions: computeShader(computeShaderParams).compute(
+        positionBuffer.count,
+        [64],
+      ),
       time,
     };
   }, [positionBuffer]);
@@ -139,9 +159,9 @@ const Scene = () => {
     ref.current!.setAttribute("position", positionBuffer);
   }, [ref]);
 
-  useFrame(({ gl }) => {
-    time.value = performance.now() / 1000;
-    (gl as THREE.WebGPURenderer).compute(computePositions);
+  useFrame(({ gl, clock }) => {
+    time.value = clock.elapsedTime;
+    (gl as THREE_WEBGPU.WebGPURenderer).compute(computePositions);
   });
 
   return (
