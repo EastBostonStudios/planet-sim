@@ -1,10 +1,17 @@
-import { Stats } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import * as React from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+  type FC,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import styled from "styled-components";
 import * as THREE_WEBGPU from "three/webgpu";
 import computePositionsShader from "./scene/chunk/computePositions.wgsl";
+import computePositions2Shader from "./scene/chunk/computePositions2.wgsl";
+import MyWorker from "./scene/setup.worker?worker";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -15,42 +22,12 @@ const StyledApp = styled.div`
   background-color: darkslategray;
 `;
 
-/*const particleCount = 1000;
-
-const createBuffer = () =>
-  storage(
-    new THREE.StorageInstancedBufferAttribute(particleCount, 3),
-    "vec3",
-    particleCount,
-  );
-const buffer = createBuffer();
-
-const computeUpdate = Fn(() => {
-  const position = positionBuffer.element(instanceIndex);
-  const velocity = velocityBuffer.element(instanceIndex);
-
-  velocity.addAssign(vec3(0.0, gravity, 0.0));
-  position.addAssign(velocity);
-
-  velocity.mulAssign(friction);
-
-  // floor
-
-  If(position.y.lessThan(0), () => {
-    position.y = 0;
-    velocity.y = velocity.y.negate().mul(bounce);
-
-    // floor friction
-
-    velocity.x = velocity.x.mul(0.9);
-    velocity.z = velocity.z.mul(0.9);
-  });
-});
-
-computeParticles = computeUpdate().compute(particleCount);*/
-
 export const App2 = () => {
   //----------------------------------------------------------------------------
+
+  const [frameLoop, setFrameLoop] = useState<"never" | "always">("never");
+  const [positionBuffer, setPositionBuffer] =
+    useState<THREE_WEBGPU.StorageBufferAttribute>();
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -59,30 +36,37 @@ export const App2 = () => {
     };
   }, []);
 
-  /*const ref = useRef<InstancedMesh>(null);
-  useLayoutEffect(() => {
-    init().then(render);
-  }, []);*/
-
-  //----------------------------------------------------------------------------
-
-  const [isInitialized, setIsInitialized] = useState(false);
+  useEffect(() => {
+    const worker = new MyWorker();
+    worker.onmessage = async (message) => {
+      worker.terminate();
+      console.log(message.data);
+      setPositionBuffer(
+        new THREE_WEBGPU.StorageBufferAttribute(message.data, 3),
+      );
+    };
+    worker.onerror = async (error) => {
+      worker.terminate();
+      console.error(error);
+    };
+    worker.postMessage({});
+    return;
+  }, []);
 
   return (
     <StyledApp>
       <Canvas
+        frameloop={frameLoop}
         gl={(canvas) => {
           const renderer = new THREE_WEBGPU.WebGPURenderer({
-            canvas,
+            canvas: canvas as HTMLCanvasElement,
             antialias: true,
           });
-          renderer.init().then(() => setIsInitialized(true));
+          renderer.init().then(() => setFrameLoop("always"));
           return renderer;
         }}
       >
-        <Stats />
-        <RotatingBox />
-        {isInitialized && <Scene />}
+        {positionBuffer && <Scene positionBuffer={positionBuffer} />}
       </Canvas>
     </StyledApp>
   );
@@ -99,69 +83,77 @@ const RotatingBox = () => {
   });
   return (
     <mesh ref={ref}>
-      <boxGeometry args={[1, 1, 1]} />
+      <boxGeometry args={[0.1, 0.1, 0.1]} />
       <meshStandardMaterial color={"hotpink"} />
     </mesh>
   );
 };
 
-const Scene = () => {
-  const positionBuffer = useMemo(() => {
-    const numTris = 10000000;
-    const arr = new Float32Array(numTris);
-    for (let i = 0; i < arr.length; i++) {
-      const x = (i % 1000) - 500;
-      const y = i / 1000 - 500;
-      arr[i * 9 + 0] = x;
-      arr[i * 9 + 1] = y;
-      arr[i * 9 + 2] = 0;
-
-      arr[i * 9 + 3] = x + 1;
-      arr[i * 9 + 4] = y;
-      arr[i * 9 + 5] = 0;
-
-      arr[i * 9 + 6] = x + 1;
-      arr[i * 9 + 7] = y + 1;
-      arr[i * 9 + 8] = 0;
-    }
-    for (let i = 0; i < arr.length; i++) {
-      arr[i] /= 10.0;
-    }
-    return new THREE_WEBGPU.StorageBufferAttribute(arr, 3);
-  }, []);
-
-  const { computePositions, time } = useMemo(() => {
-    // @builtin(global_invocation_id)
-    const computeShader = THREE_WEBGPU.wgslFn(computePositionsShader);
-
+const Scene: FC<{ positionBuffer: THREE_WEBGPU.StorageBufferAttribute }> = ({
+  positionBuffer,
+}) => {
+  const params = useMemo(() => {
+    const position_buffer = THREE_WEBGPU.storage(
+      positionBuffer,
+      "vec3",
+      positionBuffer.count,
+    );
     const time = THREE_WEBGPU.uniform(0);
-    const computeShaderParams = {
-      positionBuffer: THREE_WEBGPU.storage(
-        positionBuffer,
-        "vec3",
-        positionBuffer.count,
-      ),
-      time,
-    };
-
     return {
-      computePositions: computeShader(computeShaderParams).compute(
-        positionBuffer.count,
-        [64],
-      ),
+      position_buffer,
       time,
     };
   }, [positionBuffer]);
+
+  const { computePositions, computePositions2 } = useMemo(() => {
+    // @builtin(global_invocation_id)
+    const computeShader = THREE_WEBGPU.wgslFn(computePositionsShader);
+    const compute2Shader = THREE_WEBGPU.wgslFn(computePositions2Shader);
+
+    const call = computeShader(params);
+    const compute = call.compute(positionBuffer.count, [64]);
+    return {
+      computePositions: compute,
+      computePositions2: compute2Shader(params).compute(
+        positionBuffer.count,
+        [64],
+      ),
+    };
+  }, [params, positionBuffer.count]);
 
   const ref = useRef<THREE_WEBGPU.BufferGeometry>(null);
 
   useLayoutEffect(() => {
     ref.current!.setAttribute("position", positionBuffer);
-  }, [ref]);
+  }, [positionBuffer]);
+
+  const computeCommands = useMemo(
+    () => [
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+      computePositions,
+      computePositions2,
+    ],
+    [computePositions, computePositions2],
+  );
 
   useFrame(({ gl, clock }) => {
-    time.value = clock.elapsedTime;
-    (gl as THREE_WEBGPU.WebGPURenderer).compute(computePositions);
+    params.time.value = clock.elapsedTime;
+    (gl as THREE_WEBGPU.WebGPURenderer).compute(computeCommands);
   });
 
   return (
