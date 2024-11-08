@@ -3,6 +3,7 @@ import * as React from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import * as THREE_WEBGPU from "three/webgpu";
+import computePositionsShader from "./scene/chunk/computePositions.wgsl";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -114,14 +115,7 @@ const Scene = () => {
 
   const { computePositions, time } = useMemo(() => {
     // @builtin(global_invocation_id)
-    const computeShader = THREE_WEBGPU.wgslFn(`
-      fn compute(
-        positionBuffer: ptr<storage, array<vec3<f32>>, read_write>,
-        time: f32
-      ) -> void {
-        (*positionBuffer)[instanceIndex] = (*positionBuffer)[instanceIndex] + 0.01 * vec3(1.0, 1.0, 1.0) * sin(time);
-      }
-    `);
+    const computeShader = THREE_WEBGPU.wgslFn(computePositionsShader);
 
     const time = THREE_WEBGPU.uniform(0);
     const computeShaderParams = {
