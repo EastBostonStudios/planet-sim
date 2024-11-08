@@ -6,15 +6,19 @@ import {
   Stats,
 } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import { folder, useControls } from "leva";
 import * as React from "react";
-import { createContext } from "react";
+import { createContext, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
-import { DoubleSide, Vector3 } from "three";
+import { BufferAttribute, DoubleSide, Vector3 } from "three";
 import * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
-import type { IcoCoords } from "./board/Icosphere";
-import { Scene } from "./scene/Scene";
+import { type IcoCoords, Icosphere } from "./board/Icosphere";
+import { validateBoard } from "./board/boardHelpers";
+import { latLngToXYZ } from "./board/sphereMath";
+import { MainMap } from "./scene/MainMap";
+import { Minimap } from "./scene/Minimap";
 import { foo } from "./shaderTest/webComputeTest";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 import { interpolateOnFace } from "./utils/mathUtils";
@@ -186,7 +190,7 @@ const App = () => {
   //----------------------------------------------------------------------------
 
   React.useEffect(() => {
-    foo();
+    //foo();
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "scroll";
@@ -194,6 +198,58 @@ const App = () => {
   }, []);
 
   //----------------------------------------------------------------------------
+
+  const { doSwap, show, showTileIndices } = useControls({
+    tiles: folder({
+      doSwap: true,
+      show: false,
+      showTileIndices: false,
+      showChunks: false,
+    }),
+  });
+
+  const { triangles, tilePositionAttribute, tile2DPositionAttribute } =
+    useMemo(() => {
+      const board = new Icosphere(icosphereSize, doSwap);
+      validateBoard(board);
+
+      const buffer = new Float32Array(board.tiles.length * 3.0);
+      const tile2DPositionBuffer = new Float32Array(board.tiles.length * 3.0);
+      for (const tile of board.tiles) {
+        buffer[tile.index * 3] = tile.xyz.x;
+        buffer[tile.index * 3 + 1] = tile.xyz.y;
+        buffer[tile.index * 3 + 2] = tile.xyz.z;
+
+        const position2D = new Vector3().addVectors(
+          latLngToXYZ(tile.lngLat),
+          new Vector3(
+            -0.0001 * Math.abs(tile.lngLat.x), // Hides wrapping
+          ),
+        );
+
+        tile2DPositionBuffer[tile.index * 3] = position2D.x;
+        tile2DPositionBuffer[tile.index * 3 + 1] = position2D.y;
+        tile2DPositionBuffer[tile.index * 3 + 2] = position2D.z;
+      }
+      const tilePositionAttribute = new BufferAttribute(buffer, 3, false);
+      const tile2DPositionAttribute = new BufferAttribute(
+        tile2DPositionBuffer,
+        3,
+        false,
+      );
+      return { ...board, tilePositionAttribute, tile2DPositionAttribute };
+    }, [icosphereSize, doSwap]);
+
+  const indices = useMemo(() => {
+    const result = new Uint32Array(triangles.length * 3);
+    let i = 0;
+    for (const tri of triangles) {
+      result[i++] = tri.a.index;
+      result[i++] = tri.b.index;
+      result[i++] = tri.c.index;
+    }
+    return result;
+  }, [triangles]);
 
   return (
     <AppContext.Provider
@@ -234,7 +290,10 @@ const App = () => {
         <HtmlOverlaysProvider>
           <Canvas>
             <Stats />
-            <Scene icosphereSize={icosphereSize} />
+            <MainMap
+              tilePositionAttribute={tilePositionAttribute}
+              indices={indices}
+            />
             <directionalLight rotation={[45, 45, 45]} />
             {is3D ? (
               <group key="3D">
@@ -262,6 +321,18 @@ const App = () => {
               </group>
             )}
           </Canvas>
+          <Minimap
+            style={{
+              position: "absolute",
+              width: "200px",
+              height: "100px",
+              right: "2rem",
+              bottom: "2rem",
+              backgroundColor: "red",
+            }}
+            tilePositionAttribute={tile2DPositionAttribute}
+            indices={indices}
+          />
         </HtmlOverlaysProvider>
       </StyledApp>
     </AppContext.Provider>

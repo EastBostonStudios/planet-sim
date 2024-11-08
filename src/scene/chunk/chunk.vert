@@ -35,20 +35,12 @@ void main() {
     );
     v_lng_lat = lng_lat;
 
-    #if (IS_3D == 1)
+    //#if (IS_3D == 1)
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    #else
+    /*#else
         // Vector must be normalized!!
         float lat = asin(position.y);
         float lng = fract(1.0 + (atan(position.z, -position.x) / (2.0 * M_PI)) + v_time * 0.1) * 2.0 * M_PI - M_PI;
-
-        /*
-        vec3 position2 = vec3(
-            -cos(lat) * cos(lng),
-            sin(lat),
-            cos(lat) * sin(lng)
-        );
-        */
 
         vec3 position2 = vec3(
         lng * cos(lat),
@@ -56,7 +48,7 @@ void main() {
         -0.0001 * abs(lng) // Hides wrapping
         );
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position2, 1.0);
-    #endif
+    #endif*/
 
 }
 
