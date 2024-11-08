@@ -3,7 +3,8 @@ import * as React from "react";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import styled from "styled-components";
 import type { InstancedMesh } from "three";
-import { foo } from "./shaderTest/webComputeTest";
+import * as THREE from "three/webgpu";
+import { init, render } from "./test";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -13,6 +14,40 @@ const StyledApp = styled.div`
   right: 0;
   background-color: darkslategray;
 `;
+
+/*const particleCount = 1000;
+
+const createBuffer = () =>
+  storage(
+    new THREE.StorageInstancedBufferAttribute(particleCount, 3),
+    "vec3",
+    particleCount,
+  );
+const buffer = createBuffer();
+
+const computeUpdate = Fn(() => {
+  const position = positionBuffer.element(instanceIndex);
+  const velocity = velocityBuffer.element(instanceIndex);
+
+  velocity.addAssign(vec3(0.0, gravity, 0.0));
+  position.addAssign(velocity);
+
+  velocity.mulAssign(friction);
+
+  // floor
+
+  If(position.y.lessThan(0), () => {
+    position.y = 0;
+    velocity.y = velocity.y.negate().mul(bounce);
+
+    // floor friction
+
+    velocity.x = velocity.x.mul(0.9);
+    velocity.z = velocity.z.mul(0.9);
+  });
+});
+
+computeParticles = computeUpdate().compute(particleCount);*/
 
 export const App2 = () => {
   //----------------------------------------------------------------------------
@@ -24,27 +59,33 @@ export const App2 = () => {
     };
   }, []);
 
-  useEffect(() => {
-    foo().then(console.log);
-  }, []);
-
   const ref = useRef<InstancedMesh>(null);
   useLayoutEffect(() => {
-    //ref.current.set;
+    init().then(render);
   }, []);
 
   //----------------------------------------------------------------------------
 
-  return (
-    <StyledApp>
-      <Canvas>
-        <instancedMesh ref={ref} args={[undefined, undefined, 1]}>
-          {false && <cubeBufferGeometry args={[1, 1, 1]} />}
-          <meshNormalMaterial />
-        </instancedMesh>
-      </Canvas>
-    </StyledApp>
-  );
+  return <StyledApp></StyledApp>;
 };
 
 export default App2;
+
+/*
+<Canvas
+        gl={(canvas) => {
+          const renderer = new THREE.WebGPURenderer({ canvas });
+          renderer.init();
+          return renderer;
+        }}
+      >
+        <mesh>
+          <boxGeometry args={[1, 1, 1]} />
+          <meshStandardMaterial color={"hotpink"} />
+        </mesh>
+        <instancedMesh ref={ref} args={[undefined, undefined, 1]}>
+          {false && <boxGeometry args={[1, 1, 1]} />}
+          <meshNormalMaterial />
+        </instancedMesh>
+      </Canvas>
+ */

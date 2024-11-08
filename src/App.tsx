@@ -11,11 +11,10 @@ import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { DoubleSide, Vector3 } from "three";
-import * as Icosahedron from "./board/Icosahedron";
+import type * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
 import type { IcoCoords } from "./board/Icosphere";
 import { Scene } from "./scene/Scene";
-import { foo } from "./shaderTest/webComputeTest";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 import { interpolateOnFace } from "./utils/mathUtils";
 
@@ -54,7 +53,7 @@ const minResolution = 0;
 const maxResolution = 39;
 const defaultResolution = 1;
 
-const dbp = Icosahedron.distBetweenPoints;
+//const dbp = Icosahedron.distBetweenPoints;
 
 //------------------------------------------------------------------------------
 
@@ -98,13 +97,14 @@ const App = () => {
       const projector2D: (
         point: Icosahedron.Point,
         offset?: number,
-      ) => Vector3 = (point, offset) =>
+      ) => Vector3 = () =>
         new Vector3(
+          /*
           point.coords2D.x * dbp -
             point.coords2D.y * dbp * 0.5 +
             (offset ?? 0) * distBetweenPoints,
           (point.coords2D.y * dbp * Math.sqrt(3.0)) / 2.0,
-          0,
+          0,*/
         );
 
       const projectCoords: (coords: IcoCoords) => Vector3 = is3D
@@ -186,7 +186,6 @@ const App = () => {
   //----------------------------------------------------------------------------
 
   React.useEffect(() => {
-    foo();
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "scroll";
