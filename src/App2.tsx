@@ -1,10 +1,8 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import * as React from "react";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
-import type { InstancedMesh } from "three";
-import * as THREE from "three/webgpu";
-import { init, render } from "./test";
+import * as THREE_WEBGPU from "three/webgpu";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -59,33 +57,109 @@ export const App2 = () => {
     };
   }, []);
 
-  const ref = useRef<InstancedMesh>(null);
+  /*const ref = useRef<InstancedMesh>(null);
   useLayoutEffect(() => {
     init().then(render);
-  }, []);
+  }, []);*/
 
   //----------------------------------------------------------------------------
 
-  return <StyledApp></StyledApp>;
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  return (
+    <StyledApp>
+      <Canvas
+        gl={(canvas) => {
+          const renderer = new THREE_WEBGPU.WebGPURenderer({
+            canvas,
+            antialias: true,
+          });
+          renderer.init().then(() => setIsInitialized(true));
+          return renderer;
+        }}
+      >
+        <RotatingBox />
+        {isInitialized && <Scene />}
+      </Canvas>
+    </StyledApp>
+  );
+};
+
+const RotatingBox = () => {
+  const ref = useRef<THREE_WEBGPU.Mesh>(null);
+  useFrame(() => {
+    if (ref.current) {
+      ref.current.rotateX(0.001);
+      ref.current.rotateY(0.005);
+      ref.current.rotateZ(0.003);
+    }
+  });
+  return (
+    <mesh ref={ref}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color={"hotpink"} />
+    </mesh>
+  );
+};
+
+const Scene = () => {
+  const positionBuffer = useMemo(
+    () =>
+      new THREE_WEBGPU.StorageBufferAttribute(
+        new Float32Array([0, 0, 0, 1, 0, 0, 1, 1, 0]),
+        3,
+      ),
+    [],
+  );
+
+  const { computePositions, time } = useMemo(() => {
+    // @builtin(global_invocation_id)
+    const computeShader = THREE_WEBGPU.wgslFn(`
+      fn compute(
+        positionBuffer: ptr<storage, array<vec3<f32>>, read_write>,
+        time: f32
+      ) -> void {
+        (*positionBuffer)[instanceIndex] = (*positionBuffer)[instanceIndex] + 0.01 * vec3(1.0, 1.0, 1.0) * sin(time);
+      }
+    `);
+
+    const time = THREE_WEBGPU.uniform(0);
+    const computeShaderParams = {
+      positionBuffer: THREE_WEBGPU.storage(
+        positionBuffer,
+        "vec3",
+        positionBuffer.count,
+      ),
+      time,
+    };
+
+    return {
+      computePositions: computeShader(computeShaderParams).compute(4, [64]),
+      time,
+    };
+  }, [positionBuffer]);
+
+  const ref = useRef<THREE_WEBGPU.BufferGeometry>(null);
+
+  useLayoutEffect(() => {
+    ref.current!.setAttribute("position", positionBuffer);
+  }, [ref]);
+
+  useFrame(({ gl }) => {
+    time.value = performance.now() / 1000;
+    (gl as THREE.WebGPURenderer).compute(computePositions);
+  });
+
+  return (
+    <mesh>
+      <bufferGeometry ref={ref} />
+      <meshBasicMaterial />
+    </mesh>
+  );
 };
 
 export default App2;
 
 /*
-<Canvas
-        gl={(canvas) => {
-          const renderer = new THREE.WebGPURenderer({ canvas });
-          renderer.init();
-          return renderer;
-        }}
-      >
-        <mesh>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color={"hotpink"} />
-        </mesh>
-        <instancedMesh ref={ref} args={[undefined, undefined, 1]}>
-          {false && <boxGeometry args={[1, 1, 1]} />}
-          <meshNormalMaterial />
-        </instancedMesh>
-      </Canvas>
+
  */

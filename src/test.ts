@@ -40,7 +40,6 @@ let computePositions;
 export async function init() {
   await renderer.init();
 
-  /*
   const geometry = new THREE.BoxGeometry(10, 10, 10);
 
   const positions = geometry.attributes.position.array;
@@ -117,7 +116,7 @@ export async function init() {
     ).toReadOnly(),
     uvBuffer: storage(uvBuffer, "vec2", uvBuffer.count).toReadOnly(),
     index: vertexIndex,
-  };*/
+  };
 
   //You can also create a new bufferGeometry
   // const material = new THREE.MeshBasicNodeMaterial();
@@ -134,7 +133,7 @@ export async function render() {
   cube.rotation.y += 0.01;
 
   if (!computePositions) return;
-  // computePositions.computeNode.parameters.time.value = performance.now() / 1000;
+  computePositions.computeNode.parameters.time.value = performance.now() / 1000;
   // renderer.compute(computePositions);
 }
 
