@@ -40,7 +40,6 @@ export const App2 = () => {
     const worker = new MyWorker();
     worker.onmessage = async (message) => {
       worker.terminate();
-      console.log(message.data);
       setPositionBuffer(
         new THREE_WEBGPU.StorageBufferAttribute(message.data, 3),
       );
@@ -93,6 +92,7 @@ const Scene: FC<{ positionBuffer: THREE_WEBGPU.StorageBufferAttribute }> = ({
   positionBuffer,
 }) => {
   const params = useMemo(() => {
+    console.log(positionBuffer);
     const position_buffer = THREE_WEBGPU.storage(
       positionBuffer,
       "vec3",
