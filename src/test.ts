@@ -1,3 +1,4 @@
+import * as THREE2 from "three";
 import * as THREE from "three/webgpu";
 import {
   cameraProjectionMatrix,
@@ -11,22 +12,24 @@ import {
   wgslFn,
 } from "three/webgpu";
 
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000,
+);
+
 const renderer = new THREE.WebGPURenderer({ antialias: true });
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(new THREE.Color());
 document.body.appendChild(renderer.domElement);
 
-const camera = new THREE.PerspectiveCamera(
-  50.0,
-  window.innerWidth / window.innerHeight,
-  1e-1,
-  1e6,
-);
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x00001f);
-camera.position.set(10, 10, 10);
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+const cube = new THREE.Mesh(geometry, material);
+scene.add(cube);
+
+camera.position.z = 5;
 
 window.addEventListener("resize", onWindowResize, false);
 
@@ -37,6 +40,7 @@ let computePositions;
 export async function init() {
   await renderer.init();
 
+  /*
   const geometry = new THREE.BoxGeometry(10, 10, 10);
 
   const positions = geometry.attributes.position.array;
@@ -56,7 +60,7 @@ export async function init() {
         positionBuffer: ptr<storage, array<vec3<f32>>, read_write>,
         time: f32
       ) -> void {
-        positionBuffer[instanceIndex] = referenceBuffer[instanceIndex] * (0.75 + 0.25 * sin(time));
+        (*positionBuffer)[instanceIndex] = (*referenceBuffer)[instanceIndex] * (0.75 + 0.25 * sin(time));
       }
     `);
 
@@ -76,7 +80,6 @@ export async function init() {
     [64],
   );
 
-  /*
   const vertexShader = wgslFn(`
       fn main_vertex(
         projectionMatrix: mat4x4<f32>,
@@ -88,9 +91,9 @@ export async function init() {
         index: u32,
       ) -> vec4<f32> {
 
-        var position = positionBuffer[index];
-        var normal = normalBuffer[index];
-        var uv = uvBuffer[index];
+        var position = (*positionBuffer)[index];
+        var normal = (*normalBuffer)[index];
+        var uv = (*uvBuffer)[index];
 
         var outPosition = projectionMatrix * cameraViewMatrix * modelWorldMatrix * vec4f(position, 1);
     
@@ -114,24 +117,25 @@ export async function init() {
     ).toReadOnly(),
     uvBuffer: storage(uvBuffer, "vec2", uvBuffer.count).toReadOnly(),
     index: vertexIndex,
-  };
+  };*/
 
   //You can also create a new bufferGeometry
-  const material = new THREE.MeshBasicNodeMaterial();
-  material.vertexNode = vertexShader(vertexShaderParams);
-  material.fragmentNode = vec4(0, 0.25, 0.75, 1); //just a simple color
-  const box = new THREE.Mesh(geometry, material);
-  scene.add(box);
-  */
+  // const material = new THREE.MeshBasicNodeMaterial();
+  // material.vertexNode = vertexShader(vertexShaderParams);
+  // material.fragmentNode = vec4(0, 0.25, 0.75, 1); //just a simple color
 }
 
 export async function render() {
-  if (!computePositions) return;
-  requestAnimationFrame(render);
+  // requestAnimationFrame(render);
   renderer.render(scene, camera);
+  console.log(render);
 
-  computePositions.computeNode.parameters.time.value = performance.now() / 1000;
-  renderer.compute(computePositions);
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.01;
+
+  if (!computePositions) return;
+  // computePositions.computeNode.parameters.time.value = performance.now() / 1000;
+  // renderer.compute(computePositions);
 }
 
 function onWindowResize() {
