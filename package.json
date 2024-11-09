@@ -10,7 +10,9 @@
     "dev": "vite --port 3000 --open",
     "build": "vite build",
     "serve": "vite preview",
-    "preview": "vite preview --port 8080"
+    "preview": "vite preview --port 8080",
+    "lint": "biome check .",
+    "lint:fix": "biome check . - apply"
   },
   "dependencies": {
     "@react-three/drei": "^9.111.3",

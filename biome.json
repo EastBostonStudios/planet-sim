@@ -10,6 +10,9 @@
     "lineWidth": 80,
     "lineEnding": "lf"
   },
+  "files": {
+    "ignore": ["./dist"]
+  },
   "linter": {
     "enabled": true,
     "rules": { "recommended": true }

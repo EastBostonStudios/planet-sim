@@ -14,7 +14,6 @@ import { DoubleSide, Vector3 } from "three";
 import * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
 import type { IcoCoords } from "./board/Icosphere";
-import { Scene } from "./scene/Scene";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
 import { interpolateOnFace } from "./utils/mathUtils";
 
@@ -232,7 +231,6 @@ const App = () => {
         <HtmlOverlaysProvider>
           <Canvas>
             <Stats />
-            <Scene icosphereSize={icosphereSize} />
             <directionalLight rotation={[45, 45, 45]} />
             {is3D ? (
               <group key="3D">
