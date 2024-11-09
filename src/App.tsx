@@ -11,7 +11,7 @@ import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { DoubleSide, Vector3 } from "three";
-import type * as Icosahedron from "./board/Icosahedron";
+import * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
 import type { IcoCoords } from "./board/Icosphere";
 import { Scene } from "./scene/Scene";
@@ -53,7 +53,7 @@ const minResolution = 0;
 const maxResolution = 39;
 const defaultResolution = 1;
 
-//const dbp = Icosahedron.distBetweenPoints;
+const dbp = Icosahedron.distBetweenPoints;
 
 //------------------------------------------------------------------------------
 
@@ -97,14 +97,13 @@ const App = () => {
       const projector2D: (
         point: Icosahedron.Point,
         offset?: number,
-      ) => Vector3 = () =>
+      ) => Vector3 = (point, offset) =>
         new Vector3(
-          /*
-          point.coords2D.x * dbp -
-            point.coords2D.y * dbp * 0.5 +
+          point.lngLat.x * dbp -
+            point.lngLat.y * dbp * 0.5 +
             (offset ?? 0) * distBetweenPoints,
-          (point.coords2D.y * dbp * Math.sqrt(3.0)) / 2.0,
-          0,*/
+          (point.lngLat.y * dbp * Math.sqrt(3.0)) / 2.0,
+          0,
         );
 
       const projectCoords: (coords: IcoCoords) => Vector3 = is3D
