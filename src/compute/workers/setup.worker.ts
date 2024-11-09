@@ -21,5 +21,4 @@ onmessage = () => {
     arr[i] /= 10.0;
   }
   postMessage(arr);
-  // postMessage(new THREE_WEBGPU.StorageBufferAttribute(arr, 3));
 };
