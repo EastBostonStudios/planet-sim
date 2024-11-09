@@ -79,7 +79,7 @@ const App = () => {
 
   const icosphereSize = React.useMemo(() => {
     const param = searchParams.get("size");
-    if (param === Number.NaN) return defaultResolution;
+    if (Number.isNaN(param)) return defaultResolution;
     return Math.min(maxResolution, Math.max(minResolution, Number(param)));
   }, [searchParams]);
 
