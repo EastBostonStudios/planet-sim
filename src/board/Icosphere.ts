@@ -1,6 +1,6 @@
 import { type Vector2, Vector3 } from "three";
-import { getTriangleNumber } from "../utils/mathUtils";
 import * as Icosahedron from "./Icosahedron";
+import { getTriangleNumber } from "./faceMath";
 import { xyzToLatLng } from "./sphereMath";
 
 const chunkSize = 8;

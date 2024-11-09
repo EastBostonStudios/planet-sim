@@ -1,16 +1,5 @@
 import { Vector2, Vector3 } from "three";
-import type { Face } from "../board/Icosahedron";
-
-/*
- */
-/*.add(
-    new Vector2(f.wrapsMeridian && f.a.lngLat.x < 0 ? 360 : 0, 0),
-  );
- */
-//  .clone()
-// .add(new Vector2(f.wrapsMeridian && f.b.lngLat.x < 0 ? 360 : 0, 0));
-//  .clone()
-//  .add(new Vector2(f.wrapsMeridian && f.c.lngLat.x < 0 ? 360 : 0, 0));
+import type { Face } from "./Icosahedron";
 
 export const getTriangleNumber = (n: number) => (n * (n + 1)) / 2;
 
