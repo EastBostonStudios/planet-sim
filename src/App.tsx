@@ -14,8 +14,8 @@ import { DoubleSide, Vector3 } from "three";
 import * as Icosahedron from "./board/Icosahedron";
 import { distBetweenPoints } from "./board/Icosahedron";
 import type { IcoCoords } from "./board/Icosphere";
+import { interpolateOnFace } from "./board/faceMath";
 import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
-import { interpolateOnFace } from "./utils/mathUtils";
 
 const StyledApp = styled.div`
   position: absolute;

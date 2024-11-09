@@ -3,8 +3,8 @@ import { folder, useControls } from "leva";
 import React, { type FC, useMemo } from "react";
 import { storage, uniform, wgslFn } from "three/webgpu";
 import type { ComputeBuffers } from "./computeBuffers";
-import computePositionsShader from "./gpgpu/computePositions.wgsl";
-import computePositions2Shader from "./gpgpu/computePositions2.wgsl";
+import computePositionsShader from "./gpgpu/compute1.wgsl";
+import computePositions2Shader from "./gpgpu/compute2.wgsl";
 
 export const ComputeLayer: FC<ComputeBuffers> = ({
   renderer,
