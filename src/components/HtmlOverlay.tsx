@@ -3,13 +3,13 @@ import * as React from "react";
 import { type Group, Vector2, Vector3 } from "three";
 
 import { useFrame } from "@react-three/fiber";
+import { RenderLayerID } from "../utils/renderingUtils";
 import {
   type HtmlOverlayAnchor,
   type HtmlOverlayEntry,
   HtmlOverlayPriority,
   useHtmlOverlays,
 } from "./HtmlOverlaysProvider";
-import { RenderLayerID } from "./renderingUtils";
 
 export const HtmlOverlay3D: React.FC<{
   x: number;

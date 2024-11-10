@@ -6,7 +6,7 @@ import {
   createBrowserRouter,
 } from "react-router-dom";
 import "./index.css";
-import { WebComputePage } from "./compute/WebComputePage";
+import { WebComputePage } from "./pages/compute/WebComputePage";
 
 const root = document.getElementById("root");
 const reactRoot = !root ? undefined : ReactDOM.createRoot(root);
