@@ -1,7 +1,8 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import React, { type FC, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { WebGPURenderer } from "three/webgpu";
+// import WebGPU from "three/examples/jsm/capabilities/WebGPU.js";
+import { PostProcessing, WebGPURenderer, pass } from "three/webgpu";
 import BasePage from "../../components/BasePage";
 import { RotatingBox } from "../../components/RotatingBox";
 import { ComputeLayer } from "./ComputeLayer";
@@ -14,6 +15,7 @@ export const WebComputePage = () => {
   const [renderer, setRenderer] = useState<WebGPURenderer>();
   const buffer0 = useInitializeBuffer();
   const buffer1 = useInitializeBuffer();
+  // const [isGPUAvailable, setIsGPUAvailable] = useState(WebGPU.isAvailable());
 
   const computeParams = useMemo(
     () =>
@@ -44,10 +46,26 @@ export const WebComputePage = () => {
   );
 };
 
-export const Scene: FC<ComputeBuffers> = ({ buffer1 }) => {
+export const Scene: FC<ComputeBuffers> = ({ renderer, buffer1 }) => {
   const ref = useRef<THREE.BufferGeometry>(
     (() => new THREE.BufferGeometry())(),
   );
+  const { scene, camera } = useThree();
+
+  useEffect(() => {
+    if (renderer && scene && camera) {
+      const postProcessing = new PostProcessing(renderer);
+
+      const scenePass = pass(scene, camera);
+      const scenePassColor = scenePass.getTextureNode("output");
+      //  const bloomPass = bloom(scenePassColor, 1, 0.1, 1);
+      //  postProcessing.outputNode = scenePassColor.add(bloomPass);
+
+      renderer.setAnimationLoop(() => {
+        postProcessing.render();
+      });
+    }
+  }, [renderer, scene, camera]);
 
   useEffect(() => {
     ref.current.setAttribute("position", buffer1);
