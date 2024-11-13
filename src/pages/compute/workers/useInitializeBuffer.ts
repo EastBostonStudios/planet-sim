@@ -1,19 +1,17 @@
 import { useEffect, useState } from "react";
 import MyWorker from "./setup.worker?worker";
 
-import * as THREE_WEBGPU from "three/webgpu";
+import { StorageBufferAttribute } from "three/webgpu";
 
 export const useInitializeBuffer = () => {
   const [positionBuffer, setPositionBuffer] =
-    useState<THREE_WEBGPU.StorageBufferAttribute>();
+    useState<StorageBufferAttribute>();
 
   useEffect(() => {
     const worker = new MyWorker();
     worker.onmessage = async (message) => {
       worker.terminate();
-      setPositionBuffer(
-        new THREE_WEBGPU.StorageBufferAttribute(message.data, 3),
-      );
+      setPositionBuffer(new StorageBufferAttribute(message.data, 3));
     };
     worker.onerror = async (error) => {
       worker.terminate();
