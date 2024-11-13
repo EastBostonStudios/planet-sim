@@ -32,4 +32,10 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    exclude: ["three"], // One way to allow access to the WebGPU class
+    /*esbuildOptions: {
+      target: "esnext",
+    },*/
+  },
 });

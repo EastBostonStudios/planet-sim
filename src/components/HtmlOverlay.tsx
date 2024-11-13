@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { type Group, Vector2, Vector3 } from "three";
+import { type Group, Vector2, Vector3 } from "three/webgpu";
 
 import { useFrame } from "@react-three/fiber";
 import { RenderLayerID } from "../utils/renderingUtils";
