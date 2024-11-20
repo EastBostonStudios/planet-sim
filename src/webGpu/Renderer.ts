@@ -138,7 +138,7 @@ export class Renderer {
   async createAssets() {
     this.triangleMesh = new TriangleMesh(this.device);
     this.material = new Material();
-    await this.material.initialize(this.device, "planet-sim/cat.jpg");
+    await this.material.initialize(this.device, "cat.jpg");
   }
 
   render = () => {
