@@ -138,11 +138,11 @@ export class Renderer {
   async createAssets() {
     this.triangleMesh = new TriangleMesh(this.device);
     this.material = new Material();
-    await this.material.intialize(this.device, "planet-sim/cat.jpg");
+    await this.material.initialize(this.device, "planet-sim/cat.jpg");
   }
 
   render = () => {
-    this.t += 0.1;
+    this.t += 0.01;
     if (this.t > 2.0 * Math.PI) {
       this.t -= 2.0 * Math.PI;
     }
