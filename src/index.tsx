@@ -6,25 +6,41 @@ import {
   createBrowserRouter,
 } from "react-router-dom";
 import "./index.css";
-import { WebComputePage } from "./compute/WebComputePage";
+import { WebGPUApp } from "./webGpu/WebGPUApp.js";
 
 const root = document.getElementById("root");
 const reactRoot = !root ? undefined : ReactDOM.createRoot(root);
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: "*",
+      element: <Navigate to={"/planet-sim"} />,
+    },
+    {
+      // This must match "homepage" in package.json to work with GitHub pages
+      path: "/planet-sim",
+      element: <WebGPUApp />,
+    },
+  ],
   {
-    path: "*",
-    element: <Navigate to={"/planet-sim"} />,
+    future: {
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_relativeSplatPath: true,
+      v7_skipActionErrorRevalidation: true,
+    },
   },
-  {
-    // This must match "homepage" in package.json to work with GitHub pages
-    path: "/planet-sim",
-    element: <WebComputePage />,
-  },
-]);
+);
 
 reactRoot?.render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <RouterProvider
+      router={router}
+      future={{
+        v7_startTransition: true,
+      }}
+    />
   </React.StrictMode>,
 );
