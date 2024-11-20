@@ -35,6 +35,7 @@ export class Renderer {
 
     await this.makePipeline();
 
+    console.log(this);
     this.render();
   }
 
@@ -66,7 +67,7 @@ export class Renderer {
         {
           binding: 0,
           visibility: GPUShaderStage.VERTEX,
-          buffer: this.uniformBuffer,
+          buffer: {},
         } as GPUBindGroupLayoutEntry,
         {
           binding: 1,
