@@ -1,18 +1,17 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
-import { Renderer } from "./Renderer.js";
+import { Game } from "./model/game.js";
 
 export const WebGPUApp = () => {
   const ref = useRef<HTMLCanvasElement>(null);
-  const [renderer, setRenderer] = useState<Renderer>();
+  const [game, setGame] = useState<Game>();
 
   useLayoutEffect(() => {
-    setRenderer((prev) => {
-      if (!ref.current) return undefined;
-      if (prev) return prev;
+    setGame((prev) => {
+      if (!ref.current || prev) return prev;
 
-      const renderer = new Renderer(ref.current);
-      renderer.Initialize().then(() => console.log("Initialized"));
-      return renderer;
+      const newGame = new Game(ref.current);
+      newGame.Initialize().then(() => newGame.run());
+      return newGame;
     });
   }, []);
 

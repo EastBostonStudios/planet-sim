@@ -1,8 +1,9 @@
 import { mat4 } from "gl-matrix";
-import { Material } from "./Material.js";
-import { TriangleMesh } from "./TriangleMesh.js";
-import cat from "./cat.jpg";
-import shader from "./shaders.wgsl";
+import { TriangleMesh } from "../TriangleMesh.js";
+import cat from "../cat.jpg";
+import type { Scene } from "../model/scene.js";
+import { Material } from "./material.js";
+import shader from "./shaders/shaders.wgsl";
 
 export class Renderer {
   canvas: HTMLCanvasElement;
@@ -17,27 +18,28 @@ export class Renderer {
   bindGroup: GPUBindGroup;
   pipeline: GPURenderPipeline;
 
+  // Depth stencil
+  depthStencilState: GPUDepthStencilState;
+  depthStencilBuffer: GPUTexture;
+  depthStencilView: GPUTextureView;
+  depthStencilAttachment: GPURenderPassDepthStencilAttachment;
+
   // Assets
   triangleMesh: TriangleMesh;
   material: Material;
+  objectBuffer: GPUBuffer;
 
   uniformBuffer: GPUBuffer;
-  t: number;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.t = 0.0;
   }
 
   async Initialize() {
     await this.setupDevice();
-
     await this.createAssets();
-
+    await this.makeDepthBufferResources();
     await this.makePipeline();
-
-    console.log(this);
-    this.render();
   }
 
   async setupDevice() {
@@ -57,9 +59,46 @@ export class Renderer {
     });
   }
 
+  async makeDepthBufferResources() {
+    this.depthStencilState = {
+      format: "depth24plus-stencil8",
+      depthWriteEnabled: true,
+      depthCompare: "less-equal",
+    };
+    const size: GPUExtent3D = {
+      width: this.canvas.width,
+      height: this.canvas.height,
+      depthOrArrayLayers: 1,
+    };
+    const depthBufferDescriptor: GPUTextureDescriptor = {
+      size: size,
+      format: "depth24plus-stencil8",
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    };
+    this.depthStencilBuffer = this.device.createTexture(depthBufferDescriptor);
+
+    const depthStencilDescriptor: GPUTextureViewDescriptor = {
+      format: "depth24plus-stencil8",
+      dimension: "2d",
+      aspect: "all",
+    };
+    this.depthStencilView = this.depthStencilBuffer.createView(
+      depthStencilDescriptor,
+    );
+
+    this.depthStencilAttachment = {
+      view: this.depthStencilView,
+      depthClearValue: 1.0,
+      depthLoadOp: "clear",
+      depthStoreOp: "store",
+      stencilLoadOp: "clear",
+      stencilStoreOp: "discard",
+    };
+  }
+
   async makePipeline() {
     this.uniformBuffer = this.device.createBuffer({
-      size: 64 * 3, // 64 for each matrix
+      size: 64 * 2, // 64 for each matrix
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -80,6 +119,14 @@ export class Renderer {
           visibility: GPUShaderStage.FRAGMENT,
           sampler: {},
         },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: {
+            type: "read-only-storage",
+            hasDynamicOffset: false,
+          },
+        } as GPUBindGroupLayoutEntry,
       ],
     });
 
@@ -100,6 +147,12 @@ export class Renderer {
           binding: 2,
           resource: this.material.sampler,
         } as GPUBindGroupEntry,
+        {
+          binding: 3,
+          resource: {
+            buffer: this.objectBuffer,
+          },
+        } as GPUBindGroupEntry,
       ],
     });
 
@@ -109,59 +162,52 @@ export class Renderer {
 
     this.pipeline = this.device.createRenderPipeline({
       vertex: {
-        module: this.device.createShaderModule({
-          code: shader,
-        }),
+        module: this.device.createShaderModule({ code: shader }),
         entryPoint: "vs_main",
         buffers: [this.triangleMesh.bufferLayout],
       },
-
       fragment: {
-        module: this.device.createShaderModule({
-          code: shader,
-        }),
+        module: this.device.createShaderModule({ code: shader }),
         entryPoint: "fs_main",
-        targets: [
-          {
-            format: this.format,
-          },
-        ],
+        targets: [{ format: this.format }],
       },
-
       primitive: {
         topology: "triangle-list",
       },
-
       layout: pipelineLayout,
+      depthStencil: this.depthStencilState,
     });
   }
 
   async createAssets() {
     this.triangleMesh = new TriangleMesh(this.device);
     this.material = new Material();
+
+    const modelBufferDescriptor: GPUBufferDescriptor = {
+      size: 64 * 1024,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    };
+    this.objectBuffer = this.device.createBuffer(modelBufferDescriptor);
     await this.material.initialize(this.device, cat);
   }
 
-  render = () => {
-    this.t += 0.01;
-    if (this.t > 2.0 * Math.PI) {
-      this.t -= 2.0 * Math.PI;
-    }
-
+  async render(scene: Scene) {
     const projection = mat4.create();
     mat4.perspective(projection, Math.PI / 4, 500 / 600, 0.1, 10.0);
 
-    const view = mat4.create();
-    mat4.lookAt(view, [-2, 0, 2], [0, 0, 0], [0, 0, 1]);
+    const view = scene.camera.view;
 
-    const model = mat4.create();
-    mat4.rotate(model, model, this.t, [0, 0, 1]);
-
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, model as ArrayBuffer);
-    this.device.queue.writeBuffer(this.uniformBuffer, 64, view as ArrayBuffer);
+    this.device.queue.writeBuffer(
+      this.objectBuffer,
+      0,
+      scene.objectData,
+      0,
+      scene.triangleCount * 16,
+    );
+    this.device.queue.writeBuffer(this.uniformBuffer, 0, view as ArrayBuffer);
     this.device.queue.writeBuffer(
       this.uniformBuffer,
-      128,
+      64,
       projection as ArrayBuffer,
     );
 
@@ -184,15 +230,15 @@ export class Renderer {
           storeOp: "store",
         } as GPURenderPassColorAttachment,
       ],
+      depthStencilAttachment: this.depthStencilAttachment,
     });
     renderpass.setPipeline(this.pipeline);
     renderpass.setVertexBuffer(0, this.triangleMesh.buffer);
     renderpass.setBindGroup(0, this.bindGroup);
-    renderpass.draw(3, 1, 0, 0);
+    renderpass.draw(3, scene.triangleCount, 0, 0);
+
     renderpass.end();
 
     this.device.queue.submit([commandEncoder.finish()]);
-
-    requestAnimationFrame(this.render);
-  };
+  }
 }
