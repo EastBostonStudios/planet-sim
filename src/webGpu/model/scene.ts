@@ -1,38 +1,29 @@
 import { mat4, vec3 } from "gl-matrix";
 import { Camera } from "./camera.js";
-import { Triangle } from "./triangle.js";
+import { Globe } from "./globe.js";
 
 export class Scene {
-  triangles: Triangle[];
+  globe: Globe;
   camera: Camera;
 
   objectData: Float32Array;
-  triangleCount: number;
 
   constructor() {
-    this.triangles = [];
+    this.globe = new Globe([2, 0, 0], 0);
     this.objectData = new Float32Array(16 * 1024);
-    this.triangleCount = 0;
     this.camera = new Camera([-2, 0, 0.5], 0, 0);
 
     const blank_matrix = mat4.create();
-    for (let i = 0; i < 10; i++) {
-      this.triangles.push(new Triangle([2, i - 5, 0], 0));
-      for (let j = 0; j < 16; j++) {
-        this.objectData[16 * i + j] = blank_matrix[j];
-      }
-      this.triangleCount++;
+    for (let j = 0; j < 16; j++) {
+      this.objectData[j] = blank_matrix[j];
     }
   }
 
   update() {
-    for (let i = 0; i < this.triangles.length; i++) {
-      const triangle = this.triangles[i];
-      triangle.update();
-      const model = triangle.model;
-      for (let j = 0; j < 16; j++) {
-        this.objectData[16 * i + j] = model[j];
-      }
+    this.globe.update();
+    const model = this.globe.model;
+    for (let j = 0; j < 16; j++) {
+      this.objectData[j] = model[j];
     }
     this.camera.update();
   }

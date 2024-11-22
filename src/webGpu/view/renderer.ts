@@ -1,8 +1,8 @@
 import { mat4 } from "gl-matrix";
-import { TriangleMesh } from "../TriangleMesh.js";
 import cat from "../assets/cat.jpg";
 import type { Scene } from "../model/scene.js";
 import { Material } from "./material.js";
+import { GlobeMesh } from "./meshes/globeMesh.js";
 import shader from "./shaders/shaders.wgsl";
 
 export class Renderer {
@@ -25,7 +25,7 @@ export class Renderer {
   depthStencilAttachment: GPURenderPassDepthStencilAttachment;
 
   // Assets
-  triangleMesh: TriangleMesh;
+  globeMesh: GlobeMesh;
   material: Material;
   objectBuffer: GPUBuffer;
 
@@ -188,7 +188,7 @@ export class Renderer {
       vertex: {
         module: this.device.createShaderModule({ code: shader }),
         entryPoint: "vs_main",
-        buffers: [this.triangleMesh.bufferLayout],
+        buffers: [this.globeMesh.bufferLayout],
       },
       fragment: {
         module: this.device.createShaderModule({ code: shader }),
@@ -204,7 +204,7 @@ export class Renderer {
   }
 
   async createAssets() {
-    this.triangleMesh = new TriangleMesh(this.device);
+    this.globeMesh = new GlobeMesh(this.device);
     this.material = new Material();
 
     const modelBufferDescriptor: GPUBufferDescriptor = {
@@ -222,7 +222,7 @@ export class Renderer {
       Math.PI / 4,
       this.canvas.width / this.canvas.height,
       0.1,
-      10.0,
+      100.0,
     );
 
     const view = scene.camera.view;
@@ -232,7 +232,7 @@ export class Renderer {
       0,
       scene.objectData,
       0,
-      scene.triangleCount * 16,
+      16, // One globe has 16 bytes of matrix info
     );
     this.device.queue.writeBuffer(this.uniformBuffer, 0, view as ArrayBuffer);
     this.device.queue.writeBuffer(
@@ -263,9 +263,11 @@ export class Renderer {
       depthStencilAttachment: this.depthStencilAttachment,
     });
     renderpass.setPipeline(this.pipeline);
-    renderpass.setVertexBuffer(0, this.triangleMesh.buffer);
+    renderpass.setVertexBuffer(0, this.globeMesh.vertexBuffer);
+    renderpass.setIndexBuffer(this.globeMesh.indexBuffer, "uint32");
     renderpass.setBindGroup(0, this.bindGroup);
-    renderpass.draw(3, scene.triangleCount, 0, 0);
+    renderpass.drawIndexed(this.globeMesh.triCount * 3, 1);
+    //renderpass.draw(this.globeMesh.vertexCount, 1 /* 1 globe */, 0, 0);
 
     renderpass.end();
 

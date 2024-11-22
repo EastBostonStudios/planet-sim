@@ -1,7 +1,7 @@
 import { mat4, vec3 } from "gl-matrix";
 import { degToRad } from "./math.js";
 
-export class Triangle {
+export class Globe {
   position: vec3;
   eulers: vec3;
   model: mat4;
