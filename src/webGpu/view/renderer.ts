@@ -74,7 +74,7 @@ export class Renderer {
           1,
           Math.min(height, this.device.limits.maxTextureDimension2D),
         );
-        // re-render
+        // Recreate depth buffer
         this.makeDepthBufferResources();
       }
     });
