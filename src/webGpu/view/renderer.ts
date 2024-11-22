@@ -1,6 +1,6 @@
 import { mat4 } from "gl-matrix";
 import { TriangleMesh } from "../TriangleMesh.js";
-import cat from "../cat.jpg";
+import cat from "../assets/cat.jpg";
 import type { Scene } from "../model/scene.js";
 import { Material } from "./material.js";
 import shader from "./shaders/shaders.wgsl";
@@ -57,6 +57,32 @@ export class Renderer {
       format: this.format,
       alphaMode: "opaque",
     });
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width =
+          entry.devicePixelContentBoxSize?.[0].inlineSize ||
+          entry.contentBoxSize[0].inlineSize * devicePixelRatio;
+        const height =
+          entry.devicePixelContentBoxSize?.[0].blockSize ||
+          entry.contentBoxSize[0].blockSize * devicePixelRatio;
+        this.canvas.width = Math.max(
+          1,
+          Math.min(width, this.device.limits.maxTextureDimension2D),
+        );
+        this.canvas.height = Math.max(
+          1,
+          Math.min(height, this.device.limits.maxTextureDimension2D),
+        );
+        // re-render
+        this.makeDepthBufferResources();
+      }
+    });
+    try {
+      observer.observe(this.canvas, { box: "device-pixel-content-box" });
+    } catch {
+      observer.observe(this.canvas, { box: "content-box" });
+    }
   }
 
   async makeDepthBufferResources() {
@@ -65,17 +91,15 @@ export class Renderer {
       depthWriteEnabled: true,
       depthCompare: "less-equal",
     };
-    const size: GPUExtent3D = {
-      width: this.canvas.width,
-      height: this.canvas.height,
-      depthOrArrayLayers: 1,
-    };
-    const depthBufferDescriptor: GPUTextureDescriptor = {
-      size: size,
+    this.depthStencilBuffer = this.device.createTexture({
+      size: {
+        width: this.canvas.width,
+        height: this.canvas.height,
+        depthOrArrayLayers: 1,
+      },
       format: "depth24plus-stencil8",
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    };
-    this.depthStencilBuffer = this.device.createTexture(depthBufferDescriptor);
+    });
 
     const depthStencilDescriptor: GPUTextureViewDescriptor = {
       format: "depth24plus-stencil8",
@@ -193,7 +217,13 @@ export class Renderer {
 
   async render(scene: Scene) {
     const projection = mat4.create();
-    mat4.perspective(projection, Math.PI / 4, 500 / 600, 0.1, 10.0);
+    mat4.perspective(
+      projection,
+      Math.PI / 4,
+      this.canvas.width / this.canvas.height,
+      0.1,
+      10.0,
+    );
 
     const view = scene.camera.view;
 

@@ -15,5 +15,10 @@ export const WebGPUApp = () => {
     });
   }, []);
 
-  return <canvas ref={ref} width={500} height={500} />;
+  return (
+    <canvas
+      ref={ref}
+      style={{ position: "absolute", width: "100%", height: "100%" }}
+    />
+  );
 };
