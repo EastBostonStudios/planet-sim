@@ -36,6 +36,3 @@ for (let i = 0; i < 50; i++) {
     ).normalize(),
   );
 }
-console.log(
-  asdf.map((p) => latLngToXYZ(xyzToLatLng(p)).distanceTo(p).toFixed(2)),
-);

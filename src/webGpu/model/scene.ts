@@ -1,4 +1,5 @@
 import { mat4, vec3 } from "gl-matrix";
+import { mat4Size } from "../math.js";
 import { Camera } from "./camera.js";
 import { Globe } from "./globe.js";
 
@@ -22,7 +23,7 @@ export class Scene {
   update() {
     this.globe.update();
     const model = this.globe.model;
-    for (let j = 0; j < 16; j++) {
+    for (let j = 0; j < mat4Size(1); j++) {
       this.objectData[j] = model[j];
     }
     this.camera.update();

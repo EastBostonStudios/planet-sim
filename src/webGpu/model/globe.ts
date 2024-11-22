@@ -1,5 +1,5 @@
 import { mat4, vec3 } from "gl-matrix";
-import { degToRad } from "./math.js";
+import { degToRad } from "../math.js";
 
 export class Globe {
   position: vec3;
@@ -13,7 +13,7 @@ export class Globe {
   }
 
   update() {
-    this.eulers[2] += 1;
+    this.eulers[2] += 0.2;
     this.eulers[2] %= 360;
 
     this.model = mat4.create();

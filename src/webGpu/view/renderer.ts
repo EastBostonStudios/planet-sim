@@ -1,5 +1,6 @@
 import { mat4 } from "gl-matrix";
 import cat from "../assets/cat.jpg";
+import { mat4Size, mat4x4Size } from "../math.js";
 import type { Scene } from "../model/scene.js";
 import { Material } from "./material.js";
 import { GlobeMesh } from "./meshes/globeMesh.js";
@@ -28,6 +29,7 @@ export class Renderer {
   globeMesh: GlobeMesh;
   material: Material;
   objectBuffer: GPUBuffer;
+  tileDataBuffer: GPUBuffer;
 
   uniformBuffer: GPUBuffer;
 
@@ -151,6 +153,14 @@ export class Renderer {
             hasDynamicOffset: false,
           },
         } as GPUBindGroupLayoutEntry,
+        {
+          binding: 4,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: {
+            type: "read-only-storage",
+            hasDynamicOffset: false,
+          },
+        } as GPUBindGroupLayoutEntry,
       ],
     });
 
@@ -175,6 +185,12 @@ export class Renderer {
           binding: 3,
           resource: {
             buffer: this.objectBuffer,
+          },
+        } as GPUBindGroupEntry,
+        {
+          binding: 4,
+          resource: {
+            buffer: this.tileDataBuffer,
           },
         } as GPUBindGroupEntry,
       ],
@@ -207,38 +223,43 @@ export class Renderer {
     this.globeMesh = new GlobeMesh(this.device);
     this.material = new Material();
 
-    const modelBufferDescriptor: GPUBufferDescriptor = {
-      size: 64 * 1024,
+    this.objectBuffer = this.device.createBuffer({
+      size: mat4x4Size(1024), // Space for up to this many objects
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    };
-    this.objectBuffer = this.device.createBuffer(modelBufferDescriptor);
+    });
+    this.tileDataBuffer = this.device.createBuffer({
+      size: this.globeMesh.dataArray.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
     await this.material.initialize(this.device, cat);
   }
 
   async render(scene: Scene) {
-    const projection = mat4.create();
+    const projection = mat4.create() as ArrayBuffer;
     mat4.perspective(
-      projection,
+      projection as mat4,
       Math.PI / 4,
       this.canvas.width / this.canvas.height,
       0.1,
       100.0,
     );
 
-    const view = scene.camera.view;
+    const view = scene.camera.view as ArrayBuffer;
 
+    this.device.queue.writeBuffer(this.uniformBuffer, 0, view);
+    this.device.queue.writeBuffer(this.uniformBuffer, mat4x4Size(), projection);
     this.device.queue.writeBuffer(
       this.objectBuffer,
       0,
       scene.objectData,
       0,
-      16, // One globe has 16 bytes of matrix info
+      mat4Size(1), // Only write one globe
     );
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, view as ArrayBuffer);
     this.device.queue.writeBuffer(
-      this.uniformBuffer,
-      64,
-      projection as ArrayBuffer,
+      this.tileDataBuffer,
+      0,
+      this.globeMesh.dataArray,
+      0,
     );
 
     //command encoder: records draw commands for submission

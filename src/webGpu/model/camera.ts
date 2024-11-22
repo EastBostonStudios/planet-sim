@@ -1,5 +1,5 @@
 import { mat4, vec3 } from "gl-matrix";
-import { degToRad } from "./math.js";
+import { degToRad } from "../math.js";
 
 export class Camera {
   position: vec3;
