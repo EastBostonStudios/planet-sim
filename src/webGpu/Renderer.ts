@@ -1,6 +1,7 @@
 import { mat4 } from "gl-matrix";
 import { Material } from "./Material.js";
 import { TriangleMesh } from "./TriangleMesh.js";
+import cat from "./cat.jpg";
 import shader from "./shaders.wgsl";
 
 export class Renderer {
@@ -138,7 +139,7 @@ export class Renderer {
   async createAssets() {
     this.triangleMesh = new TriangleMesh(this.device);
     this.material = new Material();
-    await this.material.initialize(this.device, "cat.jpg");
+    await this.material.initialize(this.device, cat);
   }
 
   render = () => {
