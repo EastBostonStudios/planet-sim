@@ -4,6 +4,7 @@ import { mat4Size, mat4x4Size } from "../math.js";
 import type { Scene } from "../model/scene.js";
 import { Material } from "./material.js";
 import { GlobeMesh } from "./meshes/globeMesh.js";
+import computeShader from "./shaders/compute.wgsl";
 import shader from "./shaders/shaders.wgsl";
 
 export class Renderer {
@@ -17,7 +18,10 @@ export class Renderer {
 
   // Pipeline objects
   bindGroup: GPUBindGroup;
-  pipeline: GPURenderPipeline;
+  bindGroup0: GPUBindGroup;
+  bindGroup1: GPUBindGroup;
+  computePipeline: GPUComputePipeline;
+  renderPipeline: GPURenderPipeline;
 
   // Depth stencil
   depthStencilState: GPUDepthStencilState;
@@ -29,9 +33,12 @@ export class Renderer {
   globeMesh: GlobeMesh;
   material: Material;
   objectBuffer: GPUBuffer;
-  tileDataBuffer: GPUBuffer;
+  tileDataBuffer0: GPUBuffer;
+  tileDataBuffer1: GPUBuffer;
 
   uniformBuffer: GPUBuffer;
+
+  loopTimes: boolean;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -41,7 +48,8 @@ export class Renderer {
     await this.setupDevice();
     await this.createAssets();
     await this.makeDepthBufferResources();
-    await this.makePipeline();
+    await this.makeComputePipeline();
+    await this.makeRenderPipeline();
   }
 
   async setupDevice() {
@@ -60,6 +68,7 @@ export class Renderer {
       alphaMode: "opaque",
     });
 
+    // Stolen code to support canvas resizing
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width =
@@ -122,8 +131,82 @@ export class Renderer {
     };
   }
 
-  async makePipeline() {
+  async makeComputePipeline() {
+    const bindGroupLayoutCompute = this.device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: { type: "read-only-storage" },
+        } as GPUBindGroupLayoutEntry,
+        {
+          binding: 1,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: { type: "read-only-storage" },
+        } as GPUBindGroupLayoutEntry,
+        {
+          binding: 2,
+          visibility: GPUShaderStage.COMPUTE,
+          buffer: { type: "storage" },
+        } as GPUBindGroupLayoutEntry,
+      ],
+    });
+
+    const sizeBuffer = this.device.createBuffer({
+      label: "size_buffer",
+      size: 2 * Uint32Array.BYTES_PER_ELEMENT,
+      usage:
+        GPUBufferUsage.STORAGE |
+        GPUBufferUsage.UNIFORM |
+        GPUBufferUsage.COPY_DST |
+        GPUBufferUsage.VERTEX,
+    });
+    this.device.queue.writeBuffer(
+      sizeBuffer,
+      0,
+      new Float32Array([this.globeMesh.indexBuffer.size, 0]),
+    );
+
+    this.bindGroup0 = this.device.createBindGroup({
+      layout: bindGroupLayoutCompute,
+      entries: [
+        { binding: 0, resource: { buffer: sizeBuffer } },
+        { binding: 1, resource: { buffer: this.tileDataBuffer0 } },
+        { binding: 2, resource: { buffer: this.tileDataBuffer1 } },
+      ],
+    });
+    this.device.queue.writeBuffer(
+      this.tileDataBuffer0,
+      0,
+      this.globeMesh.dataArray,
+      0,
+    );
+
+    this.bindGroup1 = this.device.createBindGroup({
+      layout: bindGroupLayoutCompute,
+      entries: [
+        { binding: 0, resource: { buffer: sizeBuffer } },
+        { binding: 1, resource: { buffer: this.tileDataBuffer1 } },
+        { binding: 2, resource: { buffer: this.tileDataBuffer0 } },
+      ],
+    });
+    // compute pipeline
+    this.computePipeline = this.device.createComputePipeline({
+      layout: this.device.createPipelineLayout({
+        bindGroupLayouts: [bindGroupLayoutCompute],
+      }),
+      compute: {
+        module: this.device.createShaderModule({ code: computeShader }),
+        constants: {
+          blockSize: 256, //workgroupsize
+        },
+      },
+    });
+  }
+
+  async makeRenderPipeline() {
     this.uniformBuffer = this.device.createBuffer({
+      label: "uniform_buffer",
       size: 64 * 2, // 64 for each matrix
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -190,7 +273,7 @@ export class Renderer {
         {
           binding: 4,
           resource: {
-            buffer: this.tileDataBuffer,
+            buffer: this.tileDataBuffer0,
           },
         } as GPUBindGroupEntry,
       ],
@@ -200,7 +283,7 @@ export class Renderer {
       bindGroupLayouts: [bindGroupLayout],
     });
 
-    this.pipeline = this.device.createRenderPipeline({
+    this.renderPipeline = this.device.createRenderPipeline({
       vertex: {
         module: this.device.createShaderModule({ code: shader }),
         entryPoint: "vs_main",
@@ -224,10 +307,17 @@ export class Renderer {
     this.material = new Material();
 
     this.objectBuffer = this.device.createBuffer({
+      label: "object_buffer",
       size: mat4x4Size(1024), // Space for up to this many objects
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    this.tileDataBuffer = this.device.createBuffer({
+    this.tileDataBuffer0 = this.device.createBuffer({
+      label: "tile_data_buffer_0",
+      size: this.globeMesh.dataArray.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    this.tileDataBuffer1 = this.device.createBuffer({
+      label: "tile_data_buffer_1",
       size: this.globeMesh.dataArray.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -255,24 +345,30 @@ export class Renderer {
       0,
       mat4Size(1), // Only write one globe
     );
-    this.device.queue.writeBuffer(
-      this.tileDataBuffer,
-      0,
-      this.globeMesh.dataArray,
-      0,
-    );
 
     //command encoder: records draw commands for submission
     const commandEncoder: GPUCommandEncoder =
       this.device.createCommandEncoder();
+
+    const computePass = commandEncoder.beginComputePass();
+    computePass.setPipeline(this.computePipeline);
+    computePass.setBindGroup(
+      0,
+      this.loopTimes ? this.bindGroup1 : this.bindGroup0,
+    );
+    computePass.dispatchWorkgroups(
+      Math.ceil(this.globeMesh.indexBuffer.size / 256),
+    );
+    this.loopTimes = !this.loopTimes;
+    computePass.end();
 
     //texture view: image view to the color buffer in this case
     const textureView: GPUTextureView = this.context
       .getCurrentTexture()
       .createView();
 
-    //renderpass: holds draw commands, allocated from command encoder
-    const renderpass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
+    //renderPass: holds draw commands, allocated from command encoder
+    const renderPass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
           view: textureView,
@@ -283,14 +379,14 @@ export class Renderer {
       ],
       depthStencilAttachment: this.depthStencilAttachment,
     });
-    renderpass.setPipeline(this.pipeline);
-    renderpass.setVertexBuffer(0, this.globeMesh.vertexBuffer);
-    renderpass.setIndexBuffer(this.globeMesh.indexBuffer, "uint32");
-    renderpass.setBindGroup(0, this.bindGroup);
-    renderpass.drawIndexed(this.globeMesh.triCount * 3, 1);
-    //renderpass.draw(this.globeMesh.vertexCount, 1 /* 1 globe */, 0, 0);
+    renderPass.setPipeline(this.renderPipeline);
+    renderPass.setVertexBuffer(0, this.globeMesh.vertexBuffer);
+    renderPass.setIndexBuffer(this.globeMesh.indexBuffer, "uint32");
+    renderPass.setBindGroup(0, this.bindGroup);
+    renderPass.drawIndexed(this.globeMesh.triCount * 3, 1);
+    //renderPass.draw(this.globeMesh.vertexCount, 1 /* 1 globe */, 0, 0);
 
-    renderpass.end();
+    renderPass.end();
 
     this.device.queue.submit([commandEncoder.finish()]);
   }
