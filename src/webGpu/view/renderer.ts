@@ -21,21 +21,27 @@ export type RenderResources = {
   format: GPUTextureFormat;
 };
 
+/**
+ * An asynchronous function which requests all the required rendering resources
+ * @param canvas The HTML Canvas to get rendering resources for
+ */
 export async function requestRenderResources(
   canvas: HTMLCanvasElement,
 ): Promise<RenderResources> {
-  const adapter = <GPUAdapter>await navigator.gpu?.requestAdapter();
-  const device = <GPUDevice>await adapter?.requestDevice();
-  const context = <GPUCanvasContext>canvas.getContext("webgpu");
+  if (!navigator.gpu) throw new Error("WebGPU not supported!");
+
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) throw new Error("WebGPU adapter not provided!");
+
+  const device = await adapter.requestDevice();
+  if (!device) throw new Error("WebGPU device unavailable!");
+
+  const context = canvas.getContext("webgpu");
+  if (!context) throw new Error("WebGPU canvas context unavailable!");
+
   const format = "bgra8unorm";
   context.configure({ device, format, alphaMode: "opaque" });
-  return {
-    canvas,
-    adapter,
-    device,
-    context,
-    format,
-  };
+  return { canvas, adapter, device, context, format };
 }
 
 export class Renderer {
@@ -88,14 +94,6 @@ export class Renderer {
   }
 
   async Initialize() {
-    await this.setUpResizeObserver();
-    await this.createAssets();
-    await this.makeComputePipeline();
-    await this.makeRenderPipeline();
-    await this.makePostProcessingPipeline();
-  }
-
-  async setUpResizeObserver() {
     // Stolen code to support canvas resizing
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -118,6 +116,11 @@ export class Renderer {
     } catch {
       observer.observe(this.canvas, { box: "content-box" });
     }
+
+    await this.createAssets();
+    await this.makeComputePipeline();
+    await this.makeRenderPipeline();
+    await this.makePostProcessingPipeline();
   }
 
   async makeComputePipeline() {

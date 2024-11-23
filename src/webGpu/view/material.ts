@@ -7,30 +7,23 @@ export class Material {
     const response: Response = await fetch(url);
     const blob: Blob = await response.blob();
     const imageData: ImageBitmap = await createImageBitmap(blob);
-
     await this.loadImageBitmap(device, imageData);
-
-    const viewDescriptor: GPUTextureViewDescriptor = {
+    this.view = this.texture.createView({
       format: "rgba8unorm",
       dimension: "2d",
       aspect: "all",
       baseMipLevel: 0,
       mipLevelCount: 1,
       arrayLayerCount: 1,
-    };
-
-    this.view = this.texture.createView(viewDescriptor);
-
-    const samplerDescriptor: GPUSamplerDescriptor = {
+    });
+    this.sampler = device.createSampler({
       addressModeU: "repeat",
       addressModeV: "repeat",
       magFilter: "linear",
       minFilter: "nearest",
       mipmapFilter: "linear",
       maxAnisotropy: 1,
-    };
-
-    this.sampler = device.createSampler(samplerDescriptor);
+    });
   }
 
   private async loadImageBitmap(device: GPUDevice, imageData: ImageBitmap) {
