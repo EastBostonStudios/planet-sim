@@ -1,6 +1,6 @@
 import { mat4 } from "gl-matrix";
 import cat from "../assets/cat.jpg";
-import { mat4Size, mat4x4Size } from "../math.js";
+import { clamp, mat4Size, mat4x4Size } from "../math.js";
 import type { Scene } from "../model/scene.js";
 import { BindGroupBuilder } from "./builders/bindGroupBuilder.js";
 import { BindGroupLayoutBuilder } from "./builders/bindGroupLayoutBuilder.js";
@@ -11,14 +11,41 @@ import computeShader from "./shaders/compute.wgsl";
 import post from "./shaders/post.wgsl";
 import shader from "./shaders/shaders.wgsl";
 
-export class Renderer {
+export type RenderResources = {
   canvas: HTMLCanvasElement;
-
-  // Device/Context objects
+  // adapter: wrapper around (physical) GPU. Describes features and limits
   adapter: GPUAdapter;
+  //device: wrapper around GPU functionality. Function calls are made through the device
   device: GPUDevice;
+  //context: similar to vulkan instance (or OpenGL context)
   context: GPUCanvasContext;
   format: GPUTextureFormat;
+};
+
+export async function requestRenderResources(
+  canvas: HTMLCanvasElement,
+): Promise<RenderResources> {
+  const adapter = <GPUAdapter>await navigator.gpu?.requestAdapter();
+  const device = <GPUDevice>await adapter?.requestDevice();
+  const context = <GPUCanvasContext>canvas.getContext("webgpu");
+  const format = "bgra8unorm";
+  context.configure({ device, format, alphaMode: "opaque" });
+  return {
+    canvas,
+    adapter,
+    device,
+    context,
+    format,
+  };
+}
+
+export class Renderer {
+  // Core rendering resources
+  readonly canvas: HTMLCanvasElement;
+  readonly adapter: GPUAdapter;
+  readonly device: GPUDevice;
+  readonly context: GPUCanvasContext;
+  readonly format: GPUTextureFormat;
 
   // Pipeline objects
   computeBindGroupPing: GPUBindGroup;
@@ -37,21 +64,27 @@ export class Renderer {
   // Assets
   globeMesh: GlobeMesh;
   material: Material;
-  objectBuffer: GPUBuffer;
-  tileDataBuffer0: GPUBuffer;
-  tileDataBuffer1: GPUBuffer;
   framebuffer: Framebuffer;
 
+  objectBuffer: GPUBuffer;
+  tileDataBufferPing: GPUBuffer;
+  tileDataBufferPong: GPUBuffer;
   uniformBuffer: GPUBuffer;
+
+  depthStencilBuffer: GPUTexture;
 
   loopTimes: boolean;
 
-  constructor(canvas: HTMLCanvasElement) {
-    this.canvas = canvas;
+  constructor(resources: RenderResources) {
+    this.canvas = resources.canvas;
+    this.adapter = resources.adapter;
+    this.device = resources.device;
+    this.context = resources.context;
+    this.format = resources.format;
   }
 
   async Initialize() {
-    await this.setupDevice();
+    await this.setUpResizeObserver();
     await this.createAssets();
     await this.makeDepthBufferResources();
     await this.makeComputePipeline();
@@ -59,22 +92,7 @@ export class Renderer {
     await this.makePostProcessingPipeline();
   }
 
-  async setupDevice() {
-    //adapter: wrapper around (physical) GPU.
-    //Describes features and limits
-    this.adapter = <GPUAdapter>await navigator.gpu?.requestAdapter();
-    //device: wrapper around GPU functionality
-    //Function calls are made through the device
-    this.device = <GPUDevice>await this.adapter?.requestDevice();
-    //context: similar to vulkan instance (or OpenGL context)
-    this.context = <GPUCanvasContext>this.canvas.getContext("webgpu");
-    this.format = "bgra8unorm";
-    this.context.configure({
-      device: this.device,
-      format: this.format,
-      alphaMode: "opaque",
-    });
-
+  async setUpResizeObserver() {
     // Stolen code to support canvas resizing
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -84,14 +102,10 @@ export class Renderer {
         const height =
           entry.devicePixelContentBoxSize?.[0].blockSize ||
           entry.contentBoxSize[0].blockSize * devicePixelRatio;
-        this.canvas.width = Math.max(
-          1,
-          Math.min(width, this.device.limits.maxTextureDimension2D),
-        );
-        this.canvas.height = Math.max(
-          1,
-          Math.min(height, this.device.limits.maxTextureDimension2D),
-        );
+        const maxSize = this.device.limits.maxTextureDimension2D;
+        this.canvas.width = clamp(width, 1, maxSize);
+        this.canvas.height = clamp(height, 1, maxSize);
+
         // Recreate depth buffer
         this.makeDepthBufferResources();
       }
@@ -109,7 +123,7 @@ export class Renderer {
       depthWriteEnabled: true,
       depthCompare: "less-equal",
     };
-    const depthStencilBuffer = this.device.createTexture({
+    this.depthStencilBuffer = this.device.createTexture({
       size: {
         width: this.canvas.width,
         height: this.canvas.height,
@@ -119,7 +133,7 @@ export class Renderer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    const depthStencilView = depthStencilBuffer.createView({
+    const depthStencilView = this.depthStencilBuffer.createView({
       format: "depth24plus-stencil8",
       dimension: "2d",
       aspect: "all",
@@ -154,14 +168,14 @@ export class Renderer {
 
     this.computeBindGroupPing = BindGroupBuilder.Create("compute_ping", layout)
       .addBuffer(sizeBuffer)
-      .addBuffer(this.tileDataBuffer0)
-      .addBuffer(this.tileDataBuffer1)
+      .addBuffer(this.tileDataBufferPing)
+      .addBuffer(this.tileDataBufferPong)
       .build(this.device);
 
     this.computeBindGroupPong = BindGroupBuilder.Create("compute_pong", layout)
       .addBuffer(sizeBuffer)
-      .addBuffer(this.tileDataBuffer1)
-      .addBuffer(this.tileDataBuffer0)
+      .addBuffer(this.tileDataBufferPong)
+      .addBuffer(this.tileDataBufferPing)
       .build(this.device);
 
     this.device.queue.writeBuffer(
@@ -170,7 +184,7 @@ export class Renderer {
       new Float32Array([this.globeMesh.indexBuffer.size, 0]),
     );
     this.device.queue.writeBuffer(
-      this.tileDataBuffer0,
+      this.tileDataBufferPing,
       0,
       this.globeMesh.dataArray,
       0,
@@ -208,7 +222,7 @@ export class Renderer {
       .addBuffer(this.uniformBuffer)
       .addMaterial(this.material.view, this.material.sampler)
       .addBuffer(this.objectBuffer)
-      .addBuffer(this.tileDataBuffer0)
+      .addBuffer(this.tileDataBufferPing)
       .build(this.device);
 
     const pipelineLayout = this.device.createPipelineLayout({
@@ -279,12 +293,12 @@ export class Renderer {
       size: mat4x4Size(1024), // Space for up to this many objects
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    this.tileDataBuffer0 = this.device.createBuffer({
+    this.tileDataBufferPing = this.device.createBuffer({
       label: "tile_data_buffer_0",
       size: this.globeMesh.dataArray.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
-    this.tileDataBuffer1 = this.device.createBuffer({
+    this.tileDataBufferPong = this.device.createBuffer({
       label: "tile_data_buffer_1",
       size: this.globeMesh.dataArray.byteLength,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,

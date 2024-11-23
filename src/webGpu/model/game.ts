@@ -1,4 +1,4 @@
-import { Renderer } from "../view/renderer.js";
+import type { Renderer } from "../view/renderer.js";
 import { Scene } from "./scene.js";
 
 export class Game {
@@ -8,10 +8,11 @@ export class Game {
 
   forwards_amount: number;
   right_amount: number;
+  running = true;
 
-  constructor(canvas: HTMLCanvasElement) {
-    this.canvas = canvas;
-    this.renderer = new Renderer(canvas);
+  constructor(renderer: Renderer) {
+    this.canvas = renderer.canvas;
+    this.renderer = renderer;
     this.scene = new Scene();
 
     this.forwards_amount = 0;
@@ -29,20 +30,12 @@ export class Game {
     });
   }
 
-  async Initialize() {
-    await this.renderer.Initialize().then(() => {
-      console.log("Renderer initialized");
-    });
-  }
-
   run = async () => {
-    const running = true;
-
     this.scene.update();
     this.scene.move_player(this.forwards_amount, this.right_amount);
     await this.renderer.render(this.scene);
 
-    if (running) {
+    if (this.running) {
       requestAnimationFrame(this.run);
     }
   };
@@ -50,30 +43,29 @@ export class Game {
   handle_keypress(event: KeyboardEvent) {
     if (event.code === "KeyW") {
       this.forwards_amount = 0.02;
-    }
-    if (event.code === "KeyS") {
+    } else if (event.code === "KeyS") {
       this.forwards_amount = -0.02;
-    }
-    if (event.code === "KeyA") {
+    } else if (event.code === "KeyA") {
       this.right_amount = -0.02;
-    }
-    if (event.code === "KeyD") {
+    } else if (event.code === "KeyD") {
       this.right_amount = 0.02;
+    } else if (event.code === "Space") {
+      this.running = false;
     }
   }
 
   handle_keyrelease(event: KeyboardEvent) {
     if (event.code === "KeyW") {
       this.forwards_amount = 0;
-    }
-    if (event.code === "KeyS") {
+    } else if (event.code === "KeyS") {
       this.forwards_amount = 0;
-    }
-    if (event.code === "KeyA") {
+    } else if (event.code === "KeyA") {
       this.right_amount = 0;
-    }
-    if (event.code === "KeyD") {
+    } else if (event.code === "KeyD") {
       this.right_amount = 0;
+    } else if (event.code === "Space") {
+      this.running = true;
+      requestAnimationFrame(this.run);
     }
   }
 

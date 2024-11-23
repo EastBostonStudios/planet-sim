@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { Game } from "./model/game.js";
+import { Renderer, requestRenderResources } from "./view/renderer.js";
 
 export const WebGPUApp = () => {
   const ref = useRef<HTMLCanvasElement>(null);
@@ -8,10 +9,12 @@ export const WebGPUApp = () => {
   useLayoutEffect(() => {
     setGame((prev) => {
       if (!ref.current || prev) return prev;
-
-      const newGame = new Game(ref.current);
-      newGame.Initialize().then(() => newGame.run());
-      return newGame;
+      return requestRenderResources(ref.current).then((resources) => {
+        const renderer = new Renderer(resources);
+        const newGame = new Game(renderer);
+        renderer.Initialize().then(() => newGame.run());
+        return newGame;
+      });
     });
   }, []);
 

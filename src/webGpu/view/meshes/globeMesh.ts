@@ -10,7 +10,7 @@ export class GlobeMesh {
   triCount: number;
 
   constructor(device: GPUDevice) {
-    const icosphere = new Icosphere(10);
+    const icosphere = new Icosphere(1);
 
     // x y z u v
     const vertices: Float32Array = new Float32Array(
