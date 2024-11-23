@@ -4,7 +4,6 @@ import { clamp, mat4Size, mat4x4Size } from "../math.js";
 import type { Scene } from "../model/scene.js";
 import { BindGroupBuilder } from "./builders/bindGroupBuilder.js";
 import { BindGroupLayoutBuilder } from "./builders/bindGroupLayoutBuilder.js";
-import { Framebuffer } from "./frameBuffer.js";
 import { Material } from "./material.js";
 import { GlobeMesh } from "./meshes/globeMesh.js";
 import computeShader from "./shaders/compute.wgsl";
@@ -46,6 +45,8 @@ export class Renderer {
   readonly device: GPUDevice;
   readonly context: GPUCanvasContext;
   readonly format: GPUTextureFormat;
+  readonly projection;
+  frameNumber: number;
 
   // Pipeline objects
   computeBindGroupPing: GPUBindGroup;
@@ -58,22 +59,23 @@ export class Renderer {
   postProcessingPipeline: GPURenderPipeline;
 
   // Depth stencil
-  depthStencilState: GPUDepthStencilState;
+  depthStencilState: GPUDepthStencilState = {
+    format: "depth24plus-stencil8",
+    depthWriteEnabled: true,
+    depthCompare: "less-equal",
+  };
   depthStencilAttachment: GPURenderPassDepthStencilAttachment;
 
   // Assets
   globeMesh: GlobeMesh;
   material: Material;
-  framebuffer: Framebuffer;
 
   objectBuffer: GPUBuffer;
   tileDataBufferPing: GPUBuffer;
   tileDataBufferPong: GPUBuffer;
   uniformBuffer: GPUBuffer;
 
-  depthStencilBuffer: GPUTexture;
-
-  loopTimes: boolean;
+  screenTextureView: GPUTextureView;
 
   constructor(resources: RenderResources) {
     this.canvas = resources.canvas;
@@ -81,12 +83,13 @@ export class Renderer {
     this.device = resources.device;
     this.context = resources.context;
     this.format = resources.format;
+    this.projection = mat4.create();
+    this.frameNumber = 0;
   }
 
   async Initialize() {
     await this.setUpResizeObserver();
     await this.createAssets();
-    await this.makeDepthBufferResources();
     await this.makeComputePipeline();
     await this.makeRenderPipeline();
     await this.makePostProcessingPipeline();
@@ -106,8 +109,8 @@ export class Renderer {
         this.canvas.width = clamp(width, 1, maxSize);
         this.canvas.height = clamp(height, 1, maxSize);
 
-        // Recreate depth buffer
-        this.makeDepthBufferResources();
+        // Recreate the depth buffer and post-processing effect buffers
+        this.makePostProcessingPipeline();
       }
     });
     try {
@@ -115,38 +118,6 @@ export class Renderer {
     } catch {
       observer.observe(this.canvas, { box: "content-box" });
     }
-  }
-
-  async makeDepthBufferResources() {
-    this.depthStencilState = {
-      format: "depth24plus-stencil8",
-      depthWriteEnabled: true,
-      depthCompare: "less-equal",
-    };
-    this.depthStencilBuffer = this.device.createTexture({
-      size: {
-        width: this.canvas.width,
-        height: this.canvas.height,
-        depthOrArrayLayers: 1,
-      },
-      format: "depth24plus-stencil8",
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    const depthStencilView = this.depthStencilBuffer.createView({
-      format: "depth24plus-stencil8",
-      dimension: "2d",
-      aspect: "all",
-    });
-
-    this.depthStencilAttachment = {
-      view: depthStencilView,
-      depthClearValue: 1.0,
-      depthLoadOp: "clear",
-      depthStoreOp: "store",
-      stencilLoadOp: "clear",
-      stencilStoreOp: "discard",
-    };
   }
 
   async makeComputePipeline() {
@@ -249,6 +220,57 @@ export class Renderer {
   }
 
   async makePostProcessingPipeline() {
+    //--------------------------------------------------------------------------
+    // Depth buffer
+    const depthStencilBuffer = this.device.createTexture({
+      size: {
+        width: this.canvas.width,
+        height: this.canvas.height,
+        depthOrArrayLayers: 1,
+      },
+      format: "depth24plus-stencil8",
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    const depthStencilView = depthStencilBuffer.createView({
+      format: "depth24plus-stencil8",
+      dimension: "2d",
+      aspect: "all",
+    });
+    this.depthStencilAttachment = {
+      view: depthStencilView,
+      depthClearValue: 1.0,
+      depthLoadOp: "clear",
+      depthStoreOp: "store",
+      stencilLoadOp: "clear",
+      stencilStoreOp: "discard",
+    };
+
+    //--------------------------------------------------------------------------
+    // Screen texture
+    const screenTextureBuffer = this.device.createTexture({
+      size: {
+        width: this.canvas.width,
+        height: this.canvas.height,
+      },
+      mipLevelCount: 1,
+      format: this.format,
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    this.screenTextureView = screenTextureBuffer.createView({
+      format: this.format,
+      dimension: "2d",
+      aspect: "all",
+      baseMipLevel: 0,
+      mipLevelCount: 1,
+      baseArrayLayer: 0,
+      arrayLayerCount: 1,
+    });
+    const sampler = this.device.createSampler({
+      magFilter: "linear",
+      minFilter: "linear",
+    });
+
     const layout = BindGroupLayoutBuilder.Create("post_processing")
       .addMaterial(GPUShaderStage.FRAGMENT, "2d")
       .build(this.device);
@@ -273,15 +295,12 @@ export class Renderer {
       layout: pipelineLayout,
     });
 
-    // TODO PAC: This feels a little off
-    this.framebuffer = new Framebuffer();
-    await this.framebuffer.initialize(
-      this.device,
-      this.canvas,
-      this.format,
+    this.postProcessingBindGroup = BindGroupBuilder.Create(
+      "post_processing",
       layout,
-    );
-    this.postProcessingBindGroup = this.framebuffer.bindGroup;
+    )
+      .addMaterial(this.screenTextureView, sampler)
+      .build(this.device);
   }
 
   async createAssets() {
@@ -307,48 +326,50 @@ export class Renderer {
   }
 
   async render(scene: Scene) {
-    const projection = mat4.create() as ArrayBuffer;
-    mat4.perspective(
-      projection as mat4,
-      Math.PI / 4,
-      this.canvas.width / this.canvas.height,
-      0.1,
-      100.0,
+    //--------------------------------------------------------------------------
+
+    // Calculate the camera view and projection matrices
+    const aspect = this.canvas.width / this.canvas.height;
+    mat4.perspective(this.projection, Math.PI / 4, aspect, 0.1, 100.0);
+    this.device.queue.writeBuffer(
+      this.uniformBuffer,
+      0,
+      scene.camera.view as ArrayBuffer,
     );
-
-    const view = scene.camera.view as ArrayBuffer;
-
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, view);
-    this.device.queue.writeBuffer(this.uniformBuffer, mat4x4Size(), projection);
+    this.device.queue.writeBuffer(
+      this.uniformBuffer,
+      mat4x4Size(),
+      this.projection as ArrayBuffer,
+    );
     this.device.queue.writeBuffer(
       this.objectBuffer,
       0,
       scene.objectData,
       0,
-      mat4Size(1), // Only write one globe
+      mat4Size(1 /* Only write one globe */),
     );
 
-    //command encoder: records draw commands for submission
-    const commandEncoder: GPUCommandEncoder =
-      this.device.createCommandEncoder();
+    //--------------------------------------------------------------------------
 
+    const commandEncoder = this.device.createCommandEncoder();
+
+    //--------------------------------------------------------------------------
+    const computeBindGroup =
+      this.frameNumber % 2 === 0
+        ? this.computeBindGroupPing
+        : this.computeBindGroupPong;
+    const dispatchCount = Math.ceil(this.globeMesh.indexBuffer.size / 256);
     const computePass = commandEncoder.beginComputePass();
     computePass.setPipeline(this.computePipeline);
-    computePass.setBindGroup(
-      0,
-      this.loopTimes ? this.computeBindGroupPong : this.computeBindGroupPing,
-    );
-    computePass.dispatchWorkgroups(
-      Math.ceil(this.globeMesh.indexBuffer.size / 256),
-    );
-    this.loopTimes = !this.loopTimes;
+    computePass.setBindGroup(0, computeBindGroup);
+    computePass.dispatchWorkgroups(dispatchCount);
     computePass.end();
 
-    //renderPass: holds draw commands, allocated from command encoder
+    //--------------------------------------------------------------------------
     const renderPass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
-          view: this.framebuffer.view, // Render to the frame buffer
+          view: this.screenTextureView, // Render to the frame buffer
           loadOp: "clear",
           storeOp: "store",
         } as GPURenderPassColorAttachment,
@@ -360,10 +381,10 @@ export class Renderer {
     renderPass.setIndexBuffer(this.globeMesh.indexBuffer, "uint32");
     renderPass.setBindGroup(0, this.renderBindGroup);
     renderPass.drawIndexed(this.globeMesh.triCount * 3, 1);
-    //renderPass.draw(this.globeMesh.vertexCount, 1 /* 1 globe */, 0, 0);
+    // renderPass.draw(this.globeMesh.vertexCount, 1 /* 1 globe */, 0, 0);
     renderPass.end();
 
-    //texture view: image view to the color buffer in this case
+    //--------------------------------------------------------------------------
     const textureView: GPUTextureView = this.context
       .getCurrentTexture()
       .createView();
@@ -383,5 +404,6 @@ export class Renderer {
     postProcessingPass.end();
 
     this.device.queue.submit([commandEncoder.finish()]);
+    this.frameNumber++;
   }
 }

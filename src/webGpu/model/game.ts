@@ -70,6 +70,6 @@ export class Game {
   }
 
   handle_mouse_move(event: MouseEvent) {
-    this.scene.spin_player(event.movementX / 10, -event.movementY / 10);
+    this.scene.spin_player(event.movementX / 5, event.movementY / 5);
   }
 }
