@@ -21,6 +21,7 @@ fn vs_main(@builtin(vertex_index) vertex_index : u32) -> Fragment {
       vec2(0.0, 0.0),
     );
 
+    // TODO: are x & y in the correct direction?
     var output : Fragment;
     output.position = vec4(pos[vertex_index], 0.0, 1.0);
     output.uv = uv[vertex_index];

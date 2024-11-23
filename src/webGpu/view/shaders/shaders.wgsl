@@ -25,7 +25,8 @@ struct Vertex {
 struct Fragment {
     @builtin(position) position : vec4<f32>,
     @location(0) uv : vec2<f32>,
-    @location(1) tileData : f32
+    @location(1) tileData : f32,
+    @location(2) worldPosition : vec4<f32>
 };
 
 @vertex
@@ -35,9 +36,12 @@ fn vs_main(
     vert: Vertex) -> Fragment {
 
     var output : Fragment;
-    output.position = tileData.data[instance_index]*
+    output.position =
         u_transform.projection *
         u_transform.view *
+        objects.model[instance_index] *
+        vec4<f32>(vert.position, 1.0);
+    output.worldPosition =
         objects.model[instance_index] *
         vec4<f32>(vert.position, 1.0);
     output.uv = vert.uv;
