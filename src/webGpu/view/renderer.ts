@@ -2,9 +2,11 @@ import { mat4 } from "gl-matrix";
 import cat from "../assets/cat.jpg";
 import { mat4Size, mat4x4Size } from "../math.js";
 import type { Scene } from "../model/scene.js";
+import { Framebuffer } from "./frameBuffer.js";
 import { Material } from "./material.js";
 import { GlobeMesh } from "./meshes/globeMesh.js";
 import computeShader from "./shaders/compute.wgsl";
+import post from "./shaders/post.wgsl";
 import shader from "./shaders/shaders.wgsl";
 
 export class Renderer {
@@ -17,16 +19,17 @@ export class Renderer {
   format: GPUTextureFormat;
 
   // Pipeline objects
-  bindGroup: GPUBindGroup;
-  bindGroup0: GPUBindGroup;
-  bindGroup1: GPUBindGroup;
+  computeBindGroup0: GPUBindGroup;
+  computeBindGroup1: GPUBindGroup;
   computePipeline: GPUComputePipeline;
+
+  renderBindGroup: GPUBindGroup;
+  postProcessingBindGroup: GPUBindGroup;
   renderPipeline: GPURenderPipeline;
+  postProcessingPipeline: GPURenderPipeline;
 
   // Depth stencil
   depthStencilState: GPUDepthStencilState;
-  depthStencilBuffer: GPUTexture;
-  depthStencilView: GPUTextureView;
   depthStencilAttachment: GPURenderPassDepthStencilAttachment;
 
   // Assets
@@ -35,6 +38,7 @@ export class Renderer {
   objectBuffer: GPUBuffer;
   tileDataBuffer0: GPUBuffer;
   tileDataBuffer1: GPUBuffer;
+  framebuffer: Framebuffer;
 
   uniformBuffer: GPUBuffer;
 
@@ -50,6 +54,7 @@ export class Renderer {
     await this.makeDepthBufferResources();
     await this.makeComputePipeline();
     await this.makeRenderPipeline();
+    await this.makePostProcessingPipeline();
   }
 
   async setupDevice() {
@@ -102,7 +107,7 @@ export class Renderer {
       depthWriteEnabled: true,
       depthCompare: "less-equal",
     };
-    this.depthStencilBuffer = this.device.createTexture({
+    const depthStencilBuffer = this.device.createTexture({
       size: {
         width: this.canvas.width,
         height: this.canvas.height,
@@ -112,17 +117,14 @@ export class Renderer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    const depthStencilDescriptor: GPUTextureViewDescriptor = {
+    const depthStencilView = depthStencilBuffer.createView({
       format: "depth24plus-stencil8",
       dimension: "2d",
       aspect: "all",
-    };
-    this.depthStencilView = this.depthStencilBuffer.createView(
-      depthStencilDescriptor,
-    );
+    });
 
     this.depthStencilAttachment = {
-      view: this.depthStencilView,
+      view: depthStencilView,
       depthClearValue: 1.0,
       depthLoadOp: "clear",
       depthStoreOp: "store",
@@ -167,7 +169,7 @@ export class Renderer {
       new Float32Array([this.globeMesh.indexBuffer.size, 0]),
     );
 
-    this.bindGroup0 = this.device.createBindGroup({
+    this.computeBindGroup0 = this.device.createBindGroup({
       layout: bindGroupLayoutCompute,
       entries: [
         { binding: 0, resource: { buffer: sizeBuffer } },
@@ -182,7 +184,7 @@ export class Renderer {
       0,
     );
 
-    this.bindGroup1 = this.device.createBindGroup({
+    this.computeBindGroup1 = this.device.createBindGroup({
       layout: bindGroupLayoutCompute,
       entries: [
         { binding: 0, resource: { buffer: sizeBuffer } },
@@ -247,7 +249,7 @@ export class Renderer {
       ],
     });
 
-    this.bindGroup = this.device.createBindGroup({
+    this.renderBindGroup = this.device.createBindGroup({
       layout: bindGroupLayout,
       entries: [
         {
@@ -297,9 +299,61 @@ export class Renderer {
       primitive: {
         topology: "triangle-list",
       },
-      layout: pipelineLayout,
       depthStencil: this.depthStencilState,
+      layout: pipelineLayout,
     });
+  }
+
+  async makePostProcessingPipeline() {
+    const bindGroupLayout = this.device.createBindGroupLayout({
+      label: "post_processing_bind_group_layout",
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {
+            viewDimension: "2d",
+          },
+        } as GPUBindGroupLayoutEntry,
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {},
+        } as GPUBindGroupLayoutEntry,
+      ],
+    });
+
+    const pipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [bindGroupLayout],
+    });
+
+    this.postProcessingPipeline = this.device.createRenderPipeline({
+      label: "post_processing_pipeline",
+      vertex: {
+        module: this.device.createShaderModule({ code: post }),
+        entryPoint: "vs_main",
+      },
+      fragment: {
+        module: this.device.createShaderModule({ code: post }),
+        entryPoint: "fs_main",
+        targets: [{ format: this.format }],
+      },
+      primitive: {
+        topology: "triangle-list",
+      },
+      layout: pipelineLayout,
+    });
+
+    this.framebuffer = new Framebuffer();
+
+    await this.framebuffer.initialize(
+      this.device,
+      this.canvas,
+      this.format,
+      bindGroupLayout,
+    );
+
+    this.postProcessingBindGroup = this.framebuffer.bindGroup;
   }
 
   async createAssets() {
@@ -354,7 +408,7 @@ export class Renderer {
     computePass.setPipeline(this.computePipeline);
     computePass.setBindGroup(
       0,
-      this.loopTimes ? this.bindGroup1 : this.bindGroup0,
+      this.loopTimes ? this.computeBindGroup1 : this.computeBindGroup0,
     );
     computePass.dispatchWorkgroups(
       Math.ceil(this.globeMesh.indexBuffer.size / 256),
@@ -362,17 +416,11 @@ export class Renderer {
     this.loopTimes = !this.loopTimes;
     computePass.end();
 
-    //texture view: image view to the color buffer in this case
-    const textureView: GPUTextureView = this.context
-      .getCurrentTexture()
-      .createView();
-
     //renderPass: holds draw commands, allocated from command encoder
     const renderPass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
-          view: textureView,
-          clearValue: { r: 0.5, g: 0.0, b: 0.25, a: 1.0 },
+          view: this.framebuffer.view, // Render to the frame buffer
           loadOp: "clear",
           storeOp: "store",
         } as GPURenderPassColorAttachment,
@@ -382,11 +430,29 @@ export class Renderer {
     renderPass.setPipeline(this.renderPipeline);
     renderPass.setVertexBuffer(0, this.globeMesh.vertexBuffer);
     renderPass.setIndexBuffer(this.globeMesh.indexBuffer, "uint32");
-    renderPass.setBindGroup(0, this.bindGroup);
+    renderPass.setBindGroup(0, this.renderBindGroup);
     renderPass.drawIndexed(this.globeMesh.triCount * 3, 1);
     //renderPass.draw(this.globeMesh.vertexCount, 1 /* 1 globe */, 0, 0);
-
     renderPass.end();
+
+    //texture view: image view to the color buffer in this case
+    const textureView: GPUTextureView = this.context
+      .getCurrentTexture()
+      .createView();
+    const postProcessingPass: GPURenderPassEncoder =
+      commandEncoder.beginRenderPass({
+        colorAttachments: [
+          {
+            view: textureView,
+            loadOp: "clear",
+            storeOp: "store",
+          } as GPURenderPassColorAttachment,
+        ],
+      });
+    postProcessingPass.setPipeline(this.postProcessingPipeline);
+    postProcessingPass.setBindGroup(0, this.postProcessingBindGroup);
+    postProcessingPass.draw(3, 1, 0, 0);
+    postProcessingPass.end();
 
     this.device.queue.submit([commandEncoder.finish()]);
   }

@@ -48,5 +48,5 @@ fn vs_main(
 
 @fragment
 fn fs_main(frag: Fragment) -> @location(0) vec4<f32> {
-    return frag.tileData * textureSample(myTexture, mySampler, frag.uv);
+    return frag.tileData * textureSample(myTexture, mySampler, frag.uv/2.0);
 }
