@@ -2,6 +2,8 @@ import { mat4 } from "gl-matrix";
 import cat from "../assets/cat.jpg";
 import { mat4Size, mat4x4Size } from "../math.js";
 import type { Scene } from "../model/scene.js";
+import { BindGroupBuilder } from "./builders/bindGroupBuilder.js";
+import { BindGroupLayoutBuilder } from "./builders/bindGroupLayoutBuilder.js";
 import { Framebuffer } from "./frameBuffer.js";
 import { Material } from "./material.js";
 import { GlobeMesh } from "./meshes/globeMesh.js";
@@ -19,8 +21,8 @@ export class Renderer {
   format: GPUTextureFormat;
 
   // Pipeline objects
-  computeBindGroup0: GPUBindGroup;
-  computeBindGroup1: GPUBindGroup;
+  computeBindGroupPing: GPUBindGroup;
+  computeBindGroupPong: GPUBindGroup;
   computePipeline: GPUComputePipeline;
 
   renderBindGroup: GPUBindGroup;
@@ -134,26 +136,6 @@ export class Renderer {
   }
 
   async makeComputePipeline() {
-    const bindGroupLayoutCompute = this.device.createBindGroupLayout({
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.COMPUTE,
-          buffer: { type: "read-only-storage" },
-        } as GPUBindGroupLayoutEntry,
-        {
-          binding: 1,
-          visibility: GPUShaderStage.COMPUTE,
-          buffer: { type: "read-only-storage" },
-        } as GPUBindGroupLayoutEntry,
-        {
-          binding: 2,
-          visibility: GPUShaderStage.COMPUTE,
-          buffer: { type: "storage" },
-        } as GPUBindGroupLayoutEntry,
-      ],
-    });
-
     const sizeBuffer = this.device.createBuffer({
       label: "size_buffer",
       size: 2 * Uint32Array.BYTES_PER_ELEMENT,
@@ -163,20 +145,30 @@ export class Renderer {
         GPUBufferUsage.COPY_DST |
         GPUBufferUsage.VERTEX,
     });
+
+    const layout = BindGroupLayoutBuilder.Create("compute")
+      .addBuffer(GPUShaderStage.COMPUTE, "read-only-storage")
+      .addBuffer(GPUShaderStage.COMPUTE, "read-only-storage")
+      .addBuffer(GPUShaderStage.COMPUTE, "storage")
+      .build(this.device);
+
+    this.computeBindGroupPing = BindGroupBuilder.Create("compute_ping", layout)
+      .addBuffer(sizeBuffer)
+      .addBuffer(this.tileDataBuffer0)
+      .addBuffer(this.tileDataBuffer1)
+      .build(this.device);
+
+    this.computeBindGroupPong = BindGroupBuilder.Create("compute_pong", layout)
+      .addBuffer(sizeBuffer)
+      .addBuffer(this.tileDataBuffer1)
+      .addBuffer(this.tileDataBuffer0)
+      .build(this.device);
+
     this.device.queue.writeBuffer(
       sizeBuffer,
       0,
       new Float32Array([this.globeMesh.indexBuffer.size, 0]),
     );
-
-    this.computeBindGroup0 = this.device.createBindGroup({
-      layout: bindGroupLayoutCompute,
-      entries: [
-        { binding: 0, resource: { buffer: sizeBuffer } },
-        { binding: 1, resource: { buffer: this.tileDataBuffer0 } },
-        { binding: 2, resource: { buffer: this.tileDataBuffer1 } },
-      ],
-    });
     this.device.queue.writeBuffer(
       this.tileDataBuffer0,
       0,
@@ -184,23 +176,15 @@ export class Renderer {
       0,
     );
 
-    this.computeBindGroup1 = this.device.createBindGroup({
-      layout: bindGroupLayoutCompute,
-      entries: [
-        { binding: 0, resource: { buffer: sizeBuffer } },
-        { binding: 1, resource: { buffer: this.tileDataBuffer1 } },
-        { binding: 2, resource: { buffer: this.tileDataBuffer0 } },
-      ],
-    });
     // compute pipeline
     this.computePipeline = this.device.createComputePipeline({
       layout: this.device.createPipelineLayout({
-        bindGroupLayouts: [bindGroupLayoutCompute],
+        bindGroupLayouts: [layout],
       }),
       compute: {
         module: this.device.createShaderModule({ code: computeShader }),
         constants: {
-          blockSize: 256, //workgroupsize
+          blockSize: 256, // workgroupsize
         },
       },
     });
@@ -213,76 +197,22 @@ export class Renderer {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const bindGroupLayout = this.device.createBindGroupLayout({
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX,
-          buffer: {},
-        } as GPUBindGroupLayoutEntry,
-        {
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: {},
-        },
-        {
-          binding: 2,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: {},
-        },
-        {
-          binding: 3,
-          visibility: GPUShaderStage.VERTEX,
-          buffer: {
-            type: "read-only-storage",
-            hasDynamicOffset: false,
-          },
-        } as GPUBindGroupLayoutEntry,
-        {
-          binding: 4,
-          visibility: GPUShaderStage.VERTEX,
-          buffer: {
-            type: "read-only-storage",
-            hasDynamicOffset: false,
-          },
-        } as GPUBindGroupLayoutEntry,
-      ],
-    });
+    const layout = BindGroupLayoutBuilder.Create("render")
+      .addBuffer(GPUShaderStage.VERTEX, "uniform")
+      .addMaterial(GPUShaderStage.FRAGMENT, "2d") // Two bindings - texture and sampler
+      .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
+      .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
+      .build(this.device);
 
-    this.renderBindGroup = this.device.createBindGroup({
-      layout: bindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: {
-            buffer: this.uniformBuffer,
-          },
-        } as GPUBindGroupEntry,
-        {
-          binding: 1,
-          resource: this.material.view,
-        } as GPUBindGroupEntry,
-        {
-          binding: 2,
-          resource: this.material.sampler,
-        } as GPUBindGroupEntry,
-        {
-          binding: 3,
-          resource: {
-            buffer: this.objectBuffer,
-          },
-        } as GPUBindGroupEntry,
-        {
-          binding: 4,
-          resource: {
-            buffer: this.tileDataBuffer0,
-          },
-        } as GPUBindGroupEntry,
-      ],
-    });
+    this.renderBindGroup = BindGroupBuilder.Create("render", layout)
+      .addBuffer(this.uniformBuffer)
+      .addMaterial(this.material.view, this.material.sampler)
+      .addBuffer(this.objectBuffer)
+      .addBuffer(this.tileDataBuffer0)
+      .build(this.device);
 
     const pipelineLayout = this.device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayout],
+      bindGroupLayouts: [layout],
     });
 
     this.renderPipeline = this.device.createRenderPipeline({
@@ -305,28 +235,13 @@ export class Renderer {
   }
 
   async makePostProcessingPipeline() {
-    const bindGroupLayout = this.device.createBindGroupLayout({
-      label: "post_processing_bind_group_layout",
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: {
-            viewDimension: "2d",
-          },
-        } as GPUBindGroupLayoutEntry,
-        {
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          sampler: {},
-        } as GPUBindGroupLayoutEntry,
-      ],
-    });
+    const layout = BindGroupLayoutBuilder.Create("post_processing")
+      .addMaterial(GPUShaderStage.FRAGMENT, "2d")
+      .build(this.device);
 
     const pipelineLayout = this.device.createPipelineLayout({
-      bindGroupLayouts: [bindGroupLayout],
+      bindGroupLayouts: [layout],
     });
-
     this.postProcessingPipeline = this.device.createRenderPipeline({
       label: "post_processing_pipeline",
       vertex: {
@@ -344,15 +259,14 @@ export class Renderer {
       layout: pipelineLayout,
     });
 
+    // TODO PAC: This feels a little off
     this.framebuffer = new Framebuffer();
-
     await this.framebuffer.initialize(
       this.device,
       this.canvas,
       this.format,
-      bindGroupLayout,
+      layout,
     );
-
     this.postProcessingBindGroup = this.framebuffer.bindGroup;
   }
 
@@ -408,7 +322,7 @@ export class Renderer {
     computePass.setPipeline(this.computePipeline);
     computePass.setBindGroup(
       0,
-      this.loopTimes ? this.computeBindGroup1 : this.computeBindGroup0,
+      this.loopTimes ? this.computeBindGroupPong : this.computeBindGroupPing,
     );
     computePass.dispatchWorkgroups(
       Math.ceil(this.globeMesh.indexBuffer.size / 256),

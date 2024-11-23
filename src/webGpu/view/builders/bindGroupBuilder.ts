@@ -1,21 +1,24 @@
 export class BindGroupBuilder {
-  device: GPUDevice;
+  label: string;
   layout: GPUBindGroupLayout;
   entries: GPUBindGroupEntry[];
   binding: number;
 
-  constructor(device: GPUDevice) {
-    this.device = device;
+  private constructor(label: string, layout: GPUBindGroupLayout) {
+    this.label = label;
+    this.layout = layout;
+    this.entries = [];
+    this.binding = 0;
     this.reset();
+  }
+
+  public static Create(label: string, layout: GPUBindGroupLayout) {
+    return new BindGroupBuilder(label, layout);
   }
 
   reset() {
     this.entries = [];
     this.binding = 0;
-  }
-
-  setLayout(layout: GPUBindGroupLayout) {
-    this.layout = layout;
   }
 
   addBuffer(buffer: GPUBuffer) {
@@ -26,6 +29,7 @@ export class BindGroupBuilder {
       },
     });
     this.binding += 1;
+    return this;
   }
 
   addMaterial(view: GPUTextureView, sampler: GPUSampler) {
@@ -40,16 +44,17 @@ export class BindGroupBuilder {
       resource: sampler,
     });
     this.binding += 1;
+    return this;
   }
 
-  async build(): Promise<GPUBindGroup> {
-    const bindGroup = await this.device.createBindGroup({
+  build(device: GPUDevice): GPUBindGroup {
+    console.log(this);
+    const bindGroup = device.createBindGroup({
+      label: `${this.label}_bind_group`,
       layout: this.layout,
       entries: this.entries,
     });
-
     this.reset();
-
     return bindGroup;
   }
 }

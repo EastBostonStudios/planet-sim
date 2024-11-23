@@ -1,11 +1,17 @@
 export class BindGroupLayoutBuilder {
-  device: GPUDevice;
+  label: string;
   bindGroupLayoutEntries: GPUBindGroupLayoutEntry[];
   binding: number;
 
-  constructor(device: GPUDevice) {
-    this.device = device;
+  private constructor(label: string) {
+    this.label = label;
+    this.bindGroupLayoutEntries = [];
+    this.binding = 0;
     this.reset();
+  }
+
+  public static Create(label: string) {
+    return new BindGroupLayoutBuilder(label);
   }
 
   reset() {
@@ -13,7 +19,10 @@ export class BindGroupLayoutBuilder {
     this.binding = 0;
   }
 
-  addBuffer(visibility: number, type: GPUBufferBindingType) {
+  addBuffer(
+    visibility: GPUShaderStageFlags,
+    type: GPUBufferBindingType,
+  ): BindGroupLayoutBuilder {
     this.bindGroupLayoutEntries.push({
       binding: this.binding,
       visibility: visibility,
@@ -23,9 +32,13 @@ export class BindGroupLayoutBuilder {
       },
     });
     this.binding += 1;
+    return this;
   }
 
-  addMaterial(visibility: number, type: GPUTextureViewDimension) {
+  addMaterial(
+    visibility: number,
+    type: GPUTextureViewDimension,
+  ): BindGroupLayoutBuilder {
     this.bindGroupLayoutEntries.push({
       binding: this.binding,
       visibility: visibility,
@@ -41,10 +54,13 @@ export class BindGroupLayoutBuilder {
       sampler: {},
     });
     this.binding += 1;
+    return this;
   }
 
-  async build(): Promise<GPUBindGroupLayout> {
-    const layout: GPUBindGroupLayout = await this.device.createBindGroupLayout({
+  // buildAsync?
+  build(device: GPUDevice): GPUBindGroupLayout {
+    const layout = device.createBindGroupLayout({
+      label: `${this.label}_bind_group_layout`,
       entries: this.bindGroupLayoutEntries,
     });
     this.reset();
