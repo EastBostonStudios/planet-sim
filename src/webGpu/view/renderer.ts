@@ -57,10 +57,10 @@ export class Renderer {
   // Pipeline objects
   computeBindGroupPing: GPUBindGroup;
   computeBindGroupPong: GPUBindGroup;
-  computePipeline: GPUComputePipeline;
-
   renderBindGroup: GPUBindGroup;
   postProcessingBindGroup: GPUBindGroup;
+
+  computePipeline: GPUComputePipeline;
   renderPipeline: GPURenderPipeline;
   postProcessingPipeline: GPURenderPipeline;
 
@@ -72,16 +72,16 @@ export class Renderer {
   };
   depthStencilAttachment: GPURenderPassDepthStencilAttachment;
 
+  // Post processing
+  screenTextureView: GPUTextureView;
+
   // Assets
   globeMesh: GlobeMesh;
   material: Material;
-
+  uniformBuffer: GPUBuffer;
   objectBuffer: GPUBuffer;
   tileDataBufferPing: GPUBuffer;
   tileDataBufferPong: GPUBuffer;
-  uniformBuffer: GPUBuffer;
-
-  screenTextureView: GPUTextureView;
 
   constructor(resources: RenderResources) {
     this.canvas = resources.canvas;
@@ -95,7 +95,7 @@ export class Renderer {
 
   async Initialize() {
     // Stolen code to support canvas resizing
-    const observer = new ResizeObserver((entries) => {
+    const observer = new ResizeObserver(async (entries) => {
       for (const entry of entries) {
         const width =
           entry.devicePixelContentBoxSize?.[0].inlineSize ||
@@ -108,7 +108,7 @@ export class Renderer {
         this.canvas.height = clamp(height, 1, maxSize);
 
         // Recreate the depth buffer and post-processing effect buffers
-        this.makePostProcessingPipeline();
+        this.postProcessingPipeline = await this.makePostProcessingPipeline();
       }
     });
     try {
@@ -118,9 +118,9 @@ export class Renderer {
     }
 
     await this.createAssets();
-    await this.makeComputePipeline();
-    await this.makeRenderPipeline();
-    await this.makePostProcessingPipeline();
+    this.computePipeline = await this.makeComputePipeline();
+    this.renderPipeline = await this.makeRenderPipeline();
+    this.postProcessingPipeline = await this.makePostProcessingPipeline();
   }
 
   async makeComputePipeline() {
@@ -165,7 +165,7 @@ export class Renderer {
     );
 
     // compute pipeline
-    this.computePipeline = this.device.createComputePipeline({
+    return this.device.createComputePipeline({
       layout: this.device.createPipelineLayout({
         bindGroupLayouts: [layout],
       }),
@@ -203,7 +203,7 @@ export class Renderer {
       bindGroupLayouts: [layout],
     });
 
-    this.renderPipeline = this.device.createRenderPipeline({
+    return this.device.createRenderPipeline({
       vertex: {
         module: this.device.createShaderModule({ code: shader }),
         entryPoint: "vs_main",
@@ -278,10 +278,17 @@ export class Renderer {
       .addMaterial(GPUShaderStage.FRAGMENT, "2d")
       .build(this.device);
 
+    this.postProcessingBindGroup = BindGroupBuilder.Create(
+      "post_processing",
+      layout,
+    )
+      .addMaterial(this.screenTextureView, sampler)
+      .build(this.device);
+
     const pipelineLayout = this.device.createPipelineLayout({
       bindGroupLayouts: [layout],
     });
-    this.postProcessingPipeline = this.device.createRenderPipeline({
+    return this.device.createRenderPipeline({
       label: "post_processing_pipeline",
       vertex: {
         module: this.device.createShaderModule({ code: post }),
@@ -297,13 +304,6 @@ export class Renderer {
       },
       layout: pipelineLayout,
     });
-
-    this.postProcessingBindGroup = BindGroupBuilder.Create(
-      "post_processing",
-      layout,
-    )
-      .addMaterial(this.screenTextureView, sampler)
-      .build(this.device);
   }
 
   async createAssets() {
@@ -330,7 +330,6 @@ export class Renderer {
 
   async render(scene: Scene) {
     //--------------------------------------------------------------------------
-
     // Calculate the camera view and projection matrices
     const aspect = this.canvas.width / this.canvas.height;
     mat4.perspective(this.projection, Math.PI / 4, aspect, 0.1, 100.0);
@@ -344,6 +343,8 @@ export class Renderer {
       mat4x4Size(),
       this.projection as ArrayBuffer,
     );
+
+    // Write the object matrix buffer to the GPU
     this.device.queue.writeBuffer(
       this.objectBuffer,
       0,

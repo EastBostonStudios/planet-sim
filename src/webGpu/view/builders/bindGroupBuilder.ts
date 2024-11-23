@@ -48,7 +48,6 @@ export class BindGroupBuilder {
   }
 
   build(device: GPUDevice): GPUBindGroup {
-    console.log(this);
     const bindGroup = device.createBindGroup({
       label: `${this.label}_bind_group`,
       layout: this.layout,
