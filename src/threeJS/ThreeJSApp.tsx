@@ -11,11 +11,11 @@ import { createContext } from "react";
 import { useSearchParams } from "react-router-dom";
 import styled from "styled-components";
 import { DoubleSide, Vector3 } from "three";
-import * as Icosahedron from "./board/Icosahedron";
-import { distBetweenPoints } from "./board/Icosahedron";
-import type { IcoCoords } from "./board/Icosphere";
-import { interpolateOnFace } from "./board/faceMath";
-import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider";
+import * as Icosahedron from "../board/Icosahedron.js";
+import { distBetweenPoints } from "../board/Icosahedron.js";
+import type { IcoCoords } from "../board/Icosphere.js";
+import { interpolateOnFace } from "../board/faceMath.js";
+import { HtmlOverlaysProvider } from "../utils/HtmlOverlaysProvider.js";
 
 const StyledApp = styled.div`
   position: absolute;
@@ -72,7 +72,7 @@ export const AppContext = createContext<{
   },
 });
 
-const App = () => {
+const ThreeJSApp = () => {
   //----------------------------------------------------------------------------
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -264,4 +264,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default ThreeJSApp;

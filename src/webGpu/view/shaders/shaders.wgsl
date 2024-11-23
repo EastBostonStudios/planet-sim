@@ -11,7 +11,7 @@ struct TileData {
     data: array<f32>
 }
 
-@binding(0) @group(0) var<uniform> transformUBO: TransformData;
+@binding(0) @group(0) var<uniform> u_transform: TransformData;
 @binding(1) @group(0) var myTexture: texture_2d<f32>;
 @binding(2) @group(0) var mySampler: sampler;
 @binding(3) @group(0) var<storage, read> objects: ObjectData;
@@ -36,8 +36,8 @@ fn vs_main(
 
     var output : Fragment;
     output.position = tileData.data[instance_index]*
-        transformUBO.projection *
-        transformUBO.view *
+        u_transform.projection *
+        u_transform.view *
         objects.model[instance_index] *
         vec4<f32>(vert.position, 1.0);
     output.uv = vert.uv;
