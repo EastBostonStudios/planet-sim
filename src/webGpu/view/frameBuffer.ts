@@ -38,12 +38,8 @@ export class Framebuffer {
     this.view = this.texture.createView(viewDescriptor);
 
     const samplerDescriptor: GPUSamplerDescriptor = {
-      addressModeU: "repeat",
-      addressModeV: "repeat",
       magFilter: "linear",
       minFilter: "linear",
-      mipmapFilter: "linear",
-      maxAnisotropy: 1,
     };
     this.sampler = device.createSampler(samplerDescriptor);
 

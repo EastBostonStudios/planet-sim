@@ -16,9 +16,9 @@ fn vs_main(@builtin(vertex_index) vertex_index : u32) -> Fragment {
       vec2(-1.0, -1.0),
     );
     const uv = array(
-      vec2(0.0, 0.0),
-      vec2(2.0, 2.0),
       vec2(0.0, 2.0),
+      vec2(2.0, 0.0),
+      vec2(0.0, 0.0),
     );
 
     var output : Fragment;
@@ -29,5 +29,5 @@ fn vs_main(@builtin(vertex_index) vertex_index : u32) -> Fragment {
 
 @fragment
 fn fs_main(frag: Fragment) -> @location(0) vec4<f32> {
-    return textureSample(myTexture, mySampler, frag.uv).bgra;
+   return textureSample(myTexture, mySampler, frag.uv).bgra;
 }
