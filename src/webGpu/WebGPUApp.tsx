@@ -12,7 +12,9 @@ import { clamp } from "./math.js";
 import { Scene } from "./model/scene.js";
 import { createComputePass } from "./passes/createComputePass.js";
 import { createTerrainRenderPass } from "./passes/createTerrainRenderPass.js";
+import { useShaderModule } from "./react/useShaderModule.js";
 import { Renderer } from "./view/renderer.js";
+import shader from "./view/shaders/shaders.wgsl";
 
 export const WebGPUApp = () => {
   //----------------------------------------------------------------------------
@@ -22,6 +24,12 @@ export const WebGPUApp = () => {
   const [gpuBuffers, setGpuBuffers] = useState<GpuBuffers>();
   const [screenSpaceBuffers, setScreenSpaceBuffers] =
     useState<ScreenSpaceBuffers>();
+
+  const landscapeShader = useShaderModule(
+    "landscape",
+    gpuResources?.device,
+    shader,
+  );
 
   //----------------------------------------------------------------------------
 
@@ -77,34 +85,32 @@ export const WebGPUApp = () => {
   const [renderer, setRenderer] = useState<Renderer>();
 
   useEffect(() => {
-    try {
-      if (!gpuResources || !gpuBuffers || !screenSpaceBuffers) return;
-      const computePipeline = createComputePass(gpuResources, gpuBuffers);
-      const renderPipeline = createTerrainRenderPass(
+    if (!gpuResources || !gpuBuffers || !screenSpaceBuffers || !landscapeShader)
+      return;
+    const computePipeline = createComputePass(gpuResources, gpuBuffers);
+    const terrainPass = createTerrainRenderPass(
+      gpuResources,
+      gpuBuffers,
+      screenSpaceBuffers,
+      landscapeShader,
+    );
+    setRenderer((prev) => {
+      //if (!prev) {
+      //console.log("Created renderer");
+      return new Renderer(
         gpuResources,
         gpuBuffers,
         screenSpaceBuffers,
+        computePipeline,
+        terrainPass,
+        new Scene(),
       );
-      setRenderer((prev) => {
-        if (!prev) {
-          console.log("Created renderer");
-          return new Renderer(
-            gpuResources,
-            gpuBuffers,
-            screenSpaceBuffers,
-            computePipeline,
-            renderPipeline,
-            new Scene(),
-          );
-        }
-        console.log("Reloaded renderer");
-        prev.terrainPass = renderPipeline;
-        return prev;
-      });
-    } catch (e) {
-      console.error("FOO", e);
-    }
-  }, [gpuResources, gpuBuffers, screenSpaceBuffers]);
+      //}
+      console.log("Reloaded renderer");
+      // prev.terrainPass = terrainPass;
+      //return prev;
+    });
+  }, [gpuResources, gpuBuffers, screenSpaceBuffers, landscapeShader]);
 
   useEffect(() => {
     if (renderer) {
@@ -139,7 +145,12 @@ useEffect(() => {
     <canvas
       ref={canvasRef}
       style={{ position: "absolute", width: "100%", height: "100%" }}
-      onKeyDown={(event) => {
+    />
+  );
+};
+
+/*
+  onKeyDown={(event) => {
         if (event.code === "KeyW") setForwardsAmount(0.02);
         else if (event.code === "KeyS") setForwardsAmount(-0.02);
         else if (event.code === "KeyA") setRightAmount(-0.02);
@@ -157,6 +168,4 @@ useEffect(() => {
       onMouseMove={
         (event) => {} //scene.spin_player(event.movementX / 5, event.movementY / 5)
       }
-    />
-  );
-};
+ */

@@ -3,7 +3,6 @@ import type { GpuResources } from "../async/requestGpuResources.js";
 import type { ScreenSpaceBuffers } from "../async/screenSpaceBuffers.js";
 import { BindGroupBuilder } from "../view/builders/bindGroupBuilder.js";
 import { BindGroupLayoutBuilder } from "../view/builders/bindGroupLayoutBuilder.js";
-import shader from "../view/shaders/shaders.wgsl";
 
 export type TerrainPass = {
   bindGroup: GPUBindGroup;
@@ -22,6 +21,7 @@ export function createTerrainRenderPass(
     tileDataBufferPing,
   }: GpuBuffers,
   { depthTextureView }: ScreenSpaceBuffers,
+  landscapeShader: GPUShaderModule,
 ): TerrainPass {
   console.log("Recreating terrain render pass");
 
@@ -58,17 +58,14 @@ export function createTerrainRenderPass(
     stencilStoreOp: "discard",
   };
 
-  const shaderModule = device.createShaderModule({ code: shader });
-  const compilationInfo = shaderModule.getCompilationInfo().then(console.log);
-
   const pipeline = device.createRenderPipeline({
     vertex: {
-      module: shaderModule,
+      module: landscapeShader,
       entryPoint: "vs_main",
       buffers: [globeMesh.bufferLayout],
     },
     fragment: {
-      module: device.createShaderModule({ code: shader }),
+      module: landscapeShader,
       entryPoint: "fs_main",
       targets: [{ format: format }],
     },
