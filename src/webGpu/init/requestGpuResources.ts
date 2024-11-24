@@ -1,4 +1,4 @@
-export type RenderResources = {
+export type GpuResources = {
   canvas: HTMLCanvasElement;
   // adapter: wrapper around (physical) GPU. Describes features and limits
   adapter: GPUAdapter;
@@ -13,9 +13,9 @@ export type RenderResources = {
  * An asynchronous function which requests all the required rendering resources
  * @param canvas The HTML Canvas to get rendering resources for
  */
-export async function requestRenderResources(
+export async function requestGpuResources(
   canvas: HTMLCanvasElement,
-): Promise<RenderResources> {
+): Promise<GpuResources> {
   if (!navigator.gpu) throw new Error("WebGPU not supported!");
 
   const adapter = await navigator.gpu.requestAdapter();

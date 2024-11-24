@@ -2,11 +2,11 @@ import { Canvas } from "@react-three/fiber";
 import React, { type FC, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { WebGPURenderer } from "three/webgpu";
-import BasePage from "../components/BasePage";
-import { RotatingBox } from "../components/RotatingBox";
-import { ComputeLayer } from "./ComputeLayer";
-import type { ComputeBuffers } from "./computeBuffers";
-import { useInitializeBuffer } from "./workers/useInitializeBuffer";
+import BasePage from "../components/BasePage.js";
+import { RotatingBox } from "../components/RotatingBox.js";
+import { ComputeLayer } from "./ComputeLayer.js";
+import type { ComputeBuffers } from "./computeBuffers.js";
+import { useInitializeBuffer } from "./workers/useInitializeBuffer.js";
 
 export const WebComputePage = () => {
   //----------------------------------------------------------------------------

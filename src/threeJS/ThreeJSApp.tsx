@@ -15,7 +15,7 @@ import * as Icosahedron from "../board/Icosahedron.js";
 import { distBetweenPoints } from "../board/Icosahedron.js";
 import type { IcoCoords } from "../board/Icosphere.js";
 import { interpolateOnFace } from "../board/faceMath.js";
-import { HtmlOverlaysProvider } from "../utils/HtmlOverlaysProvider.js";
+import { HtmlOverlaysProvider } from "./utils/HtmlOverlaysProvider.js";
 
 const StyledApp = styled.div`
   position: absolute;

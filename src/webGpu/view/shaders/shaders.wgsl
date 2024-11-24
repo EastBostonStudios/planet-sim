@@ -29,6 +29,7 @@ struct Fragment {
     @location(2) worldPosition : vec4<f32>
 };
 
+
 @vertex
 fn vs_main(
     @builtin(instance_index) instance_index: u32,

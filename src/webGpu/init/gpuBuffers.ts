@@ -2,9 +2,9 @@ import cat from "../assets/cat.jpg";
 import { mat4x4Size } from "../math.js";
 import { Material } from "../view/material.js";
 import { GlobeMesh } from "../view/meshes/globeMesh.js";
-import type { RenderResources } from "./requestRenderResources.js";
+import type { GpuResources } from "./requestGpuResources.js";
 
-export type RenderAssets = {
+export type GpuBuffers = {
   globeMesh: GlobeMesh;
   material: Material;
   uniformBuffer: GPUBuffer;
@@ -13,9 +13,9 @@ export type RenderAssets = {
   tileDataBufferPong: GPUBuffer;
 };
 
-export async function createAssets(
-  renderResources: RenderResources,
-): Promise<RenderAssets> {
+export async function allocateGpuBuffers(
+  renderResources: GpuResources,
+): Promise<GpuBuffers> {
   const globeMesh = new GlobeMesh(renderResources.device);
   const material = new Material();
 

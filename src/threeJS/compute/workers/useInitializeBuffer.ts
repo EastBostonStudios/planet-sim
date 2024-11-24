@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import MyWorker from "./setup.worker?worker";
+import MyWorker from "./setup.worker.js?worker";
 
 import * as THREE_WEBGPU from "three/webgpu";
 

@@ -30,5 +30,5 @@ fn vs_main(@builtin(vertex_index) vertex_index : u32) -> Fragment {
 
 @fragment
 fn fs_main(frag: Fragment) -> @location(0) vec4<f32> {
-   return textureSample(myTexture, mySampler, frag.uv).bgra;
+   return textureSample(myTexture, mySampler, frag.uv /* + vec2<f32>(sin(uv.x), sin(uv.y))*/).rgba;
 }

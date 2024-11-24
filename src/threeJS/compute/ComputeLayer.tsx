@@ -2,7 +2,7 @@ import { useFrame } from "@react-three/fiber";
 import { folder, useControls } from "leva";
 import React, { type FC, useMemo } from "react";
 import { storage, uniform, wgslFn } from "three/webgpu";
-import type { ComputeBuffers } from "./computeBuffers";
+import type { ComputeBuffers } from "./computeBuffers.js";
 import computePositionsShader from "./gpgpu/compute1.wgsl";
 import computePositions2Shader from "./gpgpu/compute2.wgsl";
 
