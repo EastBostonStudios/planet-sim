@@ -1,9 +1,9 @@
+import type { GpuBuffers } from "../async/gpuBuffers.js";
+import type { GpuResources } from "../async/requestGpuResources.js";
+import type { ScreenSpaceBuffers } from "../async/screenSpaceBuffers.js";
 import { BindGroupBuilder } from "../view/builders/bindGroupBuilder.js";
 import { BindGroupLayoutBuilder } from "../view/builders/bindGroupLayoutBuilder.js";
 import shader from "../view/shaders/shaders.wgsl";
-import type { GpuBuffers } from "./gpuBuffers.js";
-import type { GpuResources } from "./requestGpuResources.js";
-import type { ScreenSpaceBuffers } from "./screenSpaceBuffers.js";
 
 export type TerrainPass = {
   bindGroup: GPUBindGroup;
@@ -23,6 +23,8 @@ export function createTerrainRenderPass(
   }: GpuBuffers,
   { depthTextureView }: ScreenSpaceBuffers,
 ): TerrainPass {
+  console.log("Recreating terrain render pass");
+
   const layout = BindGroupLayoutBuilder.Create("render")
     .addBuffer(GPUShaderStage.VERTEX, "uniform")
     .addMaterial(GPUShaderStage.FRAGMENT, "2d") // Two bindings - texture and sampler
@@ -56,9 +58,12 @@ export function createTerrainRenderPass(
     stencilStoreOp: "discard",
   };
 
+  const shaderModule = device.createShaderModule({ code: shader });
+  const compilationInfo = shaderModule.getCompilationInfo().then(console.log);
+
   const pipeline = device.createRenderPipeline({
     vertex: {
-      module: device.createShaderModule({ code: shader }),
+      module: shaderModule,
       entryPoint: "vs_main",
       buffers: [globeMesh.bufferLayout],
     },

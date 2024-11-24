@@ -7,7 +7,7 @@ export class Material {
     const response: Response = await fetch(url);
     const blob: Blob = await response.blob();
     const imageData: ImageBitmap = await createImageBitmap(blob);
-    await this.loadImageBitmap(device, imageData);
+    this.loadImageBitmap(device, imageData);
     this.view = this.texture.createView({
       format: "rgba8unorm",
       dimension: "2d",
@@ -26,7 +26,7 @@ export class Material {
     });
   }
 
-  private async loadImageBitmap(device: GPUDevice, imageData: ImageBitmap) {
+  private loadImageBitmap(device: GPUDevice, imageData: ImageBitmap) {
     const textureDescriptor: GPUTextureDescriptor = {
       size: {
         width: imageData.width,

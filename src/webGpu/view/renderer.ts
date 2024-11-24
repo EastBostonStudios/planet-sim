@@ -1,15 +1,15 @@
 import { mat4 } from "gl-matrix";
-import type { ComputePass } from "../init/createComputePass.js";
+import type { GpuBuffers } from "../async/gpuBuffers.js";
+import type { GpuResources } from "../async/requestGpuResources.js";
+import type { ScreenSpaceBuffers } from "../async/screenSpaceBuffers.js";
+import { mat4Size, mat4x4Size } from "../math.js";
+import type { Scene } from "../model/scene.js";
+import type { ComputePass } from "../passes/createComputePass.js";
 import {
   type PostProcessingPass,
   createPostProcessingPass,
-} from "../init/createPostProcessingPass.js";
-import type { TerrainPass } from "../init/createTerrainRenderPass.js";
-import type { GpuBuffers } from "../init/gpuBuffers.js";
-import type { GpuResources } from "../init/requestGpuResources.js";
-import type { ScreenSpaceBuffers } from "../init/screenSpaceBuffers.js";
-import { mat4Size, mat4x4Size } from "../math.js";
-import type { Scene } from "../model/scene.js";
+} from "../passes/createPostProcessingPass.js";
+import type { TerrainPass } from "../passes/createTerrainRenderPass.js";
 
 export class Renderer {
   readonly projection;
@@ -20,7 +20,7 @@ export class Renderer {
   readonly buffers: GpuBuffers;
   readonly screenBuffers: ScreenSpaceBuffers;
   readonly computePass: ComputePass;
-  readonly terrainPass: TerrainPass;
+  terrainPass: TerrainPass;
   readonly postProcessingPass: PostProcessingPass;
 
   constructor(
@@ -68,7 +68,7 @@ export class Renderer {
   }
 
   async render() {
-    console.log(this);
+    //  console.log("renderer", this);
     this.scene.update();
 
     //--------------------------------------------------------------------------
@@ -158,7 +158,7 @@ export class Renderer {
     this._frame++;
 
     if (this._running) {
-      requestAnimationFrame(this.render);
+      requestAnimationFrame(this.render.bind(this));
     }
   }
 }

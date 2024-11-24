@@ -2,12 +2,12 @@ import { Icosphere } from "../../../board/Icosphere.js";
 import { f32Size } from "../../math.js";
 
 export class GlobeMesh {
-  dataArray: Float32Array;
-  vertexBuffer: GPUBuffer;
-  indexBuffer: GPUBuffer;
-  bufferLayout: GPUVertexBufferLayout;
-  vertexCount: number;
-  triCount: number;
+  readonly dataArray: Float32Array;
+  readonly vertexBuffer: GPUBuffer;
+  readonly indexBuffer: GPUBuffer;
+  readonly bufferLayout: GPUVertexBufferLayout;
+  readonly vertexCount: number;
+  readonly triCount: number;
 
   constructor(device: GPUDevice) {
     const icosphere = new Icosphere(1);

@@ -1,8 +1,8 @@
+import type { GpuResources } from "../async/requestGpuResources.js";
+import type { ScreenSpaceBuffers } from "../async/screenSpaceBuffers.js";
 import { BindGroupBuilder } from "../view/builders/bindGroupBuilder.js";
 import { BindGroupLayoutBuilder } from "../view/builders/bindGroupLayoutBuilder.js";
 import post from "../view/shaders/post.wgsl";
-import type { GpuResources } from "./requestGpuResources.js";
-import type { ScreenSpaceBuffers } from "./screenSpaceBuffers.js";
 
 export type PostProcessingPass = {
   readonly bindGroup: GPUBindGroup;

@@ -1,23 +1,17 @@
-import React, {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { createComputePass } from "./init/createComputePass.js";
-import { createTerrainRenderPass } from "./init/createTerrainRenderPass.js";
-import { type GpuBuffers, allocateGpuBuffers } from "./init/gpuBuffers.js";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type GpuBuffers, allocateGpuBuffers } from "./async/gpuBuffers.js";
 import {
   type GpuResources,
   requestGpuResources,
-} from "./init/requestGpuResources.js";
+} from "./async/requestGpuResources.js";
 import {
   type ScreenSpaceBuffers,
   allocateScreenSpaceBuffers,
-} from "./init/screenSpaceBuffers.js";
+} from "./async/screenSpaceBuffers.js";
 import { clamp } from "./math.js";
 import { Scene } from "./model/scene.js";
+import { createComputePass } from "./passes/createComputePass.js";
+import { createTerrainRenderPass } from "./passes/createTerrainRenderPass.js";
 import { Renderer } from "./view/renderer.js";
 
 export const WebGPUApp = () => {
@@ -28,11 +22,6 @@ export const WebGPUApp = () => {
   const [gpuBuffers, setGpuBuffers] = useState<GpuBuffers>();
   const [screenSpaceBuffers, setScreenSpaceBuffers] =
     useState<ScreenSpaceBuffers>();
-  const scene = useMemo<Scene>(() => new Scene(), []);
-
-  const [forwardsAmount, setForwardsAmount] = useState<number>(0);
-  const [rightAmount, setRightAmount] = useState<number>(0);
-  const [running, setIsRunning] = useState<boolean>(true);
 
   //----------------------------------------------------------------------------
 
@@ -48,7 +37,7 @@ export const WebGPUApp = () => {
   useEffect(() => {
     if (!gpuResources) return;
     allocateGpuBuffers(gpuResources).then((b) => {
-      console.log("Allocated buffers:", b);
+      console.log("Allocated async:", b);
       setGpuBuffers(b);
     });
 
@@ -68,7 +57,7 @@ export const WebGPUApp = () => {
           clamp(height, 1, maxSize),
         ).then((b) => {
           setScreenSpaceBuffers(() => {
-            console.log("Reallocated screen space buffers:", b);
+            console.log("Reallocated screen space async:", b);
             return b;
           });
         });
@@ -105,16 +94,17 @@ export const WebGPUApp = () => {
             screenSpaceBuffers,
             computePipeline,
             renderPipeline,
-            scene,
+            new Scene(),
           );
         }
         console.log("Reloaded renderer");
+        prev.terrainPass = renderPipeline;
         return prev;
       });
     } catch (e) {
       console.error("FOO", e);
     }
-  }, [gpuResources, gpuBuffers, screenSpaceBuffers, scene]);
+  }, [gpuResources, gpuBuffers, screenSpaceBuffers]);
 
   useEffect(() => {
     if (renderer) {
@@ -142,6 +132,9 @@ useEffect(() => {
 
   //----------------------------------------------------------------------------
 
+  const [forwardsAmount, setForwardsAmount] = useState<number>(0);
+  const [rightAmount, setRightAmount] = useState<number>(0);
+
   return (
     <canvas
       ref={canvasRef}
@@ -161,8 +154,8 @@ useEffect(() => {
         else if (event.code === "KeyD") setRightAmount(0);
         else if (event.code === "Space") if (renderer) renderer.running = true;
       }}
-      onMouseMove={(event) =>
-        scene.spin_player(event.movementX / 5, event.movementY / 5)
+      onMouseMove={
+        (event) => {} //scene.spin_player(event.movementX / 5, event.movementY / 5)
       }
     />
   );

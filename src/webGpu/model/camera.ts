@@ -2,12 +2,12 @@ import { mat4, vec3 } from "gl-matrix";
 import { degToRad } from "../math.js";
 
 export class Camera {
-  position: vec3;
-  eulers: vec3;
-  view: mat4;
-  forwards: vec3;
-  right: vec3;
-  up: vec3;
+  readonly position: vec3;
+  readonly eulers: vec3;
+  readonly view: mat4;
+  readonly forwards: vec3;
+  readonly right: vec3;
+  readonly up: vec3;
 
   constructor(position: vec3, theta: number, phi: number) {
     this.position = position;

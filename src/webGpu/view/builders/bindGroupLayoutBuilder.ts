@@ -1,5 +1,5 @@
 export class BindGroupLayoutBuilder {
-  label: string;
+  readonly label: string;
   bindGroupLayoutEntries: GPUBindGroupLayoutEntry[];
   binding: number;
 
