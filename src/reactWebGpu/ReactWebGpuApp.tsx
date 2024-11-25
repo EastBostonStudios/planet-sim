@@ -109,6 +109,7 @@ const Main: FC = () => {
         >
           <WebGPUCanvas
             label="canvas_3"
+            flexBasis={0.9}
             setCanvases={setCanvases}
             objectBuffer={objectBuffer}
             scene={scene}
@@ -116,6 +117,13 @@ const Main: FC = () => {
           />
           <WebGPUCanvas
             label="canvas_4"
+            setCanvases={setCanvases}
+            objectBuffer={objectBuffer}
+            scene={scene}
+            globeMesh={globeMesh}
+          />
+          <WebGPUCanvas
+            label="canvas_5"
             flexBasis={0.5}
             setCanvases={setCanvases}
             objectBuffer={objectBuffer}
