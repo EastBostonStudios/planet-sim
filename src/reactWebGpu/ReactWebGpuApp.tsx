@@ -2,8 +2,11 @@ import React, { type FC, useEffect, useMemo, useState } from "react";
 import { mat4Size, mat4x4Size } from "../webGpu/math.js";
 import { Scene } from "../webGpu/model/scene.js";
 import { GlobeMesh } from "../webGpu/view/meshes/globeMesh.js";
-import { GpuDeviceProvider, useGpuDevice } from "./GpuDeviceProvider.js";
-import { type CanvasData, WebGPUCanvas } from "./WebGPUCanvas.js";
+import {
+  GpuDeviceProvider,
+  useGpuDevice,
+} from "./components/GpuDeviceProvider.js";
+import { type CanvasData, WebGPUCanvas } from "./components/WebGPUCanvas.js";
 import { useCreateBuffer } from "./gpuHooks/useCreateBuffer.js";
 
 export const ReactWebGpuApp: FC = () => {
@@ -27,6 +30,10 @@ const Main: FC = () => {
   const scene = useMemo(() => new Scene(), []);
   const globeMesh = useMemo(() => new GlobeMesh(device), [device]);
 
+  // TODO: how should we read out of CPU-readable buffers? Should there be a
+  //  readBufferAsync() method? (Since we have to call mapAsync()? Should that
+  //  be done every frame anyways?
+  // TODO: can we make ping-pong buffers more straightforward to create and use?
   const objectBuffer = useCreateBuffer({
     label: "object_buffer",
     size: mat4x4Size(1024), // Space for up to this many objects
@@ -34,6 +41,8 @@ const Main: FC = () => {
   });
 
   useEffect(() => {
+    // TODO: This is extremely gross and should be abstracted into a "GameLoop" class
+    //  with a "SimLoop" and a "RenderLoop" (well, multiple render loops- one per canvas)
     if (!objectBuffer) return;
     //--------------------------------------------------------------------------
     // Calculate the camera view and projection matrices
@@ -52,11 +61,11 @@ const Main: FC = () => {
     const commandEncoder = device.createCommandEncoder();
     if (!commandEncoder) return;
     for (const canvas of canvases) {
-      console.log({ commandEncoder });
+      //    console.log({ commandEncoder });
       canvas.renderPassFunc(commandEncoder);
     }
     device.queue.submit([commandEncoder.finish()]);
-    console.log("rendering", counter, canvases);
+    //    console.log("rendering", counter, canvases);
 
     setTimeout(() => setCounter((prev) => prev + 1), 10);
   }, [scene, device, canvases, counter, objectBuffer]);

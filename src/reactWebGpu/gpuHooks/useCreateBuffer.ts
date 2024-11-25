@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useGpuDevice } from "../GpuDeviceProvider.js";
+import { useGpuDevice } from "../components/GpuDeviceProvider.js";
 
 export function useCreateBuffer({ label, size, usage }: GPUBufferDescriptor) {
   const device = useGpuDevice();

@@ -5,7 +5,7 @@ import React, {
   useContext,
   useRef,
 } from "react";
-import useFireOnce from "./useFireOnce.js";
+import { useFireOnceAsync } from "../reactHooks/useFireOnce.js";
 
 const GpuDeviceContext = createContext<GPUDevice | undefined>(undefined);
 
@@ -13,9 +13,8 @@ export const GpuDeviceProvider: FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const isLoadingRef = useRef(false);
-  const device = useFireOnce(async () => {
+  const device = useFireOnceAsync(async () => {
     isLoadingRef.current = true;
-    console.log("ASDF");
     if (!navigator.gpu) throw new Error("WebGPU not supported!");
 
     const adapter = await navigator.gpu.requestAdapter();
@@ -23,6 +22,8 @@ export const GpuDeviceProvider: FC<{ children: ReactNode }> = ({
 
     const device = await adapter.requestDevice();
     if (!device) throw new Error("WebGPU device unavailable!");
+
+    console.log("Acquired GPUDevice");
     return device;
   });
 
