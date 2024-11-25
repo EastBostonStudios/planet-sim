@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useGpuDevice } from "../GpuDeviceProvider.js";
+import { useGpuDevice } from "../components/GpuDeviceProvider.js";
 
 /**
  * While creating a shader module is synchronous, checking for errors is async.
