@@ -6,7 +6,7 @@ import {
   createBrowserRouter,
 } from "react-router-dom";
 import "./index.css";
-import { WebGPUApp } from "./webGpu/WebGPUApp.js";
+import { ReactWebGpuApp } from "./reactWebGpu/ReactWebGpuApp.js";
 
 const root = document.getElementById("root");
 const reactRoot = !root ? undefined : ReactDOM.createRoot(root);
@@ -20,7 +20,7 @@ const router = createBrowserRouter(
     {
       // This must match "homepage" in package.json to work with GitHub pages
       path: "/planet-sim",
-      element: <WebGPUApp />,
+      element: <ReactWebGpuApp />,
     },
   ],
   {

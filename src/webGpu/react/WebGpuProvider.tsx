@@ -1,5 +1,4 @@
-import {type FC, useEffect, useState} from "react";
-import type {GpuResources} from "../async/requestGpuResources.js";
+import type { GpuResources } from "../async/requestGpuResources.js";
 
 /**
  * An asynchronous function which requests all the required rendering resources
@@ -23,13 +22,3 @@ export async function requestGpuResources(
   context.configure({ device, format, alphaMode: "opaque" });
   return { canvas, adapter, device, context, format };
 }
-
-export const WebGpuProvider: FC<> = () => {
-  const [gpuResources, setGpuResources] = useState<GpuResources>();
-
-  useEffect(() => {
-    requestGpuResources;
-  }, []);
-
-  return <Context.Provider>{}</Context.Provider>;
-};

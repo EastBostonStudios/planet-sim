@@ -28,6 +28,7 @@ export class Material {
 
   private loadImageBitmap(device: GPUDevice, imageData: ImageBitmap) {
     const textureDescriptor: GPUTextureDescriptor = {
+      label: "cat_texture",
       size: {
         width: imageData.width,
         height: imageData.height,
