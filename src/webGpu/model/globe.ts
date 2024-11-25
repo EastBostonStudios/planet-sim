@@ -2,9 +2,9 @@ import { mat4, vec3 } from "gl-matrix";
 import { degToRad } from "../math.js";
 
 export class Globe {
-  position: vec3;
-  eulers: vec3;
-  model: mat4;
+  readonly position: vec3;
+  readonly eulers: vec3;
+  readonly model: mat4;
   constructor(position: vec3, theta: number) {
     this.position = position;
     this.eulers = vec3.create();

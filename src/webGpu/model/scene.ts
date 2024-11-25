@@ -4,10 +4,10 @@ import { Camera } from "./camera.js";
 import { Globe } from "./globe.js";
 
 export class Scene {
-  globe: Globe;
-  camera: Camera;
+  readonly globe: Globe;
+  readonly camera: Camera;
 
-  objectData: Float32Array;
+  readonly objectData: Float32Array;
 
   constructor() {
     this.globe = new Globe([2, 0, 0], 0);
