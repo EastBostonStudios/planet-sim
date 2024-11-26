@@ -6,7 +6,7 @@ export function useCreateBuffer({
   label,
   size,
   usage,
-}: Required<GPUBufferDescriptor>): GPUBuffer {
+}: GPUBufferDescriptor & { label: string }): GPUBuffer {
   const device = useGpuDevice();
   const fullName = useLayerName(label);
   const [bufferAndDescriptor, setBufferAndDescriptor] = useState(() => {
