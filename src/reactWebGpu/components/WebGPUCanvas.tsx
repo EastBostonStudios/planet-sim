@@ -2,7 +2,6 @@ import { mat4 } from "gl-matrix";
 import React, {
   type Dispatch,
   type FC,
-  type RefObject,
   type SetStateAction,
   useEffect,
   useId,
@@ -23,6 +22,28 @@ import { useFireOnce } from "../reactHooks/useFireOnce.js";
 import shader from "../shaders/shaders.wgsl";
 import { useGpuDevice } from "./GpuDeviceProvider.js";
 
+/*
+export function useMutableCallback<T>(fn: T) {
+  const ref = React.useRef<T>(fn);
+  useEffect(() => {
+    ref.current = fn;
+  }, [fn]);
+  return ref;
+}
+
+export function useFrame(callback: RenderCallback, renderPriority = 0): null {
+  const store = useStore();
+  const subscribe = store.getState().internal.subscribe;
+  // Memoize ref
+  const ref = useMutableCallback(callback);
+  // Subscribe on mount, unsubscribe on unmount
+  useEffect(
+    () => subscribe(ref, renderPriority, store),
+    [renderPriority, subscribe, store],
+  );
+  return null;
+}*/
+
 export type CanvasData = {
   id: string;
   label: string;
@@ -38,21 +59,36 @@ interface Props {
   globeMesh: GlobeMesh;
 }
 
-export const WebGPUCanvas: FC<Props> = (props) => (
-  <Layer name={props.label}>
-    <Inner {...props} />
-  </Layer>
-);
+export const WebGPUCanvas: FC<Props> = (props) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  return (
+    <Layer name={props.label}>
+      <canvas
+        ref={canvasRef}
+        style={{
+          minBlockSize: 0,
+          minInlineSize: 0,
+          minHeight: 0,
+          minWidth: 0,
+          flexGrow: props.flexBasis ?? 1,
+          flexShrink: props.flexBasis ?? 1,
+          backgroundColor: props.flexBasis ? "red" : "blue",
+        }}
+      >
+        {canvasRef.current && <Inner {...props} canvas={canvasRef.current} />}
+      </canvas>
+    </Layer>
+  );
+};
 
-export const Inner: FC<Props> = ({
+export const Inner: FC<Props & { canvas: HTMLCanvasElement }> = ({
   label,
-  flexBasis,
   setCanvases,
   objectBuffer,
   scene,
   globeMesh,
+  canvas,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const device = useGpuDevice();
 
   const viewProjectionBuffer = useCreateBuffer({
@@ -68,13 +104,11 @@ export const Inner: FC<Props> = ({
 
   const material = useCreateMaterial();
 
-  const canvasDimensions = useCanvasDimensionListener(canvasRef);
+  const canvasDimensions = useCanvasDimensionListener(canvas);
 
   const renderPassFunc = useMemo(() => {
-    const canvas = canvasRef.current;
     if (
       !viewProjectionBuffer ||
-      !canvas ||
       !landscapeShader ||
       !material ||
       !canvasDimensions
@@ -83,7 +117,7 @@ export const Inner: FC<Props> = ({
 
     const { width, height, aspect } = canvasDimensions;
 
-    const context = canvas?.getContext("webgpu");
+    const context = canvas.getContext("webgpu");
     if (!context) throw new Error("WebGPU canvas context unavailable!");
     const format: GPUTextureFormat = "bgra8unorm";
     context.configure({ device, format, alphaMode: "opaque" });
@@ -193,6 +227,7 @@ export const Inner: FC<Props> = ({
       renderPass.end();
     };
   }, [
+    canvas,
     scene,
     label,
     device,
@@ -228,29 +263,16 @@ export const Inner: FC<Props> = ({
     };
   }, [id, label, renderPassFunc, setCanvases]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        minBlockSize: 0,
-        minInlineSize: 0,
-        minHeight: 0,
-        minWidth: 0,
-        flexGrow: flexBasis ?? 1,
-        flexShrink: flexBasis ?? 1,
-        backgroundColor: flexBasis ? "red" : "blue",
-      }}
-    />
-  );
+  return <></>;
 };
 
 /**
  * A hook which returns an object representing a canvas' size and aspect ratio
- * @param canvasRef   A ref to the canvas to watch for resizing
+ * @param canvas      A ref to the canvas to watch for resizing
  * @return            The width, height, and aspect ratio of this canvas
  */
 const useCanvasDimensionListener = (
-  canvasRef: RefObject<HTMLCanvasElement | null>,
+  canvas: HTMLCanvasElement,
 ): { width: number; height: number; aspect: number } | undefined => {
   const device = useGpuDevice();
   const [result, setResult] = useState<{
@@ -260,8 +282,6 @@ const useCanvasDimensionListener = (
   }>();
 
   useFireOnce(() => {
-    if (!canvasRef.current) return;
-
     // Modified from https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
     const observer = new ResizeObserver(async (entries) => {
       for (const entry of entries) {
@@ -287,9 +307,9 @@ const useCanvasDimensionListener = (
     });
 
     try {
-      observer.observe(canvasRef.current, { box: "device-pixel-content-box" });
+      observer.observe(canvas, { box: "device-pixel-content-box" });
     } catch {
-      observer.observe(canvasRef.current, { box: "content-box" });
+      observer.observe(canvas, { box: "content-box" });
     }
   });
 
