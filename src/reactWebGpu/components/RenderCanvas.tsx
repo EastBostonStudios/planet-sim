@@ -1,42 +1,33 @@
 import { mat4 } from "gl-matrix";
-import React, {
-  type FC,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
-import { Layer } from "../../Layer.js";
+import React, { type FC, type ReactNode, useRef, useState } from "react";
 import { clamp, mat4x4Size } from "../../webGpu/math.js";
 import type { Scene } from "../../webGpu/model/scene.js";
 import { BindGroupBuilder } from "../../webGpu/view/builders/bindGroupBuilder.js";
 import { BindGroupLayoutBuilder } from "../../webGpu/view/builders/bindGroupLayoutBuilder.js";
 import type { Material } from "../../webGpu/view/material.js";
 import type { GlobeMesh } from "../../webGpu/view/meshes/globeMesh.js";
+import { Layer, useLayerName } from "../Layer.js";
 import { useCreateBuffer } from "../gpuHooks/useCreateBuffer.js";
 import { useCreateMaterialAsync } from "../gpuHooks/useCreateMaterialAsync.js";
 import { useCreateShaderModule } from "../gpuHooks/useCreateShaderModule.js";
+import { useRenderPass } from "../gpuHooks/useRenderPass.js";
 import { useFireOnce } from "../reactHooks/useFireOnce.js";
 import shader from "../shaders/shaders.wgsl";
-import { RenderPassContext, type RenderPassFunc } from "../test.js";
 import { useGpuDevice } from "./GpuDeviceProvider.js";
 
 interface Props {
-  label: string;
-  flexBasis?: number;
+  name: string;
   objectBuffer: GPUBuffer;
   scene: Scene;
   globeMesh: GlobeMesh;
+  flexBasis?: number;
   children?: ReactNode;
 }
 
-export const WebGPUCanvas: FC<Props> = (props) => {
+export const RenderCanvas: FC<Props> = (props) => {
   const device = useGpuDevice();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [data, setData] = useState<{
-    canvas: HTMLCanvasElement;
     context: GPUCanvasContext;
     format: GPUTextureFormat;
   }>();
@@ -54,7 +45,7 @@ export const WebGPUCanvas: FC<Props> = (props) => {
     if (!context) throw new Error("WebGPU canvas context unavailable!");
     const format: GPUTextureFormat = "bgra8unorm";
     context.configure({ device, format, alphaMode: "opaque" });
-    setData({ canvas, context, format });
+    setData({ context, format });
 
     // Modified from https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
     const observer = new ResizeObserver(async (entries) => {
@@ -72,11 +63,13 @@ export const WebGPUCanvas: FC<Props> = (props) => {
           device.limits.maxTextureDimension2D,
         );
         const aspect = width / height;
-        setDimensions((prev) =>
-          prev && prev.width === width && prev.height === height
-            ? prev
-            : { width, height, aspect },
-        );
+        setDimensions((prev) => {
+          if (prev && prev.width === width && prev.height === height)
+            return prev;
+          canvas.width = width;
+          canvas.height = height;
+          return { width, height, aspect };
+        });
       }
     });
 
@@ -88,7 +81,10 @@ export const WebGPUCanvas: FC<Props> = (props) => {
   });
 
   return (
-    <Layer name={props.label}>
+    <Layer name={props.name}>
+      {
+        // TODO: this styling logic doesn't quite work
+      }
       <canvas
         ref={canvasRef}
         style={{
@@ -107,7 +103,6 @@ export const WebGPUCanvas: FC<Props> = (props) => {
         <Inner
           {...props}
           material={material}
-          canvas={data.canvas}
           context={data.context}
           format={data.format}
           width={dimensions.width}
@@ -119,10 +114,28 @@ export const WebGPUCanvas: FC<Props> = (props) => {
   );
 };
 
+/**
+ * An inner component responsible for managing the rendering side of things,
+ * including resizing canvases as necessary.
+ *
+ * NOTE: It's not worth useEffect()/useMemo()ing code in here. It's better to
+ * let it run every time this component refreshes as it prevents delays in the
+ *
+ * @param label
+ * @param format
+ * @param width
+ * @param height
+ * @param aspect  The aspect ratio of this
+ * @param material TODO: this should be extracted out
+ * @param objectBuffer TODO: this should be extracted out
+ * @param scene TODO: this should be extracted out
+ * @param globeMesh TODO: this should be extracted out
+ * @param context TODO: this should be extracted out
+ * @constructor
+ */
 const Inner: FC<
   Props & {
     material: Material;
-    canvas: HTMLCanvasElement;
     context: GPUCanvasContext;
     format: GPUTextureFormat;
     width: number;
@@ -131,17 +144,18 @@ const Inner: FC<
   }
 > = ({
   material,
-  label,
+  name: localName,
   objectBuffer,
   scene,
   globeMesh,
-  canvas,
   context,
   format,
   width,
   height,
   aspect,
 }) => {
+  console.log("this shouldn't be called a lot");
+  const name = useLayerName(localName);
   const device = useGpuDevice();
   const viewProjectionBuffer = useCreateBuffer({
     label: "view_projection",
@@ -153,14 +167,14 @@ const Inner: FC<
     code: shader,
   });
 
-  const layout = BindGroupLayoutBuilder.Create(`${label}_render`)
+  const layout = BindGroupLayoutBuilder.Create(`${name}_render`)
     .addBuffer(GPUShaderStage.VERTEX, "uniform")
     .addMaterial(GPUShaderStage.FRAGMENT, "2d") // Two bindings - texture and sampler
     .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
     //   .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
     .build(device);
 
-  const bindGroup = BindGroupBuilder.Create(`${label}_render`, layout)
+  const bindGroup = BindGroupBuilder.Create(`${name}_render`, layout)
     .addBuffer(viewProjectionBuffer)
     .addMaterial(material.view, material.sampler)
     .addBuffer(objectBuffer)
@@ -225,8 +239,6 @@ const Inner: FC<
   });
 
   const projection = mat4.create();
-  canvas.width = width;
-  canvas.height = height;
   mat4.perspective(projection, Math.PI / 4, aspect, 0.1, 100.0);
 
   useRenderPass((commandEncoder: GPUCommandEncoder) => {
@@ -261,19 +273,3 @@ const Inner: FC<
 
   return <></>;
 };
-
-function useRenderPass(func: RenderPassFunc) {
-  const canvases = useContext(RenderPassContext);
-  if (!canvases) throw new Error("TODO PAC");
-  const id = useId();
-
-  useEffect(() => {
-    console.log(`adding ${id}`);
-    canvases[id] = func;
-
-    return () => {
-      console.log(`deleting ${id}`);
-      delete canvases[id];
-    };
-  }, [id, func, canvases]);
-}

@@ -1,4 +1,10 @@
-import React, { type FC, useCallback, useMemo, useState } from "react";
+import React, {
+  type FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { mat4Size, mat4x4Size } from "../webGpu/math.js";
 import { Scene } from "../webGpu/model/scene.js";
 import { GlobeMesh } from "../webGpu/view/meshes/globeMesh.js";
@@ -6,10 +12,12 @@ import {
   GpuDeviceProvider,
   useGpuDevice,
 } from "./components/GpuDeviceProvider.js";
-import { WebGPUCanvas } from "./components/WebGPUCanvas.js";
+import { RenderCanvas } from "./components/RenderCanvas.js";
 import { useCreateBuffer } from "./gpuHooks/useCreateBuffer.js";
-import { useFireOnce } from "./reactHooks/useFireOnce.js";
-import { RenderPassContext, type RenderPassFunc } from "./test.js";
+import {
+  RenderPassContext,
+  type RenderPassFunc,
+} from "./gpuHooks/useRenderPass.js";
 
 export const ReactWebGpuApp: FC = () => {
   return (
@@ -63,6 +71,7 @@ const Main: FC = () => {
     const commandEncoder = device.createCommandEncoder();
     if (!commandEncoder) return;
 
+    console.log(...Object.keys(canvases));
     for (const id in canvases) {
       //    console.log({ commandEncoder });
       canvases[id](commandEncoder);
@@ -72,9 +81,9 @@ const Main: FC = () => {
     requestAnimationFrame(thing);
   }, []);
 
-  useFireOnce(() => {
+  useEffect(() => {
     thing();
-  });
+  }, [thing]);
 
   return (
     <RenderPassContext.Provider value={canvases}>
@@ -97,13 +106,13 @@ const Main: FC = () => {
               flexDirection: "column",
             }}
           >
-            <WebGPUCanvas
+            <RenderCanvas
               label="canvas_1"
               objectBuffer={objectBuffer}
               scene={scene}
               globeMesh={globeMesh}
             />
-            <WebGPUCanvas
+            <RenderCanvas
               label="canvas_2"
               flexBasis={0.5}
               objectBuffer={objectBuffer}
@@ -120,20 +129,20 @@ const Main: FC = () => {
               flexDirection: "column",
             }}
           >
-            <WebGPUCanvas
+            <RenderCanvas
               label="canvas_3"
               flexBasis={0.9}
               objectBuffer={objectBuffer}
               scene={scene}
               globeMesh={globeMesh}
             />
-            <WebGPUCanvas
+            <RenderCanvas
               label="canvas_4"
               objectBuffer={objectBuffer}
               scene={scene}
               globeMesh={globeMesh}
             />
-            <WebGPUCanvas
+            <RenderCanvas
               label="canvas_5"
               flexBasis={0.5}
               objectBuffer={objectBuffer}

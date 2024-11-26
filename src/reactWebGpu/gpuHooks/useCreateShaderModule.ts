@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLayerName } from "../../Layer.js";
+import { useLayerName } from "../Layer.js";
 import { useGpuDevice } from "../components/GpuDeviceProvider.js";
 
 /**
