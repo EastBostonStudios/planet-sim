@@ -10,6 +10,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { Layer } from "../../Layer.js";
 import { clamp, mat4x4Size } from "../../webGpu/math.js";
 import type { Scene } from "../../webGpu/model/scene.js";
 import { BindGroupBuilder } from "../../webGpu/view/builders/bindGroupBuilder.js";
@@ -28,25 +29,40 @@ export type CanvasData = {
   renderPassFunc: (commandEncoder: GPUCommandEncoder) => void;
 };
 
-export const WebGPUCanvas: FC<{
+interface Props {
   label: string;
   flexBasis?: number;
   setCanvases: Dispatch<SetStateAction<CanvasData[]>>;
   objectBuffer: GPUBuffer;
   scene: Scene;
   globeMesh: GlobeMesh;
-}> = ({ label, flexBasis, setCanvases, objectBuffer, scene, globeMesh }) => {
+}
+
+export const WebGPUCanvas: FC<Props> = (props) => (
+  <Layer name={props.label}>
+    <Inner {...props} />
+  </Layer>
+);
+
+export const Inner: FC<Props> = ({
+  label,
+  flexBasis,
+  setCanvases,
+  objectBuffer,
+  scene,
+  globeMesh,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const device = useGpuDevice();
 
-  const uniformBuffer = useCreateBuffer({
-    label: "uniform_buffer",
+  const viewProjectionBuffer = useCreateBuffer({
+    label: "view_projection",
     size: 64 * 2, // 64 for each matrix
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
   const landscapeShader = useShaderModule({
-    label: "landscape_shader",
+    label: "landscape",
     code: shader,
   });
 
@@ -57,7 +73,7 @@ export const WebGPUCanvas: FC<{
   const renderPassFunc = useMemo(() => {
     const canvas = canvasRef.current;
     if (
-      !uniformBuffer ||
+      !viewProjectionBuffer ||
       !canvas ||
       !landscapeShader ||
       !material ||
@@ -80,7 +96,7 @@ export const WebGPUCanvas: FC<{
       .build(device);
 
     const bindGroup = BindGroupBuilder.Create(`${label}_render`, layout)
-      .addBuffer(uniformBuffer)
+      .addBuffer(viewProjectionBuffer)
       .addMaterial(material.view, material.sampler)
       .addBuffer(objectBuffer)
       //.addBuffer(tileDataBufferPing)
@@ -155,8 +171,8 @@ export const WebGPUCanvas: FC<{
 
       const viewBuffer = scene.camera.view as ArrayBuffer;
       const projBuffer = projection as ArrayBuffer;
-      device.queue.writeBuffer(uniformBuffer, mat4x4Size(0), viewBuffer);
-      device.queue.writeBuffer(uniformBuffer, mat4x4Size(1), projBuffer);
+      device.queue.writeBuffer(viewProjectionBuffer, mat4x4Size(0), viewBuffer);
+      device.queue.writeBuffer(viewProjectionBuffer, mat4x4Size(1), projBuffer);
 
       const renderPass: GPURenderPassEncoder = commandEncoder.beginRenderPass({
         colorAttachments: [
@@ -182,7 +198,7 @@ export const WebGPUCanvas: FC<{
     device,
     landscapeShader,
     material,
-    uniformBuffer,
+    viewProjectionBuffer,
     objectBuffer,
     globeMesh,
     canvasDimensions,
