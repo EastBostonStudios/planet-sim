@@ -16,8 +16,8 @@ import { BindGroupBuilder } from "../../webGpu/view/builders/bindGroupBuilder.js
 import { BindGroupLayoutBuilder } from "../../webGpu/view/builders/bindGroupLayoutBuilder.js";
 import type { GlobeMesh } from "../../webGpu/view/meshes/globeMesh.js";
 import { useCreateBuffer } from "../gpuHooks/useCreateBuffer.js";
-import { useCreateMaterial } from "../gpuHooks/useCreateMaterial.js";
-import { useShaderModule } from "../gpuHooks/useShaderModule.js";
+import { useCreateMaterialAsync } from "../gpuHooks/useCreateMaterialAsync.js";
+import { useCreateShaderModule } from "../gpuHooks/useCreateShaderModule.js";
 import { useFireOnce } from "../reactHooks/useFireOnce.js";
 import shader from "../shaders/shaders.wgsl";
 import { useGpuDevice } from "./GpuDeviceProvider.js";
@@ -93,16 +93,16 @@ export const Inner: FC<Props & { canvas: HTMLCanvasElement }> = ({
 
   const viewProjectionBuffer = useCreateBuffer({
     label: "view_projection",
-    size: 64 * 2, // 64 for each matrix
+    size: 64 * 3, // 64 for each matrix
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const landscapeShader = useShaderModule({
+  const landscapeShader = useCreateShaderModule({
     label: "landscape",
     code: shader,
   });
 
-  const material = useCreateMaterial();
+  const material = useCreateMaterialAsync();
 
   const canvasDimensions = useCanvasDimensionListener(canvas);
 

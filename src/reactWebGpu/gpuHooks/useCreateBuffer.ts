@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLayerName } from "../../Layer.js";
 import { useGpuDevice } from "../components/GpuDeviceProvider.js";
 
@@ -6,22 +6,28 @@ export function useCreateBuffer({
   label,
   size,
   usage,
-}: GPUBufferDescriptor & { label: string }) {
+}: Required<GPUBufferDescriptor>): GPUBuffer {
   const device = useGpuDevice();
   const fullName = useLayerName(label);
-  const [buffer, setBuffer] = useState<GPUBuffer>(() => {
+  const [bufferAndDescriptor, setBufferAndDescriptor] = useState(() => {
     console.log(`Allocated "${fullName}" buffer`);
-    return device.createBuffer({ label: fullName, size, usage });
+    const buffer = device.createBuffer({ label: fullName, size, usage });
+    return { fullName, size, usage, buffer };
   });
-  const isCreatingBufferRef = useRef(true);
 
   useEffect(() => {
-    if (!isCreatingBufferRef.current) {
-      isCreatingBufferRef.current = true;
+    setBufferAndDescriptor((prev) => {
+      if (
+        fullName === prev.fullName &&
+        size === prev.size &&
+        usage === prev.usage
+      )
+        return prev;
       console.log(`Reallocated "${fullName}" buffer`);
-      setBuffer(device.createBuffer({ label: fullName, size, usage }));
-    }
+      const buffer = device.createBuffer({ label: fullName, size, usage });
+      return { fullName, size, usage, buffer };
+    });
   }, [device, fullName, size, usage]);
 
-  return buffer;
+  return bufferAndDescriptor.buffer;
 }

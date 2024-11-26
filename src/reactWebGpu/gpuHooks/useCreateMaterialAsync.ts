@@ -3,7 +3,7 @@ import cat from "../../webGpu/assets/cat.jpg";
 import { Material } from "../../webGpu/view/material.js";
 import { useGpuDevice } from "../components/GpuDeviceProvider.js";
 
-export const useCreateMaterial = () => {
+export const useCreateMaterialAsync = () => {
   const device = useGpuDevice();
   const [material, setMaterial] = useState<Material>();
   useEffect(() => {
