@@ -2,6 +2,7 @@ import { mat4 } from "gl-matrix";
 import React, {
   type Dispatch,
   type FC,
+  type ReactNode,
   type SetStateAction,
   useEffect,
   useId,
@@ -22,28 +23,6 @@ import { useFireOnce } from "../reactHooks/useFireOnce.js";
 import shader from "../shaders/shaders.wgsl";
 import { useGpuDevice } from "./GpuDeviceProvider.js";
 
-/*
-export function useMutableCallback<T>(fn: T) {
-  const ref = React.useRef<T>(fn);
-  useEffect(() => {
-    ref.current = fn;
-  }, [fn]);
-  return ref;
-}
-
-export function useFrame(callback: RenderCallback, renderPriority = 0): null {
-  const store = useStore();
-  const subscribe = store.getState().internal.subscribe;
-  // Memoize ref
-  const ref = useMutableCallback(callback);
-  // Subscribe on mount, unsubscribe on unmount
-  useEffect(
-    () => subscribe(ref, renderPriority, store),
-    [renderPriority, subscribe, store],
-  );
-  return null;
-}*/
-
 export type CanvasData = {
   id: string;
   label: string;
@@ -57,10 +36,63 @@ interface Props {
   objectBuffer: GPUBuffer;
   scene: Scene;
   globeMesh: GlobeMesh;
+  children: ReactNode;
 }
 
 export const WebGPUCanvas: FC<Props> = (props) => {
+  const device = useGpuDevice();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [data, setData] = useState<{
+    canvas: HTMLCanvasElement;
+    context: GPUCanvasContext;
+    format: GPUTextureFormat;
+  }>();
+  const [dimensions, setDimensions] = useState<{
+    width: number;
+    height: number;
+    aspect: number;
+  }>();
+
+  useFireOnce(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("webgpu");
+    if (!context) throw new Error("WebGPU canvas context unavailable!");
+    const format: GPUTextureFormat = "bgra8unorm";
+    context.configure({ device, format, alphaMode: "opaque" });
+    setData({ canvas, context, format });
+
+    // Modified from https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
+    const observer = new ResizeObserver(async (entries) => {
+      for (const entry of entries) {
+        const width = clamp(
+          entry.devicePixelContentBoxSize?.[0].inlineSize ||
+            entry.contentBoxSize[0].inlineSize * devicePixelRatio,
+          1,
+          device.limits.maxTextureDimension2D,
+        );
+        const height = clamp(
+          entry.devicePixelContentBoxSize?.[0].blockSize ||
+            entry.contentBoxSize[0].blockSize * devicePixelRatio,
+          1,
+          device.limits.maxTextureDimension2D,
+        );
+        const aspect = width / height;
+        setDimensions((prev) =>
+          prev && prev.width === width && prev.height === height
+            ? prev
+            : { width, height, aspect },
+        );
+      }
+    });
+
+    try {
+      observer.observe(canvas, { box: "device-pixel-content-box" });
+    } catch {
+      observer.observe(canvas, { box: "content-box" });
+    }
+  });
+
   return (
     <Layer name={props.label}>
       <canvas
@@ -75,134 +107,172 @@ export const WebGPUCanvas: FC<Props> = (props) => {
           backgroundColor: props.flexBasis ? "red" : "blue",
         }}
       >
-        {canvasRef.current && <Inner {...props} canvas={canvasRef.current} />}
+        {props.children}
       </canvas>
+      {data && dimensions && (
+        <Inner
+          {...props}
+          canvas={data.canvas}
+          context={data.context}
+          format={data.format}
+          width={dimensions.width}
+          height={dimensions.height}
+          aspect={dimensions.aspect}
+        />
+      )}
     </Layer>
   );
 };
 
-export const Inner: FC<Props & { canvas: HTMLCanvasElement }> = ({
+export const Inner: FC<
+  Props & {
+    canvas: HTMLCanvasElement;
+    context: GPUCanvasContext;
+    format: GPUTextureFormat;
+    width: number;
+    height: number;
+    aspect: number;
+  }
+> = ({
   label,
   setCanvases,
   objectBuffer,
   scene,
   globeMesh,
   canvas,
+  context,
+  format,
+  width,
+  height,
+  aspect,
 }) => {
   const device = useGpuDevice();
-
+  const material = useCreateMaterialAsync();
   const viewProjectionBuffer = useCreateBuffer({
     label: "view_projection",
     size: 64 * 3, // 64 for each matrix
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-
   const landscapeShader = useCreateShaderModule({
     label: "landscape",
     code: shader,
   });
 
-  const material = useCreateMaterialAsync();
+  const { depthStencilAttachment, bindGroup, pipeline, projection } =
+    useMemo(() => {
+      if (!material) return {};
 
-  const canvasDimensions = useCanvasDimensionListener(canvas);
+      const layout = BindGroupLayoutBuilder.Create(`${label}_render`)
+        .addBuffer(GPUShaderStage.VERTEX, "uniform")
+        .addMaterial(GPUShaderStage.FRAGMENT, "2d") // Two bindings - texture and sampler
+        .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
+        //   .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
+        .build(device);
 
-  const renderPassFunc = useMemo(() => {
-    if (
-      !viewProjectionBuffer ||
-      !landscapeShader ||
-      !material ||
-      !canvasDimensions
-    )
-      return undefined;
+      const bindGroup = BindGroupBuilder.Create(`${label}_render`, layout)
+        .addBuffer(viewProjectionBuffer)
+        .addMaterial(material.view, material.sampler)
+        .addBuffer(objectBuffer)
+        //.addBuffer(tileDataBufferPing)
+        .build(device);
 
-    const { width, height, aspect } = canvasDimensions;
+      const pipelineLayout = device.createPipelineLayout({
+        bindGroupLayouts: [layout],
+      });
 
-    const context = canvas.getContext("webgpu");
-    if (!context) throw new Error("WebGPU canvas context unavailable!");
-    const format: GPUTextureFormat = "bgra8unorm";
-    context.configure({ device, format, alphaMode: "opaque" });
+      // TODO: Minimaps, etc. don't require a depth stencil
+      const depthStencilState: GPUDepthStencilState = {
+        format: "depth24plus-stencil8",
+        depthWriteEnabled: true,
+        depthCompare: "less-equal",
+      };
 
-    const layout = BindGroupLayoutBuilder.Create(`${label}_render`)
-      .addBuffer(GPUShaderStage.VERTEX, "uniform")
-      .addMaterial(GPUShaderStage.FRAGMENT, "2d") // Two bindings - texture and sampler
-      .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
-      //   .addBuffer(GPUShaderStage.VERTEX, "read-only-storage")
-      .build(device);
+      // Depth buffer
+      const depthTexture = device.createTexture({
+        label: "depth_texture",
+        size: {
+          width: width,
+          height: height,
+          depthOrArrayLayers: 1,
+        },
+        format: "depth24plus-stencil8",
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      });
 
-    const bindGroup = BindGroupBuilder.Create(`${label}_render`, layout)
-      .addBuffer(viewProjectionBuffer)
-      .addMaterial(material.view, material.sampler)
-      .addBuffer(objectBuffer)
-      //.addBuffer(tileDataBufferPing)
-      .build(device);
+      const depthTextureView = depthTexture.createView({
+        label: "depth_texture_view",
+        format: "depth24plus-stencil8",
+        dimension: "2d",
+        aspect: "all",
+      });
 
-    const pipelineLayout = device.createPipelineLayout({
-      bindGroupLayouts: [layout],
-    });
+      const depthStencilAttachment: GPURenderPassDepthStencilAttachment = {
+        view: depthTextureView,
+        depthClearValue: 1.0,
+        depthLoadOp: "clear",
+        depthStoreOp: "store",
+        stencilLoadOp: "clear",
+        stencilStoreOp: "discard",
+      };
 
-    // TODO: Minimaps, etc. don't require a depth stencil
-    const depthStencilState: GPUDepthStencilState = {
-      format: "depth24plus-stencil8",
-      depthWriteEnabled: true,
-      depthCompare: "less-equal",
-    };
+      const pipeline = device.createRenderPipeline({
+        vertex: {
+          module: landscapeShader,
+          entryPoint: "vs_main",
+          buffers: [globeMesh.bufferLayout],
+        },
+        fragment: {
+          module: landscapeShader,
+          entryPoint: "fs_main",
+          targets: [{ format: format }],
+        },
+        primitive: {
+          topology: "triangle-list",
+        },
+        layout: pipelineLayout,
+        depthStencil: depthStencilState,
+      });
 
-    // Depth buffer
-    const depthTexture = device.createTexture({
-      label: "depth_texture",
-      size: {
-        width: width,
-        height: height,
-        depthOrArrayLayers: 1,
-      },
-      format: "depth24plus-stencil8",
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-
-    const depthTextureView = depthTexture.createView({
-      label: "depth_texture_view",
-      format: "depth24plus-stencil8",
-      dimension: "2d",
-      aspect: "all",
-    });
-
-    const depthStencilAttachment: GPURenderPassDepthStencilAttachment = {
-      view: depthTextureView,
-      depthClearValue: 1.0,
-      depthLoadOp: "clear",
-      depthStoreOp: "store",
-      stencilLoadOp: "clear",
-      stencilStoreOp: "discard",
-    };
-
-    const pipeline = device.createRenderPipeline({
-      vertex: {
-        module: landscapeShader,
-        entryPoint: "vs_main",
-        buffers: [globeMesh.bufferLayout],
-      },
-      fragment: {
-        module: landscapeShader,
-        entryPoint: "fs_main",
-        targets: [{ format: format }],
-      },
-      primitive: {
-        topology: "triangle-list",
-      },
-      layout: pipelineLayout,
-      depthStencil: depthStencilState,
-    });
-
-    const projection = mat4.create();
-
-    return (commandEncoder: GPUCommandEncoder) => {
+      const projection = mat4.create();
       canvas.width = width;
       canvas.height = height;
+      mat4.perspective(projection, Math.PI / 4, aspect, 0.1, 100.0);
+
+      return {
+        bindGroup,
+        pipeline,
+        projection,
+        depthStencilAttachment,
+        canvas,
+        device,
+        label,
+        viewProjectionBuffer,
+        objectBuffer,
+        material,
+        globeMesh,
+        landscapeShader,
+      };
+    }, [
+      canvas,
+      width,
+      height,
+      aspect,
+      material,
+      device,
+      label,
+      globeMesh,
+      landscapeShader,
+      objectBuffer,
+      viewProjectionBuffer,
+      format,
+    ]);
+
+  const renderPassFunc = useMemo(() => {
+    if (!bindGroup || !pipeline) return;
+    return (commandEncoder: GPUCommandEncoder) => {
       const textureView: GPUTextureView = context
         .getCurrentTexture()
         .createView();
-      mat4.perspective(projection, Math.PI / 4, aspect, 0.1, 100.0);
-
       const viewBuffer = scene.camera.view as ArrayBuffer;
       const projBuffer = projection as ArrayBuffer;
       device.queue.writeBuffer(viewProjectionBuffer, mat4x4Size(0), viewBuffer);
@@ -227,16 +297,15 @@ export const Inner: FC<Props & { canvas: HTMLCanvasElement }> = ({
       renderPass.end();
     };
   }, [
-    canvas,
-    scene,
-    label,
+    context,
+    bindGroup,
+    pipeline,
+    projection,
+    depthStencilAttachment,
     device,
-    landscapeShader,
-    material,
-    viewProjectionBuffer,
-    objectBuffer,
     globeMesh,
-    canvasDimensions,
+    viewProjectionBuffer,
+    scene,
   ]);
 
   const id = useId();
@@ -264,54 +333,4 @@ export const Inner: FC<Props & { canvas: HTMLCanvasElement }> = ({
   }, [id, label, renderPassFunc, setCanvases]);
 
   return <></>;
-};
-
-/**
- * A hook which returns an object representing a canvas' size and aspect ratio
- * @param canvas      A ref to the canvas to watch for resizing
- * @return            The width, height, and aspect ratio of this canvas
- */
-const useCanvasDimensionListener = (
-  canvas: HTMLCanvasElement,
-): { width: number; height: number; aspect: number } | undefined => {
-  const device = useGpuDevice();
-  const [result, setResult] = useState<{
-    width: number;
-    height: number;
-    aspect: number;
-  }>();
-
-  useFireOnce(() => {
-    // Modified from https://webgpufundamentals.org/webgpu/lessons/webgpu-resizing-the-canvas.html
-    const observer = new ResizeObserver(async (entries) => {
-      for (const entry of entries) {
-        const width = clamp(
-          entry.devicePixelContentBoxSize?.[0].inlineSize ||
-            entry.contentBoxSize[0].inlineSize * devicePixelRatio,
-          1,
-          device.limits.maxTextureDimension2D,
-        );
-        const height = clamp(
-          entry.devicePixelContentBoxSize?.[0].blockSize ||
-            entry.contentBoxSize[0].blockSize * devicePixelRatio,
-          1,
-          device.limits.maxTextureDimension2D,
-        );
-        const aspect = width / height;
-        setResult((prev) =>
-          prev && prev.width === width && prev.height === height
-            ? prev
-            : { width, height, aspect },
-        );
-      }
-    });
-
-    try {
-      observer.observe(canvas, { box: "device-pixel-content-box" });
-    } catch {
-      observer.observe(canvas, { box: "content-box" });
-    }
-  });
-
-  return result;
 };
