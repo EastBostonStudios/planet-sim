@@ -267,6 +267,7 @@ export const Inner: FC<
       format,
     ]);
 
+  // TODO: turn this into a useRenderPass() hook similar to useFrame()
   const renderPassFunc = useMemo(() => {
     if (!bindGroup || !pipeline) return;
     return (commandEncoder: GPUCommandEncoder) => {
