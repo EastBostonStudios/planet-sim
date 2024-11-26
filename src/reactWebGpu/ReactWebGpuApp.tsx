@@ -1,4 +1,4 @@
-import React, { type FC, useEffect, useMemo, useState } from "react";
+import React, { type FC, useCallback, useMemo, useState } from "react";
 import { mat4Size, mat4x4Size } from "../webGpu/math.js";
 import { Scene } from "../webGpu/model/scene.js";
 import { GlobeMesh } from "../webGpu/view/meshes/globeMesh.js";
@@ -6,8 +6,10 @@ import {
   GpuDeviceProvider,
   useGpuDevice,
 } from "./components/GpuDeviceProvider.js";
-import { type CanvasData, WebGPUCanvas } from "./components/WebGPUCanvas.js";
+import { WebGPUCanvas } from "./components/WebGPUCanvas.js";
 import { useCreateBuffer } from "./gpuHooks/useCreateBuffer.js";
+import { useFireOnce } from "./reactHooks/useFireOnce.js";
+import { RenderPassContext, type RenderPassFunc } from "./test.js";
 
 export const ReactWebGpuApp: FC = () => {
   return (
@@ -26,7 +28,7 @@ const Main: FC = () => {
   });*/
 
   const [counter, setCounter] = useState(0);
-  const [canvases, setCanvases] = useState<Array<CanvasData>>([]);
+  const canvases = useMemo<Record<string, RenderPassFunc>>(() => ({}), []);
   const scene = useMemo(() => new Scene(), []);
   const globeMesh = useMemo(() => new GlobeMesh(device), [device]);
 
@@ -40,7 +42,7 @@ const Main: FC = () => {
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  useEffect(() => {
+  const thing = useCallback(() => {
     // TODO: This is extremely gross and should be abstracted into a "GameLoop" class
     //  with a "SimLoop" and a "RenderLoop" (well, multiple render loops- one per canvas)
     if (!objectBuffer) return;
@@ -60,88 +62,88 @@ const Main: FC = () => {
 
     const commandEncoder = device.createCommandEncoder();
     if (!commandEncoder) return;
-    for (const canvas of canvases) {
+
+    for (const id in canvases) {
       //    console.log({ commandEncoder });
-      canvas.renderPassFunc(commandEncoder);
+      canvases[id](commandEncoder);
     }
     device.queue.submit([commandEncoder.finish()]);
     //    console.log("rendering", counter, canvases);
+    requestAnimationFrame(thing);
+  }, []);
 
-    setTimeout(() => setCounter((prev) => prev + 1), 10);
-  }, [scene, device, canvases, counter, objectBuffer]);
+  useFireOnce(() => {
+    thing();
+  });
 
   return (
-    scene &&
-    objectBuffer && (
-      <div
-        style={{
-          position: "absolute",
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "row",
-        }}
-      >
+    <RenderPassContext.Provider value={canvases}>
+      {scene && objectBuffer && (
         <div
           style={{
-            minWidth: 0,
-            minHeight: 0,
-            flexBasis: "3.4",
+            position: "absolute",
+            width: "100%",
+            height: "100%",
             display: "flex",
-            flexDirection: "column",
+            flexDirection: "row",
           }}
         >
-          <WebGPUCanvas
-            label="canvas_1"
-            setCanvases={setCanvases}
-            objectBuffer={objectBuffer}
-            scene={scene}
-            globeMesh={globeMesh}
-          />
-          <WebGPUCanvas
-            label="canvas_2"
-            flexBasis={0.5}
-            setCanvases={setCanvases}
-            objectBuffer={objectBuffer}
-            scene={scene}
-            globeMesh={globeMesh}
-          />
+          <div
+            style={{
+              minWidth: 0,
+              minHeight: 0,
+              flexBasis: "3.4",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <WebGPUCanvas
+              label="canvas_1"
+              objectBuffer={objectBuffer}
+              scene={scene}
+              globeMesh={globeMesh}
+            />
+            <WebGPUCanvas
+              label="canvas_2"
+              flexBasis={0.5}
+              objectBuffer={objectBuffer}
+              scene={scene}
+              globeMesh={globeMesh}
+            />
+          </div>
+          <div
+            style={{
+              minWidth: 0,
+              minHeight: 0,
+              flexBasis: "1.2",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <WebGPUCanvas
+              label="canvas_3"
+              flexBasis={0.9}
+              objectBuffer={objectBuffer}
+              scene={scene}
+              globeMesh={globeMesh}
+            />
+            <WebGPUCanvas
+              label="canvas_4"
+              objectBuffer={objectBuffer}
+              scene={scene}
+              globeMesh={globeMesh}
+            />
+            <WebGPUCanvas
+              label="canvas_5"
+              flexBasis={0.5}
+              objectBuffer={objectBuffer}
+              scene={scene}
+              globeMesh={globeMesh}
+            />
+          </div>
         </div>
-        <div
-          style={{
-            minWidth: 0,
-            minHeight: 0,
-            flexBasis: "1.2",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <WebGPUCanvas
-            label="canvas_3"
-            flexBasis={0.9}
-            setCanvases={setCanvases}
-            objectBuffer={objectBuffer}
-            scene={scene}
-            globeMesh={globeMesh}
-          />
-          <WebGPUCanvas
-            label="canvas_4"
-            setCanvases={setCanvases}
-            objectBuffer={objectBuffer}
-            scene={scene}
-            globeMesh={globeMesh}
-          />
-          <WebGPUCanvas
-            label="canvas_5"
-            flexBasis={0.5}
-            setCanvases={setCanvases}
-            objectBuffer={objectBuffer}
-            scene={scene}
-            globeMesh={globeMesh}
-          />
-        </div>
-      </div>
-    )
+      )}
+    </RenderPassContext.Provider>
   );
 };
 

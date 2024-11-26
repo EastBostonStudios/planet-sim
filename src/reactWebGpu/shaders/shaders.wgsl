@@ -26,7 +26,6 @@ struct Fragment {
     @location(0) uv : vec2<f32>,
 };
 
-
 @vertex
 fn vs_main(
     @builtin(instance_index) instance_index: u32,
