@@ -8,12 +8,14 @@ import React, {
 import { mat4Size, mat4x4Size } from "../webGpu/math.js";
 import { Scene } from "../webGpu/model/scene.js";
 import { GlobeMesh } from "../webGpu/view/meshes/globeMesh.js";
+import { ExampleCanvas } from "./ExampleCanvas.js";
 import {
   GpuDeviceProvider,
   useGpuDevice,
 } from "./components/GpuDeviceProvider.js";
 import { RenderCanvas } from "./components/RenderCanvas.js";
 import { useCreateBuffer } from "./gpuHooks/useCreateBuffer.js";
+import { useCreateMaterialAsync } from "./gpuHooks/useCreateMaterialAsync.js";
 import {
   RenderPassContext,
   type RenderPassFunc,
@@ -35,6 +37,7 @@ const Main: FC = () => {
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });*/
 
+  const material = useCreateMaterialAsync();
   const [counter, setCounter] = useState(0);
   const canvases = useMemo<Record<string, RenderPassFunc>>(() => ({}), []);
   const scene = useMemo(() => new Scene(), []);
@@ -106,19 +109,28 @@ const Main: FC = () => {
               flexDirection: "column",
             }}
           >
-            <RenderCanvas
-              label="canvas_1"
-              objectBuffer={objectBuffer}
-              scene={scene}
-              globeMesh={globeMesh}
-            />
-            <RenderCanvas
-              label="canvas_2"
-              flexBasis={0.5}
-              objectBuffer={objectBuffer}
-              scene={scene}
-              globeMesh={globeMesh}
-            />
+            <RenderCanvas name="canvas_1">
+              {material && (
+                <ExampleCanvas
+                  name={"canvas_1"}
+                  scene={scene}
+                  globeMesh={globeMesh}
+                  material={material}
+                  objectBuffer={objectBuffer}
+                />
+              )}
+            </RenderCanvas>
+            <RenderCanvas name="canvas_2" flexBasis={0.5}>
+              {material && (
+                <ExampleCanvas
+                  name={"canvas_1"}
+                  scene={scene}
+                  globeMesh={globeMesh}
+                  material={material}
+                  objectBuffer={objectBuffer}
+                />
+              )}
+            </RenderCanvas>
           </div>
           <div
             style={{
@@ -129,26 +141,40 @@ const Main: FC = () => {
               flexDirection: "column",
             }}
           >
-            <RenderCanvas
-              label="canvas_3"
-              flexBasis={0.9}
-              objectBuffer={objectBuffer}
-              scene={scene}
-              globeMesh={globeMesh}
-            />
-            <RenderCanvas
-              label="canvas_4"
-              objectBuffer={objectBuffer}
-              scene={scene}
-              globeMesh={globeMesh}
-            />
-            <RenderCanvas
-              label="canvas_5"
-              flexBasis={0.5}
-              objectBuffer={objectBuffer}
-              scene={scene}
-              globeMesh={globeMesh}
-            />
+            <RenderCanvas name="canvas_3" flexBasis={0.9}>
+              {material && (
+                <ExampleCanvas
+                  name={"canvas_1"}
+                  scene={scene}
+                  globeMesh={globeMesh}
+                  material={material}
+                  objectBuffer={objectBuffer}
+                />
+              )}
+            </RenderCanvas>
+
+            <RenderCanvas name="canvas_4" flexBasis={1.0}>
+              {material && (
+                <ExampleCanvas
+                  name={"canvas_4"}
+                  scene={scene}
+                  globeMesh={globeMesh}
+                  material={material}
+                  objectBuffer={objectBuffer}
+                />
+              )}
+            </RenderCanvas>
+            <RenderCanvas name="canvas_5" flexBasis={0.25}>
+              {material && (
+                <ExampleCanvas
+                  name={"canvas_5"}
+                  scene={scene}
+                  globeMesh={globeMesh}
+                  material={material}
+                  objectBuffer={objectBuffer}
+                />
+              )}
+            </RenderCanvas>
           </div>
         </div>
       )}
